@@ -7,7 +7,9 @@ use crate::error::DomainError;
 
 macro_rules! define_id {
     ($name:ident, $kind:literal) => {
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+        #[derive(
+            Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+        )]
         #[serde(transparent)]
         pub struct $name(Uuid);
 
@@ -23,10 +25,12 @@ macro_rules! define_id {
             }
 
             pub fn parse_str(value: &str) -> Result<Self, DomainError> {
-                Uuid::parse_str(value).map(Self).map_err(|_| DomainError::InvalidIdentifier {
-                    kind: $kind,
-                    value: value.to_owned(),
-                })
+                Uuid::parse_str(value)
+                    .map(Self)
+                    .map_err(|_| DomainError::InvalidIdentifier {
+                        kind: $kind,
+                        value: value.to_owned(),
+                    })
             }
         }
 
