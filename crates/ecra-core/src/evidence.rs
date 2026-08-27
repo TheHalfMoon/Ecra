@@ -2,8 +2,8 @@ use serde::{Deserialize, Deserializer, Serialize, de};
 
 use crate::{
     ActorId, ArtifactId, ContentDigest, DomainError, EpochMillis, EvidenceId, FactId,
-    InformationClassification, InformationRef, ObservationId, Origin, ReceiptId, ResourceId,
-    ResourceRef, I_JSON_MAX_SAFE_INTEGER, I_JSON_MIN_SAFE_INTEGER,
+    I_JSON_MAX_SAFE_INTEGER, I_JSON_MIN_SAFE_INTEGER, InformationClassification, InformationRef,
+    ObservationId, Origin, ReceiptId, ResourceId, ResourceRef,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -157,7 +157,12 @@ pub enum ObservationPayloadRef {
 }
 
 #[derive(Deserialize)]
-#[serde(tag = "kind", content = "value", rename_all = "snake_case", deny_unknown_fields)]
+#[serde(
+    tag = "kind",
+    content = "value",
+    rename_all = "snake_case",
+    deny_unknown_fields
+)]
 enum ObservationPayloadRefWire {
     Artifact(ArtifactId),
     Evidence(EvidenceId),
@@ -361,7 +366,12 @@ fn validate_decimal(value: &str) -> bool {
 }
 
 #[derive(Deserialize)]
-#[serde(tag = "kind", content = "value", rename_all = "snake_case", deny_unknown_fields)]
+#[serde(
+    tag = "kind",
+    content = "value",
+    rename_all = "snake_case",
+    deny_unknown_fields
+)]
 enum FactValueWire {
     Text(String),
     Boolean(bool),
