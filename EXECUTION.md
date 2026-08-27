@@ -1,262 +1,169 @@
 # Ecra Execution Guide
 
-> **Operational start-here document.** This file tells a human or coding agent what is active, what is next, and which repository documents govern the work.
+> **Operational start-here document.** Recover live work from this file, the active slice status/tasks, and exact GitHub truth; do not depend on private chat state.
 
 ## Source-of-truth order
 
-Before any material implementation or architecture change, read in this order:
+1. `.specify/memory/constitution.md`
+2. `EXECUTION.md`
+3. `specs/000-ecra-platform/roadmap.md`
+4. `specs/000-ecra-platform/STATUS.md`
+5. relevant platform architecture/threat/gap/risk/benchmark/decision artifacts
+6. `specs/README.md`
+7. active package `specs/001-trusted-domain-kernel/`, especially `STATUS.md`, spec/research/data-model/contracts/clarifications/plan/quickstart/tasks/analyze/traceability
+8. exact live branch/head, PR, CI, reviews and changed files
 
-1. `.specify/memory/constitution.md` — binding governance and Definition of Done.
-2. `EXECUTION.md` — current active slice, branch/PR status, phase ledger, and next eligible work.
-3. `specs/000-ecra-platform/roadmap.md` — immutable ECR slice IDs and dependency graph.
-4. `specs/000-ecra-platform/STATUS.md` — compact platform lifecycle truth.
-5. platform architecture/threat/gap/risk/benchmark/decision documents as relevant.
-6. `specs/README.md` — package navigation.
-7. Active slice package, especially `STATUS.md`, `spec.md`, `research.md`, `data-model.md`, `contracts/`, `implementation-clarifications.md`, `plan.md`, `quickstart.md`, `tasks.md`, analyze artifacts, and checklists.
-8. Exact current GitHub branch/head, PR, CI, review, and changed-file truth.
-
-If prose conflicts with exact live evidence, update stale prose; never downgrade repository truth to match an old status line.
+Stale prose must be updated to live evidence, never the reverse.
 
 ## Current execution truth
 
-Active slice: **ECR-001 — Trusted Domain Kernel**  
-Package: `specs/001-trusted-domain-kernel/`  
-Implementation branch: `001-trusted-domain-kernel`  
-PR: `#1` — OPEN / DRAFT / mergeable at the last live check.  
-Lifecycle: `IMPLEMENTING_CONVERGENCE`.
+```text
+Active slice: ECR-001 — Trusted Domain Kernel
+Branch: 001-trusted-domain-kernel
+PR: #1 — OPEN / DRAFT; mergeable at last live check
+Lifecycle: FINAL_CONVERGENCE_VERIFICATION
+```
 
-Latest fully verified implementation head before docs convergence:
+Latest fully verified implementation baseline:
 
 ```text
 5dfe4c09b2abceeec14bc94b8e13d2dccddfd37c
+CI 33086490495 — success
 ```
 
-Exact-head Phase 10 CI:
+Latest executable convergence gate before final analyze/ledger output:
 
 ```text
-run 33086490495 — success
+a7f1ea27e55fe7d41d70a6101dd3f44502e260f0
+CI 33087744071 — success
 ```
 
-That run passed:
+That convergence CI mirrors the revised quickstart and passed build, format, strict Clippy, full workspace tests, eight dedicated contract/security targets, rustdoc, offline replay, unsafe boundary, dependency boundary and `cargo tree -p ecra-core`.
 
-```text
-cargo build --workspace --locked
-cargo fmt --all --check
-cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-cargo test --workspace --locked
-cargo test --doc --workspace --locked
-cargo test --workspace --locked --offline
-bash scripts/check-core-unsafe.sh
-bash scripts/check-core-deps.sh
-```
-
-Do not treat any SHA here as permanent. Re-read PR/head/CI before mutation.
+Always re-read the current head before mutation; the SHAs above are evidence anchors, not permanent branch pointers.
 
 ## ECR-001 phase ledger
 
-| Phase | Tasks | Outcome | Evidence / next state |
-|---|---:|---|---|
-| 1 — Reproducible Rust Workspace | T001–T006 | `VERIFIED_ON_BRANCH` | workspace/toolchain/lints/CI established |
-| 2 — Version, Errors, IDs, Time, Canonicalization, Digests | T007–T014 | `VERIFIED_ON_BRANCH` | deterministic zero-I/O primitives |
-| 3 — Actors, Principals, Origins, Resources, Scope | T015–T023 | `VERIFIED_ON_BRANCH` | typed authority boundaries/fixtures |
-| 4 — Capability Request/Grant, Delegation, Time | T024–T028 | `VERIFIED_ON_BRANCH` | request/grant separation and temporal shape |
-| 5 — Information, Observation, Fact, Freshness, Evidence, Artifact | T029–T038 | `VERIFIED_ON_BRANCH` | provenance/classification/freshness/artifact contracts |
-| 6 — Information Use / Source-to-Sink Intent | T039–T042 | `VERIFIED_ON_BRANCH` | CI `33075545972` |
-| 7 — Effects, Idempotency, Retry, Action Digest | T043–T051 | `VERIFIED_ON_BRANCH` | CI `33078470973` |
-| 8 — Attempts, Receipts, Independent Verification | T052–T057 | `VERIFIED_ON_BRANCH` | CI `33080355344` |
-| 9 — Strict v1 Contract / Fixture Runner / Portability | T058–T062 | `VERIFIED_ON_BRANCH` | CI `33083362584` |
-| 10 — Cross-cutting Security / Architecture Gates | T063–T069 | `VERIFIED_ON_BRANCH` | exact head `5dfe4c09…`, CI `33086490495` |
-| 11 — Traceability / Analyze / Closure | T070–T076 | `PARTIAL` | T074 analyze found blocking canonical drift; T075 activated convergence |
-| 12 — Convergence | T077–T080 | `ACTIVE` | T077 complete on branch; T078 active, T079 next, T080 final exact-head convergence gate |
+| Phase | Tasks | State |
+|---|---:|---|
+| 1–9 | T001–T062 | `VERIFIED_ON_BRANCH` |
+| 10 — Cross-cutting gates | T063–T069 | `VERIFIED_ON_BRANCH` at `5dfe4c09…` / CI `33086490495` |
+| 11 — Closure / traceability | T070–T076 | T070–T072 + T074–T075 complete; T073/T076 remain |
+| 12 — Convergence | T077–T080 | T077–T079 complete; T080 `ACTIVE_FINAL_GATE` |
 
-`VERIFIED_ON_BRANCH` is not `CLOSED_CANONICAL`.
+## Completed convergence
 
-## Why Phase 12 exists
+### T077
 
-Post-implementation analyze artifact:
+Primary `data-model.md` and `contracts/domain-v1.md` are synchronized with implemented v1 semantics: strict envelope/error behavior, exact error API, C1–C12, bound parameters, full retry matrix, bounded receipt/verification semantics and fixture/wire convention.
 
-```text
-specs/001-trusted-domain-kernel/post-implementation-analyze-2026-08-27.md
-Decision: CONVERGENCE_REQUIRED
-```
+### T078
 
-The implementation/test suite was stronger and more precise than several planning-era canonical documents. Closure is blocked until the primary contract, data model, verification guide and execution ledgers match the implemented v1 semantics and complete traceability proves no remaining MUST-level drift.
+`quickstart.md`, `tasks.md`, active `STATUS.md`, and `EXECUTION.md` reflect live implementation/gate truth. The active status path is `specs/001-trusted-domain-kernel/STATUS.md`; no root `STATUS.md` exists.
 
-## Immediate next work
+### T079
 
-Follow `specs/001-trusted-domain-kernel/tasks.md` in order:
+`specs/001-trusted-domain-kernel/traceability-closure-2026-08-27.md` maps FR-001–FR-055, SC-001–SC-020, constitution G1–G15 and P-001–P-035 to code/tests/contracts or named downstream enforcement owners.
+
+No downstream runtime control is falsely claimed as implemented by ECR-001 value types.
+
+## Immediate next work — T080
+
+Perform in order:
 
 ```text
-T077 DONE_ON_BRANCH
-  Fold C1–C12 plus real version/error semantics into primary data-model + contract.
-
-T078 ACTIVE
-  Converge quickstart + active STATUS + EXECUTION + task ledger to live truth.
-
-T079 NEXT
-  Produce one exact traceability artifact for FR-001–FR-055,
-  SC-001–SC-020, constitution G1–G15, and all ECR-001-owned
-  pre-implementation-review findings, with downstream deferrals explicit.
-
-T080 BLOCKED_BY_T078_T079
-  Run revised quickstart, exact-head CI and analyze-equivalent review.
-  Only zero blocking drift can authorize PR readiness.
+A. Run final analyze-equivalent review against converged spec/research/data-model/contract/plan/tasks/implementation/traceability.
+B. Record zero-blocker or blocker result in the active package.
+C. Trigger/observe the full revised CI on the exact report-containing head.
+D. If green and zero blocker, finalize T073/T080 ledgers with exact run/head evidence.
+E. Run one final exact-head CI because ledger finalization itself changes the branch head.
+F. Inspect PR #1 exact state, reviews, required checks and readiness.
 ```
 
-The active slice status is:
+Do not mark PR ready, merge, or advance the roadmap while any of A–F is unresolved.
 
-```text
-specs/001-trusted-domain-kernel/STATUS.md
-```
-
-There is no root `STATUS.md`; do not invent one. `AGENTS.md` names both platform and active-slice status files explicitly.
-
-## Current ECR-001 invariants
-
-Never cross these boundaries to make convergence faster:
-
-```text
-Actor != authenticated Principal
-CapabilityRequest != CapabilityGrant
-classification != permission
-InformationUse != authorization
-locator != resource security identity
-ActionDigest != signature/approval
-ActionIntent != ActionAttemptRef != ActionReceipt != VerificationReceipt
-executor_observed_success != verified
-UNKNOWN remains UNKNOWN
-ContentDigest != ActionDigest/security proof
-free-form reason/label/notes/provider text != authority
-```
-
-Additional converged v1 facts:
-- malformed/missing strict Versioned envelope -> `serialization_failed`;
-- unsupported major/minor use dedicated compatibility codes;
-- machine API is exactly 16 ErrorCategory variants / 19 ErrorCode variants;
-- ActionParametersRef binds every non-empty payload reference with SecurityDigest;
-- `ActionSemantics` is construction-only; wire JSON keeps effect/idempotency/retry flat;
-- verified/rejected/inconclusive VerificationReceipt requires evidence; not_evaluated may have none;
-- repository inner-body fixtures do not weaken the public `Versioned<T>` wire contract.
-
-## Convergence verification gate
-
-After every material convergence batch, CI must remain capable of passing:
+## Required final CI surface
 
 ```bash
 cargo build --workspace --locked
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --workspace --locked
+cargo test -p ecra-core --test valid_fixtures --locked
+cargo test -p ecra-core --test invalid_fixtures --locked
+cargo test -p ecra-core --test contract_fixtures --locked
+cargo test -p ecra-core --test canonicalization --locked
+cargo test -p ecra-core --test action_digest --locked
+cargo test -p ecra-core --test properties --locked
+cargo test -p ecra-core --test portability --locked
+cargo test -p ecra-core --test non_authoritative_metadata --locked
 cargo test --doc --workspace --locked
 cargo test --workspace --locked --offline
 bash scripts/check-core-unsafe.sh
 bash scripts/check-core-deps.sh
+cargo tree -p ecra-core
 ```
 
-Before T080 closure analysis, also run every dedicated contract/security target named in the revised `quickstart.md`.
+## Non-negotiable ECR-001 invariants
 
-No later ECR implementation becomes eligible after a failed ECR-001 gate.
+```text
+Actor != authenticated Principal
+CapabilityRequest != CapabilityGrant
+classification != permission
+InformationUse != authorization
+locator/provider/free-form text != authority or resource identity
+ActionDigest != signature/approval
+ActionIntent != ActionAttemptRef != ActionReceipt != VerificationReceipt
+executor_observed_success != verified
+UNKNOWN remains UNKNOWN
+ContentDigest != ActionDigest/security proof
+```
+
+Additional v1 convergence truth:
+- malformed/missing strict version envelope -> `serialization_failed`;
+- unsupported major/minor -> dedicated compatibility codes;
+- exact machine API = 16 ErrorCategory / 19 ErrorCode variants;
+- every non-empty ActionParametersRef binds payload semantics with SecurityDigest;
+- `ActionSemantics` is a Rust construction helper only; wire fields stay flat;
+- verified/rejected/inconclusive verification requires evidence; not_evaluated may have none;
+- repository semantic inner-body fixtures do not weaken the public `Versioned<T>` contract.
 
 ## Closure sequence
 
-ECR-001 closure order is:
-
 ```text
-finish T077–T079
+T080 zero-blocking-drift + exact-head green
   ↓
-run T080 exact-head quickstart + CI + analyze
-  ↓ zero blocking drift
-finish T070–T073 traceability/closure evidence disposition
+T073 exact final evidence record
   ↓
-make PR ready only if governance/readiness criteria pass
-  ↓
-review/fix exact current head as required
+PR readiness + required review/fixes
   ↓
 merge without force-push/rebase/destructive history rewriting
   ↓
 post-merge exact-main verification
   ↓
-update platform roadmap/status + EXECUTION
+T076 roadmap/platform/active status advancement
   ↓
 CLOSED_CANONICAL
   ↓
-identify next dependency-eligible ECR slice
+select next dependency-eligible ECR slice
 ```
 
-T076 must not set roadmap `CLOSED_CANONICAL` before the merge/post-merge evidence required by the Definition of Done.
+No dependent ECR implementation is eligible before that sequence completes.
 
-## Platform execution path
+## Platform direction
 
-The canonical dependency graph is `specs/000-ecra-platform/roadmap.md`. High-level orientation remains:
-
-### Wave A — Trusted substrate
-
-```text
-ECR-001 Trusted Domain Kernel
-  ↓
-ECR-002 Durable Run / Ledger / Budgets
-  ├── ECR-031 Identity / Trust Root / Sensitive Storage
-  └── ECR-004 Verification / Reconciliation
-  ↓
-ECR-003 Authority / Information Flow / Policy / Secrets
-  ↓
-ECR-005 Evaluation & Threat Harness
-```
-
-### Wave B — Browser wedge
-
-```text
-ECR-006 Stock Firefox / WebDriver BiDi Prototype
-  ↓
-ECR-007 Browser Foundation / Upstream Strategy
-  ↓
-ECR-008 Ecra Browser Wedge
-```
-
-### Wave C — Trusted knowledge and context
-
-```text
-ECR-009 Search Evidence Fabric
-  ↓
-ECR-010 Workspace & Memory
-  ↓
-ECR-011 Browser-Native Semantic Capabilities
-```
-
-### Wave D — Learn once, replay cheaply
-
-```text
-ECR-012 Skill IR
-  ↓
-ECR-013 Skill Compiler
-  ↓
-ECR-014 Deterministic Replay
-  ↓
-ECR-015 Divergence & Repair
-```
-
-### Wave E — Agent/developer ecosystem
-
-```text
-ECR-016 Protocol Gateway
-ECR-017 Plugin & Sandbox Runtime
-  ↓
-ECR-018 Terminal Execution
-ECR-019 Developer Workspace
-ECR-020 Data & Analytics
-ECR-021 Local Model Gateway
-```
-
-ECR-022 through ECR-031 remain governed by the canonical roadmap, not this orientation summary.
+The canonical dependency graph remains `specs/000-ecra-platform/roadmap.md`. ECR-001 is the trust substrate; ECR-002/ECR-031/ECR-003/ECR-004 own durable execution, identity/trust, authorization/information-flow enforcement, and verification orchestration respectively. Browser/search/workspace/skills/protocol/runtime work remains blocked by roadmap dependencies.
 
 ## Handoff rule
 
-A continuation prompt must not require private chat state. The next executor should recover by reading:
+A future executor should need only:
 
-1. this file;
-2. `specs/001-trusted-domain-kernel/STATUS.md`;
-3. active `tasks.md` + converged contract/data model/quickstart;
-4. post-implementation analyze and traceability artifacts;
-5. live PR #1 head, CI, reviews and changed-file truth.
+```text
+EXECUTION.md
+specs/001-trusted-domain-kernel/STATUS.md
+tasks.md + converged contract/data-model/quickstart
+post-implementation analyze + traceability + final convergence analyze
+live PR #1 head/CI/reviews
+```
 
-Update `EXECUTION.md` and active `STATUS.md` whenever execution materially advances.
+Update these ledgers whenever execution materially advances.
