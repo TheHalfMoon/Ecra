@@ -11,7 +11,7 @@ pub const MAX_BUDGET_AMOUNT: u64 = 9_007_199_254_740_991;
 pub struct BudgetAmount(u64);
 
 impl BudgetAmount {
-    pub const fn new(value: u64) -> Result<Self, RunError> {
+    pub fn new(value: u64) -> Result<Self, RunError> {
         if value > MAX_BUDGET_AMOUNT {
             return Err(RunError::new(
                 RunErrorCategory::Budget,
