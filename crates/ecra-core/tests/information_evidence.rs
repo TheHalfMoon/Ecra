@@ -94,7 +94,8 @@ fn fact_numeric_construction_is_wire_safe() {
     }
 
     for value in ["", "+1", "01", "-0", "1.", "1e3"] {
-        let error = FactValue::decimal(value).expect_err("non-canonical decimal must not construct");
+        let error =
+            FactValue::decimal(value).expect_err("non-canonical decimal must not construct");
         assert_eq!(error.code(), ErrorCode::InvalidInformation);
     }
 }
