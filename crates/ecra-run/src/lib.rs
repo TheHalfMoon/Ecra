@@ -10,9 +10,23 @@
 //! This crate does **not** authenticate principals, authorize actions,
 //! declassify information, independently verify outcomes, execute providers,
 //! protect real secrets at rest, or claim hostile-tamper resistance.
-//!
-//! The initial Phase 1 scaffold intentionally exposes no persistence or runtime
-//! API until the corresponding contract tasks are implemented and verified.
 
-/// ECR-002 implementation marker used by foundation smoke tests.
+pub mod budget;
+pub mod digest;
+pub mod error;
+pub mod event;
+pub mod state;
+
+pub use budget::{
+    BudgetAmount, BudgetDimension, BudgetLimit, MAX_BUDGET_AMOUNT, RunBudget,
+};
+pub use digest::{LedgerDigest, LedgerDigestAlgorithm};
+pub use error::{RunError, RunErrorCategory, RunErrorCode, RunErrorSummary};
+pub use event::{
+    AttemptUnknownCause, EventSequence, InterventionKind, MAX_EVENT_SEQUENCE,
+    MAX_INTERVENTION_NOTE_BYTES, RecoveryReason, RunEvent, RunEventEnvelope,
+};
+pub use state::{MAX_SUSPENSION_OTHER_CODE_BYTES, RunPhase, SuspensionReason};
+
 pub const ECR_002_CONTRACT_MAJOR: u16 = 1;
+pub const ECR_002_CONTRACT_MINOR: u16 = 0;

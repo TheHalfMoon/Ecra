@@ -1,0 +1,1 @@
+{"event":{"kind":"run_created","value":{"actor":"00000000-0000-0000-0000-000000000001","budget":{"limits":[{"dimension":"tool_calls","hard":100,"soft":80}]}}},"previous_digest":null,"recorded_at":0,"run_id":"00000000-0000-0000-0000-000000000201","schema_version":{"major":1,"minor":0},"sequence":1}

@@ -48,8 +48,10 @@ jobs:
           cargo test -p ecra-core --test properties --locked
           cargo test -p ecra-core --test portability --locked
           cargo test -p ecra-core --test non_authoritative_metadata --locked
-      - name: ECR-002 package tests
-        run: cargo test -p ecra-run --locked
+      - name: ECR-002 contract targets
+        run: |
+          cargo test -p ecra-run --test event_contract --locked
+          cargo test -p ecra-run --locked
       - name: Rustdoc tests
         run: cargo test --doc --workspace --locked
       - name: Offline replay gate
