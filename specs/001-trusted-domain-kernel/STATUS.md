@@ -4,7 +4,7 @@
 **Lifecycle:** IMPLEMENTING  
 **Branch:** `001-trusted-domain-kernel`  
 **PR:** `#1` (draft until full slice closure)  
-**Latest fully verified implementation head:** `0b273f41f853f61e3dd691d4dcd5c2149c28f166`
+**Latest fully verified implementation head:** `946e95366ed681c724192cd01ece199d5e8f55a7`
 
 This file is the execution ledger for ECR-001. It summarizes progress; normative semantics remain in `spec.md`, `data-model.md`, `contracts/`, and approved implementation clarifications.
 
@@ -19,8 +19,9 @@ Phase 5  VERIFIED_ON_BRANCH
 Phase 6  VERIFIED_ON_BRANCH
 Phase 7  VERIFIED_ON_BRANCH
 Phase 8  VERIFIED_ON_BRANCH
-Phase 9  NEXT_ACTIVE_PHASE
-Phase 10+ BLOCKED_BY_ORDERING
+Phase 9  VERIFIED_ON_BRANCH
+Phase 10 NEXT_ACTIVE_PHASE
+Phase 11 BLOCKED_BY_ORDERING
 ```
 
 `VERIFIED_ON_BRANCH` is not `CLOSED_CANONICAL`.
@@ -64,18 +65,6 @@ The verified golden digest for the committed Phase 7 golden fixture is:
 Verified head: `0b273f41f853f61e3dd691d4dcd5c2149c28f166`  
 CI run: `33080355344` — `success`
 
-All exact-head gates passed:
-
-```text
-cargo build --workspace --locked                                      PASS
-cargo fmt --all --check                                               PASS
-cargo clippy --workspace --all-targets --all-features --locked -- -D warnings  PASS
-cargo test --workspace --locked                                       PASS
-cargo test --doc --workspace --locked                                 PASS
-cargo test --workspace --locked --offline                             PASS
-bash scripts/check-core-deps.sh                                       PASS
-```
-
 Established:
 
 - `ActionAttemptRef` with distinct `ActionAttemptId` and exact `ActionRef` binding;
@@ -91,23 +80,56 @@ Established:
 - round-trip proof that UNKNOWN remains UNKNOWN;
 - explicit proof that `executor_observed_success != verified`.
 
-The bounded C11 clarification remains normative for this PR and MUST converge into the primary contract/data model/tasks before ECR-001 closure.
+### Phase 9 — T058–T062
 
-## Next active phase — Phase 9 / T058–T062
+Verified head: `946e95366ed681c724192cd01ece199d5e8f55a7`  
+CI run: `33083362584` — `success`
 
-Goal: make the entire v1 contract strict, deterministic, portable, and fixture-complete as one API rather than a collection of individually tested types.
+All exact-head gates passed:
+
+```text
+cargo build --workspace --locked                                      PASS
+cargo fmt --all --check                                               PASS
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings  PASS
+cargo test --workspace --locked                                       PASS
+cargo test --doc --workspace --locked                                 PASS
+cargo test --workspace --locked --offline                             PASS
+bash scripts/check-core-deps.sh                                       PASS
+```
+
+Established:
+
+- strict unknown-field rejection for the remaining tagged public reference enums (`Origin`, `InformationRef`, `LineageRef`);
+- exhaustive typed manifests for every committed valid and invalid JSON fixture, with directory/manifest drift detection;
+- valid fixtures round-trip both as semantic values and through supported `Versioned<T>` v1 dispatch;
+- invalid fixtures assert machine-readable `ErrorCode`/category without parsing display strings;
+- explicit unsupported-major, unsupported-minor, version-envelope unknown-field, and tagged-enum unknown-field fixtures;
+- fixed byte-exact JCS artifact for `Versioned<ActionIntent>` plus fixed domain-separated SHA-256 output;
+- executable rustdoc examples for Actor/Principal, explicit Scope, request/grant, classification, action/attempt/receipt, and independent verification construction;
+- portability tests proving LF/CRLF/pretty JSON produce identical typed value, JCS, and ActionDigest;
+- compile-time production-source scan proving the trusted core does not inspect OS/environment/network/process/time-service APIs.
+
+The fixture corpus stores most inner semantic `T` values for human readability; the exhaustive runner wraps them as `Versioned<T>`. Compatibility fixtures that test dispatch are complete envelopes. This distinction is documented in `contracts/ecra-domain-v1/README.md` and must remain consistent with the final canonical contract wording.
+
+The bounded implementation clarifications remain normative for this PR and MUST converge into the primary contract/data model/tasks before ECR-001 closure.
+
+## Next active phase — Phase 10 / T063–T069
+
+Goal: complete cross-cutting security, dependency, documentation, provenance, and zero-I/O architecture evidence without widening ECR-001.
 
 Required work:
 
 ```text
-T058 strict explicit Serde names / unknown-field behavior across public v1 types
-T059 valid/invalid fixture runners covering every committed normative fixture
-T060 canonical byte + ActionDigest expected outputs for normative fixtures
-T061 rustdoc examples for safe construction and type separation
-T062 portability / zero-environment-behavior tests
+T063 dependency-boundary automation and prohibited-category proof
+T064 zero-unsafe lint + explicit static/CI evidence
+T065 complete structured ErrorCode/ErrorCategory matrix without display-string parsing
+T066 audit/document/test every free-form field as non-authoritative
+T067 update donor/license ledger for exact locked dependencies and no-source-copy provenance
+T068 crate README architecture/type-to-requirement map + seven misuse warnings
+T069 exact-head offline/no-service-access evidence
 ```
 
-Phase 9 must preserve the zero-I/O production boundary. Any fixture discovery mechanism must not introduce runtime service, network, clock, environment, or external-process dependencies into `ecra-core`.
+Existing branch evidence already includes `scripts/check-core-deps.sh`, the CI dependency gate, `#![forbid(unsafe_code)]`, and an offline replay gate. Phase 10 must verify these satisfy the canonical task wording, strengthen only proven gaps, and record exact evidence rather than duplicating controls.
 
 ## Per-batch verification gate
 
