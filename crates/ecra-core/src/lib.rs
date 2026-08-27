@@ -9,12 +9,15 @@
 //! downstream slices.
 
 pub mod actor;
+pub mod artifact;
 pub mod canonical;
 pub mod capability;
 pub mod digest;
 pub mod error;
+pub mod evidence;
 pub mod id;
 pub mod identity;
+pub mod information;
 pub mod origin;
 pub mod resource;
 pub mod scope;
@@ -22,12 +25,20 @@ pub mod time;
 pub mod version;
 
 pub use actor::{Actor, ActorKind};
+pub use artifact::{ArtifactKind, ArtifactRef, LineageRef};
 pub use canonical::to_jcs_vec;
 pub use capability::{CapabilityGrant, CapabilityRequest, DelegationRef, OperationRef};
 pub use digest::{ContentDigest, SecurityDigest, SecurityDigestAlgorithm};
 pub use error::{DomainError, ErrorCategory, ErrorCode};
+pub use evidence::{
+    DisputeState, EvidenceKind, EvidenceRef, Fact, FactAssessment, FactValue, FreshnessAssessment,
+    FreshnessBasisKind, FreshnessState, Observation, ObservationPayloadRef, Provenance,
+};
 pub use id::*;
 pub use identity::{IdentityAssertionRef, PrincipalRef};
+pub use information::{
+    InformationClass, InformationClassification, InformationPolicyTag, InformationRef,
+};
 pub use origin::{Origin, WebOrigin};
 pub use resource::{ResourceKind, ResourceRef};
 pub use scope::{PurposeRef, Scope, ScopeConstraint};

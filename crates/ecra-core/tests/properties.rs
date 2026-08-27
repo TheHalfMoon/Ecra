@@ -2,7 +2,8 @@ use std::any::TypeId;
 
 use ecra_core::{
     ActorId, DomainError, EpochMillis, ErrorCode, I_JSON_MAX_SAFE_INTEGER, I_JSON_MIN_SAFE_INTEGER,
-    PrincipalId, SchemaVersion, SecurityDigest, TemporalValidity, Versioned,
+    InformationClass, InformationClassification, PrincipalId, SchemaVersion, SecurityDigest,
+    TemporalValidity, Versioned,
 };
 use proptest::prelude::*;
 use uuid::Uuid;
@@ -74,6 +75,22 @@ proptest! {
         let json = serde_json::to_string(&time).expect("serialize");
         let decoded: EpochMillis = serde_json::from_str(&json).expect("deserialize");
         prop_assert_eq!(decoded, time);
+    }
+
+    #[test]
+    fn information_classification_round_trip_never_changes_class(index in 0u8..5) {
+        let class = match index {
+            0 => InformationClass::Public,
+            1 => InformationClass::Private,
+            2 => InformationClass::Sensitive,
+            3 => InformationClass::Secret,
+            _ => InformationClass::Unknown,
+        };
+        let classification = InformationClassification::new(class, Vec::new());
+        let json = serde_json::to_string(&classification).expect("serialize classification");
+        let decoded: InformationClassification =
+            serde_json::from_str(&json).expect("deserialize classification");
+        prop_assert_eq!(decoded.class(), class);
     }
 }
 

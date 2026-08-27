@@ -1,7 +1,7 @@
 # ECR-001 Implementation Clarifications
 
 **Status:** NORMATIVE_FOR_ECR_001_V1  
-**Reason:** implementation review found named value objects whose wire shapes were not fully expanded in `data-model.md`. These clarifications narrow the contract; they do not widen ECR-001 scope or add runtime behavior. They MUST be folded into the primary contract/data-model during final convergence before `CLOSED_CANONICAL`.
+**Reason:** implementation review found named value objects whose wire shapes were not fully expanded in `data-model.md`, plus one task-order dependency mismatch. These clarifications narrow the contract; they do not widen ECR-001 scope or add runtime behavior. They MUST be folded into the primary contract/data-model/tasks during final convergence before `CLOSED_CANONICAL`.
 
 ## C1 — ObservationPayloadRef
 
@@ -31,7 +31,7 @@ FactValue
 - artifact(ArtifactId)
 ```
 
-Canonical decimal strings use optional leading `-`, one or more decimal digits, optional `.` followed by one or more digits, no exponent, no leading `+`, and no redundant leading zero except `0` / `0.x`. `-0` and negative zero spellings are rejected. Rich structured values belong to a later version rather than silently embedding unconstrained JSON in the trusted v1 contract.
+Canonical decimal strings use optional leading `-`, one or more decimal digits, optional `.` followed by one or more digits, no exponent, no leading `+`, and no redundant leading zero except `0` / `0.x`. `-0` and negative-zero spellings are rejected. Rich structured values belong to a later version rather than silently embedding unconstrained JSON in the trusted v1 contract.
 
 ## C3 — LineageRef
 
@@ -44,7 +44,7 @@ LineageRef
 - artifact(ArtifactId)
 ```
 
-ECR-001 MUST reject empty/self-contradictory provider text as lineage authority. Cycles and graph policy are downstream concerns.
+Provider text is never lineage authority. Cycles and graph policy are downstream concerns.
 
 ## C4 — EvidenceRef validation
 
@@ -61,3 +61,7 @@ ECR-001 MUST reject empty/self-contradictory provider text as lineage authority.
 ## C7 — Free-form metadata
 
 Optional `media_type`, `logical_name`, `storage_locator`, predicates, tag namespace/name and external references MUST be non-empty when present/required. They remain non-authoritative metadata and MUST NOT be parsed into capabilities.
+
+## C8 — InformationRef task ordering
+
+`Fact.derived_from` normatively depends on `InformationRef`, so the base reference type is introduced with Phase 5 evidence/fact work rather than waiting for Phase 6. Phase 6/T039 remains responsible for `InformationUseKind`, `InformationUse`, source-to-sink declarations and their tests. This is a dependency-order correction only.
