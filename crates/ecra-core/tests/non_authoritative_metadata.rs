@@ -57,7 +57,10 @@ fn resource_and_artifact_locators_do_not_replace_stable_identity() {
         .expect("artifact locator");
 
     assert_eq!(first_artifact.id(), second_artifact.id());
-    assert_eq!(first_artifact.classification(), second_artifact.classification());
+    assert_eq!(
+        first_artifact.classification(),
+        second_artifact.classification()
+    );
 }
 
 #[test]
@@ -106,8 +109,7 @@ fn receipt_diagnostics_and_external_reference_do_not_create_verification() {
 #[test]
 fn verification_notes_do_not_change_verification_target_or_outcome() {
     let base = VerificationReceipt::new(
-        VerificationId::parse_str("00000000-0000-0000-0000-000000000060")
-            .expect("verification id"),
+        VerificationId::parse_str("00000000-0000-0000-0000-000000000060").expect("verification id"),
         parse_actor_id("00000000-0000-0000-0000-000000000001"),
         VerificationTarget::Receipt(
             ecra_core::ReceiptId::parse_str("00000000-0000-0000-0000-000000000061")
