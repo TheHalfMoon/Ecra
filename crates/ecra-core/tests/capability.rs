@@ -1,6 +1,4 @@
-use ecra_core::{
-    CapabilityGrant, CapabilityRequest, EpochMillis, EvaluationContext, OperationRef,
-};
+use ecra_core::{CapabilityGrant, CapabilityRequest, EpochMillis, EvaluationContext, OperationRef};
 
 #[test]
 fn operation_ref_rejects_empty_components() {

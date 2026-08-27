@@ -170,7 +170,8 @@ impl CapabilityRequest {
 
     #[must_use]
     pub fn is_temporally_valid_at(&self, context: EvaluationContext) -> bool {
-        self.temporal.is_none_or(|validity| validity.contains(context))
+        self.temporal
+            .is_none_or(|validity| validity.contains(context))
     }
 }
 
@@ -304,7 +305,8 @@ impl CapabilityGrant {
 
     #[must_use]
     pub fn is_temporally_valid_at(&self, context: EvaluationContext) -> bool {
-        self.temporal.is_none_or(|validity| validity.contains(context))
+        self.temporal
+            .is_none_or(|validity| validity.contains(context))
     }
 }
 
