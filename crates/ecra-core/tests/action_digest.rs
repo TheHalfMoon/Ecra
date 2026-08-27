@@ -31,9 +31,7 @@ fn golden_action_digest_matches_domain_separated_contract() {
     let canonical = to_jcs_vec(&Versioned::v1(&intent)).expect("canonical action intent");
     assert_eq!(
         canonical.as_slice(),
-        include_bytes!(
-            "../../../contracts/ecra-domain-v1/expected/action-digest-golden.v1.jcs"
-        )
+        include_bytes!("../../../contracts/ecra-domain-v1/expected/action-digest-golden.v1.jcs")
     );
     let mut bytes = Vec::with_capacity(ACTION_INTENT_V1_DOMAIN.len() + canonical.len());
     bytes.extend_from_slice(ACTION_INTENT_V1_DOMAIN);
