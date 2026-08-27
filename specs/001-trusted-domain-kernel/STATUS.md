@@ -4,7 +4,7 @@
 **Lifecycle:** IMPLEMENTING  
 **Branch:** `001-trusted-domain-kernel`  
 **PR:** `#1` (draft until full slice closure)  
-**Latest fully verified implementation head:** `ea17736310f661149026153a90a202e36396ba45`
+**Latest fully verified implementation head:** `0b273f41f853f61e3dd691d4dcd5c2149c28f166`
 
 This file is the execution ledger for ECR-001. It summarizes progress; normative semantics remain in `spec.md`, `data-model.md`, `contracts/`, and approved implementation clarifications.
 
@@ -18,8 +18,9 @@ Phase 4  VERIFIED_ON_BRANCH
 Phase 5  VERIFIED_ON_BRANCH
 Phase 6  VERIFIED_ON_BRANCH
 Phase 7  VERIFIED_ON_BRANCH
-Phase 8  NEXT_ACTIVE_PHASE
-Phase 9+ BLOCKED_BY_ORDERING
+Phase 8  VERIFIED_ON_BRANCH
+Phase 9  NEXT_ACTIVE_PHASE
+Phase 10+ BLOCKED_BY_ORDERING
 ```
 
 `VERIFIED_ON_BRANCH` is not `CLOSED_CANONICAL`.
@@ -38,18 +39,6 @@ Established declaration-only source-to-sink information use semantics. `Informat
 Verified head: `ea17736310f661149026153a90a202e36396ba45`  
 CI run: `33078470973` — `success`
 
-All exact-head gates passed:
-
-```text
-cargo build --workspace --locked                                      PASS
-cargo fmt --all --check                                               PASS
-cargo clippy --workspace --all-targets --all-features --locked -- -D warnings  PASS
-cargo test --workspace --locked                                       PASS
-cargo test --doc --workspace --locked                                 PASS
-cargo test --workspace --locked --offline                             PASS
-bash scripts/check-core-deps.sh                                       PASS
-```
-
 Established:
 
 - `MutationDomain`, `Reversibility`, `EffectProfile`;
@@ -64,38 +53,61 @@ Established:
 - fixed ActionDigest golden/mutation tests;
 - wrong-digest ActionRef rejection.
 
-Normative ActionDigest v1 remains:
-
-```text
-SHA-256(
-  UTF8("ecra/action-intent/v1\0")
-  || JCS(Versioned<ActionIntent>)
-)
-```
-
 The verified golden digest for the committed Phase 7 golden fixture is:
 
 ```text
 6ccf10a5d1db36cb9637b4ed2ee6d3f0167c44eec585b543f58d86287710e3d4
 ```
 
-## Next active phase — Phase 8 / T052–T057
+### Phase 8 — T052–T057
 
-Goal: keep proposed intent, execution attempt, executor observation, and independent verification structurally distinct.
+Verified head: `0b273f41f853f61e3dd691d4dcd5c2149c28f166`  
+CI run: `33080355344` — `success`
+
+All exact-head gates passed:
+
+```text
+cargo build --workspace --locked                                      PASS
+cargo fmt --all --check                                               PASS
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings  PASS
+cargo test --workspace --locked                                       PASS
+cargo test --doc --workspace --locked                                 PASS
+cargo test --workspace --locked --offline                             PASS
+bash scripts/check-core-deps.sh                                       PASS
+```
+
+Established:
+
+- `ActionAttemptRef` with distinct `ActionAttemptId` and exact `ActionRef` binding;
+- `ActionReceipt` with executor-only `ActionOutcome` and fail-closed timing validation;
+- bounded `ErrorSummary` diagnostic metadata;
+- independent `VerificationReceipt`, `VerificationTarget`, `VerificationMethod`, and `VerificationOutcome`;
+- bounded `ClaimRef` target shape;
+- fail-closed evidence cardinality: verified/rejected/inconclusive require evidence, `not_evaluated` may have none;
+- two distinct attempts for one immutable action fixture;
+- UNKNOWN, executor-observed-success, and executor-observed-failure receipt fixtures;
+- all four verification-outcome fixtures;
+- invalid wrong-binding, timing, receipt→verification type-confusion, missing target/verifier/evidence, and empty-evidence verification coverage;
+- round-trip proof that UNKNOWN remains UNKNOWN;
+- explicit proof that `executor_observed_success != verified`.
+
+The bounded C11 clarification remains normative for this PR and MUST converge into the primary contract/data model/tasks before ECR-001 closure.
+
+## Next active phase — Phase 9 / T058–T062
+
+Goal: make the entire v1 contract strict, deterministic, portable, and fixture-complete as one API rather than a collection of individually tested types.
 
 Required work:
 
 ```text
-T052 ActionAttemptRef = distinct ActionAttemptId + exact ActionRef
-T053 ActionReceipt / ActionOutcome + timing/reference validation
-T054 VerificationReceipt / VerificationTarget / VerificationMethod / VerificationOutcome
-T055 valid two-attempt, receipt, and verification fixtures
-T056 invalid action-attempt binding, timing, type-confusion, and verification fixtures
-T057 tests proving attempt identity, exact receipt binding, UNKNOWN round-trip,
-     receipt != verification, and executor success != VERIFIED
+T058 strict explicit Serde names / unknown-field behavior across public v1 types
+T059 valid/invalid fixture runners covering every committed normative fixture
+T060 canonical byte + ActionDigest expected outputs for normative fixtures
+T061 rustdoc examples for safe construction and type separation
+T062 portability / zero-environment-behavior tests
 ```
 
-A Phase 8 pre-code contract gap was found for the named but previously unexpanded `ClaimRef` and `ErrorSummary` value objects and verification evidence cardinality. The bounded resolution is recorded in `implementation-clarifications.md` and MUST be folded into the primary canonical documents before ECR-001 closure.
+Phase 9 must preserve the zero-I/O production boundary. Any fixture discovery mechanism must not introduce runtime service, network, clock, environment, or external-process dependencies into `ecra-core`.
 
 ## Per-batch verification gate
 
