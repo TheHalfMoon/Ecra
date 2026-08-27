@@ -16,7 +16,9 @@ pub enum WebOrigin {
         host: String,
         port: Option<u16>,
     },
-    Opaque { id: OpaqueOriginId },
+    Opaque {
+        id: OpaqueOriginId,
+    },
 }
 
 impl WebOrigin {
@@ -56,8 +58,8 @@ impl WebOrigin {
     }
 
     pub fn from_url_str(value: &str) -> Result<Self, DomainError> {
-        let parsed = Url::parse(value)
-            .map_err(|error| DomainError::InvalidOrigin(error.to_string()))?;
+        let parsed =
+            Url::parse(value).map_err(|error| DomainError::InvalidOrigin(error.to_string()))?;
         let host = parsed
             .host_str()
             .ok_or_else(|| DomainError::InvalidOrigin("URL has no tuple origin host".to_owned()))?;
@@ -102,7 +104,9 @@ enum WebOriginWire {
         host: String,
         port: Option<u16>,
     },
-    Opaque { id: OpaqueOriginId },
+    Opaque {
+        id: OpaqueOriginId,
+    },
 }
 
 impl<'de> Deserialize<'de> for WebOrigin {
