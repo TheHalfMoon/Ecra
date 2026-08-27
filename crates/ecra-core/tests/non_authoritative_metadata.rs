@@ -40,7 +40,8 @@ fn capability_request_reason_cannot_change_requested_authority_shape() {
     assert_eq!(request.temporal(), decorated.temporal());
 
     let mut base_value = serde_json::to_value(&request).expect("serialize request");
-    let mut decorated_value = serde_json::to_value(&decorated).expect("serialize decorated request");
+    let mut decorated_value =
+        serde_json::to_value(&decorated).expect("serialize decorated request");
     base_value
         .as_object_mut()
         .expect("request object")
