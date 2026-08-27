@@ -6,6 +6,16 @@ use crate::{IdentityAssertionId, PrincipalId};
 ///
 /// The reference does not prove authentication. ECR-031 owns validation of
 /// identity assertions, trust roots, revocation and on-behalf-of relationships.
+///
+/// Actor attribution and authenticated principal identity are intentionally
+/// different Rust types:
+///
+/// ```compile_fail
+/// use ecra_core::{ActorId, PrincipalId};
+///
+/// let actor = ActorId::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+/// let _principal: PrincipalId = actor;
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PrincipalRef {
