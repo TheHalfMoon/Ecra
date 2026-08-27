@@ -90,7 +90,12 @@ impl InformationClassification {
 
 /// Stable reference to information used for lineage and later source-to-sink policy.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(tag = "kind", content = "id", rename_all = "snake_case")]
+#[serde(
+    tag = "kind",
+    content = "id",
+    rename_all = "snake_case",
+    deny_unknown_fields
+)]
 pub enum InformationRef {
     Observation(ObservationId),
     Fact(FactId),

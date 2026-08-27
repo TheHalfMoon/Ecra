@@ -126,31 +126,34 @@ The selected invariants in `data-model.md` are made executable as the following 
 
 Reversibility never upgrades retry safety: an irreversible action may still be naturally idempotent (for example a delete-like operation), while a reversible action may still be non-idempotent. These axes remain independent.
 
-## C11 — Phase 8 receipt / verification reference shapes
+## C11 — Phase 8 receipt/verification bounded values
 
-Phase 8 names two supporting value objects whose wire shapes were not expanded by the primary data model: `ClaimRef` and `ErrorSummary`. ECR-001 v1 uses deliberately small opaque structures rather than arbitrary JSON.
+The contract names `ClaimRef` and `ErrorSummary` but does not otherwise expand their v1 wire fields. ECR-001 v1 uses the smallest deterministic shapes necessary for Phase 8:
 
 ```text
 ClaimRef
 - namespace: non-empty string
 - reference: non-empty string
-```
 
-`ClaimRef` identifies a verification target only. `namespace` and `reference` are opaque structured metadata; neither grants authority, establishes truth, or embeds provider policy syntax.
-
-```text
 ErrorSummary
 - code: non-empty string
 - message?: non-empty string
 ```
 
-`ErrorSummary` is executor-observed diagnostic metadata on an `ActionReceipt`. Its code/message do not imply independent verification, authorization, retry safety, or a canonical Ecra `DomainError`. The runtime may map provider/executor errors into this bounded form without making provider text authoritative.
+Both are opaque structured metadata. Neither is policy syntax, executable content, a capability, or evidence of verification merely by existing.
+
+`ActionReceipt` validates `completed_at >= started_at` when both timestamps are present. The receipt remains executor-known evidence only; `executor_observed_success` is never `verified`.
 
 Verification evidence cardinality is fail-closed:
 
-- `verified`, `rejected`, and `inconclusive` MUST contain at least one `EvidenceRef`;
-- `not_evaluated` MAY contain an empty evidence list because no evaluation may have occurred;
-- evidence presence never upgrades `not_evaluated` into another outcome;
-- ECR-004, not ECR-001, decides evidentiary sufficiency or whether a particular evidence class is decision-grade.
+- `verified`, `rejected`, and `inconclusive` require at least one `EvidenceRef`;
+- `not_evaluated` may carry an empty evidence list because no evaluation has occurred;
+- ECR-004 later owns evidence sufficiency and independence policy.
 
-Receipt timing remains structural only: when both `started_at` and `completed_at` are present, `completed_at >= started_at`. `UNKNOWN` is a first-class ActionOutcome and MUST NOT be normalized or retried by ECR-001.
+## C12 — Fixture storage and versioned wire envelopes
+
+The public persisted/wire contract remains unchanged: normative v1 wire values use `Versioned<T>` with an explicit `{ major: 1, minor: 0 }` schema envelope.
+
+For the repository fixture corpus only, semantic files under `contracts/ecra-domain-v1/{valid,invalid}/` MAY store the inner `T` body rather than duplicating the same envelope in every file. The Phase 9 runner MUST pair every such body with its declared target type and v1 schema, construct/round-trip the corresponding `Versioned<T>` wire value, and separately exercise full-envelope compatibility fixtures for unsupported versions and unknown strict fields.
+
+This is a fixture-storage convention, not a wire exception. Adapters, persistence, external interchange, and canonical security inputs MUST NOT omit the version envelope where the v1 contract requires it.

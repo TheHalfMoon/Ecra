@@ -126,7 +126,12 @@ impl<'de> Deserialize<'de> for WebOrigin {
 ///
 /// Origin is never instruction authority or a capability grant.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(tag = "kind", content = "detail", rename_all = "snake_case")]
+#[serde(
+    tag = "kind",
+    content = "detail",
+    rename_all = "snake_case",
+    deny_unknown_fields
+)]
 pub enum Origin {
     UserInput,
     Web(WebOrigin),

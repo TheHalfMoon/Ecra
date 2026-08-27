@@ -6,7 +6,12 @@ use crate::{
 
 /// Stable lineage relation for an artifact. Locators and labels are not lineage identity.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(tag = "kind", content = "id", rename_all = "snake_case")]
+#[serde(
+    tag = "kind",
+    content = "id",
+    rename_all = "snake_case",
+    deny_unknown_fields
+)]
 pub enum LineageRef {
     Observation(ObservationId),
     Fact(FactId),
