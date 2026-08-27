@@ -3,74 +3,78 @@
 **Feature:** ECR-001  
 **Branch (when implementation starts):** `001-trusted-domain-kernel`  
 **Date:** 2026-08-27  
-**Spec:** `specs/001-trusted-domain-kernel/spec.md`
+**Replanned:** 2026-08-27  
+**Spec:** `specs/001-trusted-domain-kernel/spec.md`  
+**Contract:** `specs/001-trusted-domain-kernel/contracts/domain-v1.md`
 
 ## Summary
 
-Implement Ecra's first trusted-core contract as a single zero-I/O Rust crate (`ecra-core`). The slice provides versioned, strongly typed, serializable domain objects for actors, origins, capabilities, observations/facts/evidence, artifacts, action intents, action receipts, and verification receipts, together with strict validation and RFC 8785 canonical JSON contract fixtures.
+Implement Ecra's first trusted-core contract as one zero-I/O Rust crate, `ecra-core`.
 
-No runtime orchestration, storage, browser integration, policy engine, model provider, protocol adapter, or networking is part of this slice.
+The revised contract provides versioned, strongly typed value objects for:
+
+- actor attribution vs principal/identity-assertion references;
+- origins, resource identity and explicit security scope algebra;
+- capability request/grant representation;
+- information classification and source-to-sink use declarations;
+- observations, facts, freshness, evidence and artifacts;
+- action intent, immutable ActionDigest/ActionRef and ActionAttempt identity;
+- orthogonal mutation/reversibility/idempotency/retry semantics;
+- executor ActionReceipt vs independent VerificationReceipt;
+- deterministic canonicalization and structured errors.
+
+No authentication, authorization, persistence, browser/model/tool execution, policy engine, networking, secret access, or verification orchestration is in this slice.
 
 ## Technical Context
 
 **Language/Version:** Rust 1.98.x, Edition 2024, stable  
-**Primary Dependencies:** `serde`, `serde_json`, `thiserror`, `uuid`, `url`, RFC 8785 implementation candidate (`serde_jcs`)  
-**Dev Dependencies:** contract/property-test tooling such as `proptest` if implementation proves useful  
-**Storage:** N/A — zero-I/O domain kernel  
-**Testing:** `cargo test`, contract fixtures, property tests, rustdoc tests, strict Clippy, format check  
-**Target Platforms:** Linux x86_64, macOS arm64/x86_64 where CI capacity exists, Windows x86_64; domain semantics must be platform-independent  
-**Project Type:** Rust workspace/library  
-**Performance Goals:** validation/canonicalization are deterministic and allocation-conscious; no hot-path benchmark claim in ECR-001. Contract fixture validation should be effectively instantaneous relative to later I/O workloads.  
-**Constraints:** no network, filesystem, database, browser, process, model, telemetry, or async-runtime dependency in `ecra-core`; no `unsafe`; deterministic canonical fixtures; strict unsupported-version behavior  
-**Scale/Scope:** ~30–40 domain types/value objects, one production crate, normative v1 fixture corpus
+**Runtime dependency candidates:** `serde`, `serde_json`, `thiserror`, `uuid`, `url`, reviewed RFC-8785/JCS implementation, reviewed SHA-256 implementation such as `sha2`  
+**Dev candidates:** `proptest` where useful  
+**Storage:** none  
+**I/O:** none  
+**Unsafe:** forbidden  
+**Testing:** unit + normative valid/invalid fixtures + canonicalization/action-digest fixtures + property/type-confusion tests + rustdoc + dependency-boundary gates  
+**Platforms:** platform-independent semantics on Linux/macOS/Windows CI where available  
+**Scale:** one production crate; roughly 50–70 small domain/value/reference types; no service abstractions
 
-## Constitution Check
+## Constitution v1.1.0 Check
 
-### Pre-implementation gate
-
-| Gate | Result | Evidence / plan response |
+| Gate | Result | Plan response |
 |---|---|---|
-| G1 Domain coherence | PASS | Slice exists specifically to create the single canonical domain representation. |
-| G2 Authority | PASS | Request and grant are distinct; no authorization implementation or ambient authority exists. |
-| G3 Provenance | PASS | Observation/Fact/Provenance/Trust/Freshness/Evidence are explicit and orthogonal. |
-| G4 Side effects | PASS | Action side effect/idempotency/retry classes and UNKNOWN outcome are normative. |
-| G5 Verification | PASS | ActionReceipt and VerificationReceipt are distinct types; self-report cannot equal verification by type. |
-| G6 Durability | PASS-N/A | Persistent runs are ECR-002; ECR-001 types are serialization-ready and deterministic. |
-| G7 Privacy/secrets | PASS | No secret values or secret store; payloads/metadata do not create secret-handling behavior. |
-| G8 Local-first | PASS | Entire slice is local library code with no cloud dependency. |
-| G9 Interoperability | PASS | JSON contract is provider-neutral; no external protocol owns internal types. |
-| G10 Donor/license | PASS | Research distinguishes inspiration from source reuse; runtime dependencies require license ledger entry before merge. |
-| G11 Upstream/browser maintenance | PASS-N/A | No browser patch/integration in this slice. |
-| G12 Benchmarks | PASS | Only contract/correctness claims; no performance/security superlative. |
+| G1 Domain coherence | PASS | Revised v1 is the single canonical value-object model. |
+| G2 Authority | PASS | Actor/Principal separation, explicit ScopeConstraint algebra, Request/Grant separation; no policy implementation. |
+| G3 Provenance | PASS | Observation/Fact/Provenance/Evidence/Freshness remain explicit; verification not stored as Fact truth flag. |
+| G4 Side effects | PASS | MutationDomain/Reversibility/Idempotency/Retry are orthogonal; ActionAttempt identity exists; UNKNOWN preserved. |
+| G5 Verification | PASS | VerificationReceipt is the only verification outcome record; executor outcomes use `executor_observed_*`. |
+| G6 Durability | PASS-N/A | Persistence/lifecycle is ECR-002; types are serialization/digest ready. |
+| G7 Privacy/secrets | PASS | InformationClassification/Use can represent sensitive flows; no secret values/store. |
+| G8 Local-first | PASS | Entire feature runs offline after dependencies are available. |
+| G9 Interoperability | PASS | No protocol SDK/type owns the domain model. |
+| G10 Donor/license | PASS-CONDITIONAL | Each exact dependency/version/license must be recorded before implementation merge. |
+| G11 Browser maintenance | PASS-N/A | No browser dependency/patch. |
+| G12 Benchmarks | PASS | Only deterministic contract/correctness claims. |
+| G13 Information flow / egress | PASS | Classification + InformationUse represent source-to-sink intent; enforcement explicitly ECR-003. |
+| G14 Identity / principal binding | PASS | Actor/Principal/IdentityAssertion references are separate; authentication explicitly ECR-031. |
+| G15 Bounded execution | PASS-N/A | No recursive/tool/process/model execution exists in ECR-001. |
 
-**Gate decision:** implementation may proceed once tasks are approved/generated. No constitutional violation requires Complexity Tracking.
+**Gate decision:** no constitutional blocker remains in the revised ECR-001 plan. Implementation is still forbidden until revised `tasks.md`, checklist and analyze report are complete.
 
-## Phase 0 Research Decisions
+## Research Decisions Incorporated
 
-Complete in `research.md`:
+See `research.md`. Most important pre-code corrections:
 
-- Rust 1.98.x / Edition 2024;
-- one `ecra-core` crate;
-- JSON + Serde normative v1 representation;
-- RFC 8785 JCS canonicalization;
-- UUID newtype identifiers;
-- caller-supplied time model;
-- structured web-origin wrapper;
-- capability data independent of Cedar/protocols;
-- explicit side-effect/idempotency/retry semantics;
-- receipt and verification separation;
-- provenance and verification as orthogonal dimensions;
-- artifact references rather than artifact bytes;
-- typed errors;
-- mandatory unit/contract/property tests;
-- small dependency budget.
-
-## Phase 1 Design Artifacts
-
-- `data-model.md` — conceptual entities/invariants.
-- `contracts/domain-v1.md` — normative externally observable contract.
-- `quickstart.md` — implementation/verification path for contributors.
-- contract fixtures under root `contracts/ecra-domain-v1/` during implementation.
+1. Actor != authenticated Principal.
+2. `ScopeConstraint<T>` makes wildcard semantics explicit.
+3. ResourceId is distinct from locator text.
+4. CapabilityRequestId != CapabilityGrantId.
+5. InformationClass/InformationUse enable later source-to-sink authorization.
+6. Fact contains no canonical `verified` flag.
+7. Freshness has a temporal assessment basis.
+8. EffectProfile separates MutationDomain from Reversibility.
+9. ActionRef binds ActionId + SHA-256 ActionDigest over domain-separated canonical ActionIntent.
+10. ActionAttemptId separates intent from retry attempts.
+11. ActionReceipt uses executor-observed outcomes; VerificationReceipt alone owns verification outcome.
+12. ContentDigest metadata is distinct from security-binding digest semantics.
 
 ## Project Structure
 
@@ -82,173 +86,234 @@ Complete in `research.md`:
 ├── crates/
 │   └── ecra-core/
 │       ├── Cargo.toml
+│       ├── README.md
 │       ├── src/
 │       │   ├── lib.rs
+│       │   ├── id.rs
+│       │   ├── version.rs
+│       │   ├── time.rs
 │       │   ├── actor.rs
+│       │   ├── identity.rs
 │       │   ├── origin.rs
 │       │   ├── resource.rs
-│       │   ├── time.rs
+│       │   ├── scope.rs
 │       │   ├── capability.rs
+│       │   ├── information.rs
 │       │   ├── evidence.rs
 │       │   ├── artifact.rs
 │       │   ├── action.rs
+│       │   ├── digest.rs
 │       │   ├── receipt.rs
 │       │   ├── verification.rs
-│       │   ├── version.rs
 │       │   ├── canonical.rs
 │       │   └── error.rs
 │       └── tests/
 │           ├── contract_fixtures.rs
 │           ├── invalid_fixtures.rs
 │           ├── canonicalization.rs
+│           ├── action_digest.rs
 │           └── properties.rs
 ├── contracts/
 │   └── ecra-domain-v1/
 │       ├── README.md
 │       ├── valid/
 │       └── invalid/
-└── specs/
-    └── 001-trusted-domain-kernel/
+└── specs/001-trusted-domain-kernel/
 ```
 
-### Structure Decision
+The module split is for reviewability, not separate services/crates.
 
-Use a Cargo workspace immediately, but only one production crate for ECR-001. This makes later crate separation possible without creating speculative packages now. Normative JSON fixtures live outside the crate so future language/protocol/storage implementations can reuse the same corpus.
+## Implementation Order
 
-## Implementation Design
-
-### 1. Base value objects
-
-Implement in dependency order:
+### 1. Contract substrate
 
 ```text
-SchemaVersion / errors
+SchemaVersion / Versioned<T> / errors
 → typed IDs
-→ EpochMillis / evaluation context
-→ Actor
-→ WebOrigin / Origin
-→ ResourceRef / Scope
+→ EpochMillis / temporal values
+→ canonicalization wrapper
+→ security digest wrapper
 ```
 
-All constructors perform structural validation. Deserialization must route through validated representations rather than permit invalid internal state.
+No security-sensitive type accepts invalid internal state through public constructors/deserialization.
 
-### 2. Capabilities
-
-Implement distinct request/grant structs and structured scope metadata. ECR-001 validates shape/time ranges only; it does not decide whether a grant authorizes a request.
-
-Avoid convenience APIs that accidentally grant authority, such as `From<CapabilityRequest> for CapabilityGrant`.
-
-### 3. Evidence domain
-
-Implement Observation, Fact, Provenance, TrustState, Freshness, EvidenceRef and ArtifactRef. Preserve lineage and evidence references without embedding large data.
-
-### 4. Action semantics
-
-Implement ActionIntent and semantic classes with cross-field validation:
+### 2. Attribution, identity references and scope
 
 ```text
-side effect × idempotency × retry
+Actor
+PrincipalRef / IdentityAssertionRef
+Origin / WebOrigin
+ResourceRef
+ScopeConstraint<T> / Scope
 ```
 
-Invalid permissive combinations fail at construction/deserialization.
+Key tests:
+- Actor and Principal IDs non-interchangeable;
+- `one_of([])` invalid;
+- missing/empty never means ANY;
+- `any_explicit` visible in canonical JSON;
+- locator/free-form strings remain non-authoritative.
 
-### 5. Receipts and verification
+### 3. Capabilities
 
-ActionReceipt records executor-known outcome. VerificationReceipt records independent evaluation. No blanket conversion exists between them.
+Implement distinct request/grant types and IDs, OperationRef, TemporalValidity and delegation references.
 
-### 6. Serialization and canonicalization
+No `From<CapabilityRequest> for CapabilityGrant`, no Actor→Principal authentication shortcut, no subset/authorization evaluator.
 
-Each normative top-level fixture uses a version envelope. Contract parser rejects unsupported versions and undocumented fields.
+### 4. Information/evidence/artifacts
 
-RFC 8785 canonicalization is exposed through a narrow Ecra-owned function so the chosen crate can be replaced without changing callers.
+Implement InformationClassification/InformationUse references, Observation, Fact, Provenance, FreshnessAssessment, DisputeState, EvidenceRef and ArtifactRef.
 
-### 7. Errors
+Do **not** add `Fact.verified`. Verification lookup/aggregation is downstream.
 
-Expose structured error categories/variants. Tests match variants/codes, not display strings.
+### 5. Action semantics
+
+Implement ActionIntent, InformationUse, EffectProfile, idempotency/retry matrix and exact canonical ActionDigest.
+
+The ActionDigest test corpus is security-sensitive API contract. Any field later declared security-relevant must be part of the canonical digest domain or require a versioned contract migration.
+
+### 6. Attempt/receipt/verification
+
+Implement ActionAttemptRef, ActionReceipt and VerificationReceipt.
+
+Receipts bind ActionRef + ActionAttemptId. Verification target can bind exact ActionRef/attempt/receipt/fact/artifact/claim.
+
+### 7. Full strict versioned fixture layer
+
+Run every valid/invalid fixture through:
+
+```text
+parse → structural validation → serialize → parse → semantic equality
+```
+
+Canonical/digest fixtures additionally assert exact bytes/hex.
+
+## ActionDigest Design
+
+Normative input:
+
+```text
+UTF8("ecra/action-intent/v1\0")
+|| RFC8785_JCS(Versioned<ActionIntent>)
+```
+
+Normative v1 algorithm: SHA-256.
+
+The implementation MUST have a single Ecra-owned function/API for this calculation. Callers must not independently assemble digest bytes.
+
+The digest is a content-binding identity; it is not a signature, authorization decision, MAC, or trust proof.
+
+## Serialization Strategy
+
+- derive/implement Serde with explicit stable names;
+- strict `deny_unknown_fields`-equivalent behavior for normative security-sensitive v1 objects;
+- constructors/`TryFrom` validation for cross-field invariants;
+- do not rely on `Option` to encode wildcard authority;
+- canonical list/set ordering rules must be documented where semantically set-like values affect JCS/digests.
 
 ## Validation Strategy
 
 ### Unit tests
+- every constructor/value invariant;
+- explicit scope algebra;
+- time range;
+- information-use shape;
+- effect/idempotency/retry matrix;
+- receipt timing/action-reference binding.
 
-Each constructor and cross-field invariant.
+### Contract fixtures
 
-### Contract tests
+Every valid fixture parses/validates/round-trips. Every invalid fixture fails with expected code/category.
 
-Load all files under:
+### Canonicalization + digest
 
-```text
-contracts/ecra-domain-v1/valid
-contracts/ecra-domain-v1/invalid
-```
-
-Valid fixtures must parse, validate, serialize and round-trip. Invalid fixtures must fail with the expected category/code documented in fixture metadata or naming convention.
-
-### Canonicalization tests
-
-- byte equality against committed expected JCS fixtures;
+- RFC 8785 edge cases;
 - canonicalization fixed point;
-- cross-field digest input stability where applicable;
-- RFC 8785 edge cases included by the chosen dependency and Ecra-specific wrapper tests.
+- exact ActionDigest expected hex;
+- mutation testing style table: changing actor/principal/operation/target/scope/parameters/information-use/effect/idempotency/retry changes ActionDigest;
+- changing excluded/non-security display metadata only behaves according to the explicit contract (prefer including full ActionIntent except derived digest; any exclusion is documented).
 
-### Property tests
+### Property/type-confusion tests
 
-Focus on:
+- distinct typed IDs;
+- ScopeConstraint normalization/invariants;
+- classification/tag/lineage round-trip;
+- EffectProfile/idempotency/retry combinations;
+- request cannot grant;
+- receipt cannot verify;
+- Actor cannot authenticate as Principal through generic conversion.
 
-- temporal range validation;
-- Action semantic combinations;
-- typed ID separation/round-trip;
-- canonicalize(parse(canonical)) fixed-point behavior within supported values.
+### Architecture/dependency gate
 
-### Architecture/dependency test
-
-CI/automation checks that `ecra-core` does not acquire prohibited dependency categories. This may use a small script/cargo metadata assertion rather than a runtime test.
+Use `cargo metadata`/`cargo tree` plus repository script/check to fail if prohibited dependency categories enter `ecra-core`.
 
 ## Compatibility Policy
 
-Before first public release, ECR-001 defines v1 semantics. Once dependent slices merge:
+Once a dependent slice closes against v1:
 
-- removing/renaming fields or enum values, changing validation meaning, or changing canonical representation is a major contract change unless a migration envelope preserves old behavior;
-- additive changes still require explicit minor-version support and fixtures;
-- no reader silently accepts a schema minor greater than it understands in v1;
-- digest/canonicalization semantics are especially migration-sensitive.
+- changes to field/enums/scope semantics/ActionDigest canonical domain/ID categories/verification ownership are compatibility-sensitive;
+- semantic changes require versioned migration rather than silent parser changes;
+- additive fields still require explicit supported minor version and strict reader behavior;
+- ActionDigest domain changes require a new action contract version/domain separator;
+- persisted/wire adapters must preserve exact v1 meaning.
 
-## Security Considerations
+## Security Review Notes
 
-- No `unsafe` authorized.
-- Strict deserialization for normative security-sensitive types.
-- No text field can become an instruction/authority token by parsing its contents.
-- `storage_locator`, `reason`, `label`, `notes`, and other free-form strings are non-authoritative metadata.
-- Origin parser must reject malformed/ambiguous origin forms rather than normalize unsafe strings ad hoc.
-- Large untrusted payload bytes are out of the core; later storage/parsing layers own resource limits.
+The revised type model directly remedies review findings P-001 through P-012 and P-028–P-030 where they are ECR-001-owned:
 
-## Donor / License Plan
+- data disclosure can be represented independently of read authority;
+- Actor is not Principal;
+- wildcard scope is explicit;
+- exact ActionDigest exists;
+- attempts are unique;
+- verification has one authoritative record path;
+- local vs external mutation is orthogonal to reversibility;
+- scope/resource IDs are strongly typed;
+- Resource locator is non-authoritative;
+- freshness has a basis;
+- ContentDigest is not automatically security authenticity.
 
-Before implementation dependency merge, create/update a donor/license ledger entry for each runtime/dev dependency and any copied/adapted source. ECR-001 authorizes conceptual inspiration only from existing donor research; no direct source-copy approval is implied.
+Authorization leases/TOCTOU, trust-root identity validity, real sensitive persistence, browser permissions, search provider egress enforcement and runtime budgets are downstream owners and MUST NOT be implemented accidentally here.
 
-## Observability
+## Donor / Dependency Plan
 
-No telemetry/exporter in ECR-001. Errors and validation results are structured so later tracing can record category/code without adding tracing into the core.
+Before the implementation PR can merge:
+
+- verify exact versions/licenses/security posture for all runtime/dev dependencies;
+- add canonical donor/license ledger entries;
+- minimize features/default features;
+- record why `sha2`/JCS implementation is used rather than copied donor source;
+- copy no donor source without exact file/commit/notice provenance.
 
 ## Documentation
 
-Public types need rustdoc explaining authority/provenance semantics where misuse could become a security bug. Contract semantics remain canonical in `contracts/domain-v1.md`; rustdoc should link/reference them rather than invent conflicting rules.
+Rustdoc/crate README must explicitly warn:
+- Actor != authenticated Principal;
+- classification != permission;
+- InformationUse != authorization;
+- locator != resource security identity;
+- ActionDigest != signature/approval;
+- ActionReceipt != verification;
+- UNKNOWN remains UNKNOWN.
 
-## Definition of Done for ECR-001
+## Definition of Done
 
-1. All tasks in `tasks.md` complete.
-2. Contract fixture corpus meets `contracts/domain-v1.md` minimums.
-3. `cargo fmt --check` passes.
-4. strict Clippy passes with warnings denied for Ecra-owned code, subject to documented lint exceptions if any.
-5. unit/contract/property/rustdoc tests pass on exact head.
-6. zero prohibited runtime dependency categories.
+1. All revised tasks complete.
+2. Contract minimum valid/invalid fixture classes complete.
+3. `cargo fmt --all --check` PASS.
+4. strict Clippy PASS with documented exceptions only.
+5. unit/contract/property/canonicalization/action-digest/rustdoc tests PASS on exact head.
+6. dependency boundary PASS.
 7. zero `unsafe` in `ecra-core`.
-8. donor/license records current.
-9. no unresolved spec/plan/task traceability gap.
-10. README/spec references reflect actual implemented type names and contract version.
-11. exact implementation state demonstrates SC-001 through SC-015 or records a spec amendment before closure.
+8. offline test PASS after dependency availability.
+9. donor/license ledger current.
+10. FR-001–FR-055 and SC-001–SC-020 traceability complete.
+11. pre-implementation review ECR-001 blockers are marked resolved with evidence.
+12. analyze-equivalent post-implementation review has no critical drift.
+13. exact-head evidence is recorded before `CLOSED_CANONICAL`.
 
 ## Complexity Tracking
 
-No constitutional complexity violation is currently justified or authorized.
+The review added several domain value types, but no second crate, I/O, policy engine, service abstraction or runtime. This complexity is accepted because each new type prevents a concrete security ambiguity found before code: identity confusion, implicit wildcard scope, cross-source data disclosure, action/attempt confusion or verification state duplication.
 
-If implementation requires a second production crate, async runtime, database, network/browser dependency, code generation service, or `unsafe`, the plan MUST be amended before that change lands.
+If implementation requires a second production crate, async runtime, database/network/browser/process/model dependency, code generation service or unsafe code, this plan MUST be amended before that change lands.
