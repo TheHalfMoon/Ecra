@@ -37,7 +37,10 @@ fn observation_fact_and_artifact_keep_security_axes_separate() {
         "../../../contracts/ecra-domain-v1/valid/observation-classified.json"
     ))
     .expect("valid observation");
-    assert_eq!(observation.classification().class(), InformationClass::Sensitive);
+    assert_eq!(
+        observation.classification().class(),
+        InformationClass::Sensitive
+    );
 
     let fact: Fact = serde_json::from_str(include_str!(
         "../../../contracts/ecra-domain-v1/valid/fact-model-inferred.json"
@@ -59,7 +62,10 @@ fn observation_fact_and_artifact_keep_security_axes_separate() {
         "../../../contracts/ecra-domain-v1/valid/artifact-classified.json"
     ))
     .expect("valid artifact");
-    assert_eq!(artifact.classification().class(), InformationClass::Sensitive);
+    assert_eq!(
+        artifact.classification().class(),
+        InformationClass::Sensitive
+    );
     assert_eq!(artifact.byte_size_decimal(), Some("42"));
 }
 
