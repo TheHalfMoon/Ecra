@@ -12,7 +12,8 @@ fn golden_intent() -> ActionIntent {
 }
 
 fn digest_from_json(value: &serde_json::Value) -> String {
-    let intent: ActionIntent = serde_json::from_value(value.clone()).expect("valid action mutation");
+    let intent: ActionIntent =
+        serde_json::from_value(value.clone()).expect("valid action mutation");
     intent.digest().expect("action digest").hex().to_owned()
 }
 
@@ -136,9 +137,8 @@ fn parameter_binding_digest_change_changes_action_digest() {
         }
     });
     let mut second = first.clone();
-    second["parameters"]["binding_digest"]["hex"] = serde_json::json!(
-        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-    );
+    second["parameters"]["binding_digest"]["hex"] =
+        serde_json::json!("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
 
     assert_ne!(digest_from_json(&first), digest_from_json(&second));
 }

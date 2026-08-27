@@ -102,10 +102,7 @@ pub struct IdempotencySpec {
 }
 
 impl IdempotencySpec {
-    pub fn new(
-        class: IdempotencyClass,
-        key_ref: Option<String>,
-    ) -> Result<Self, DomainError> {
+    pub fn new(class: IdempotencyClass, key_ref: Option<String>) -> Result<Self, DomainError> {
         match class {
             IdempotencyClass::NaturallyIdempotent
             | IdempotencyClass::NonIdempotent

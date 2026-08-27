@@ -114,8 +114,7 @@ fn action_with(
         ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
         OperationRef::new("test", "operation").expect("operation"),
         ResourceRef::new(
-            ResourceId::parse_str("00000000-0000-0000-0000-000000000030")
-                .expect("resource id"),
+            ResourceId::parse_str("00000000-0000-0000-0000-000000000030").expect("resource id"),
             ResourceKind::Abstract,
             None,
             None,
@@ -177,8 +176,8 @@ fn phase7_effect_idempotency_retry_matrix_is_fail_closed() {
             };
 
             for class in idempotencies {
-                let key_ref = (class == IdempotencyClass::IdempotentWithKey)
-                    .then(|| "stable-key".to_owned());
+                let key_ref =
+                    (class == IdempotencyClass::IdempotentWithKey).then(|| "stable-key".to_owned());
                 let idempotency =
                     IdempotencySpec::new(class, key_ref).expect("valid idempotency shape");
 

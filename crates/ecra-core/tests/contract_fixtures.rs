@@ -96,9 +96,7 @@ fn phase7_invalid_action_fixtures_fail_closed() {
         include_str!(
             "../../../contracts/ecra-domain-v1/invalid/action-invalid-local-not-applicable.json"
         ),
-        include_str!(
-            "../../../contracts/ecra-domain-v1/invalid/action-invalid-key-missing.json"
-        ),
+        include_str!("../../../contracts/ecra-domain-v1/invalid/action-invalid-key-missing.json"),
         include_str!(
             "../../../contracts/ecra-domain-v1/invalid/action-invalid-non-idempotent-safe.json"
         ),
