@@ -1,8 +1,8 @@
 # Tasks: Trusted Domain Kernel
 
 **Feature:** ECR-001  
-**Input:** revised `spec.md`, `research.md`, `data-model.md`, `contracts/domain-v1.md`, `plan.md`, `quickstart.md`  
-**Status:** PLANNING_REWORK_PENDING_FINAL_ANALYZE
+**Input:** revised `spec.md`, `research.md`, `data-model.md`, `contracts/domain-v1.md`, `plan.md`, `quickstart.md`, `analyze.md`  
+**Status:** TASKS_READY
 
 ## Format
 
