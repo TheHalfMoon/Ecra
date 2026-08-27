@@ -30,7 +30,7 @@ Build the default trusted gateway between human/model intent and digital informa
 
 | ID | Slice | Primary outcome | Depends on | Status | Sub-spec |
 |---|---|---|---|---|---|
-| ECR-001 | Trusted Domain Kernel | Versioned zero-I/O domain types/invariants for actor/principal refs, origin/resource/scope, information labels, capability request/grant, provenance, action/action-attempt refs, receipts and verification | — | TASKS_READY | `specs/001-trusted-domain-kernel/` |
+| ECR-001 | Trusted Domain Kernel | Versioned zero-I/O domain types/invariants for actor/principal refs, origin/resource/scope, information labels, capability request/grant, provenance, action/action-attempt refs, receipts and verification | — | IMPLEMENTING | `specs/001-trusted-domain-kernel/` |
 | ECR-002 | Durable Run, Ledger & Budgets | Serializable run machine, unique execution attempts, append-only integrity-chained local ledger, portable `.ecra` fixture/run artifact, cancellation/resource budgets | ECR-001 | PLANNED | `specs/002-durable-run-ledger/` |
 | ECR-003 | Authority, Information Flow, Policy & Secrets | Fail-closed capability and source-to-sink disclosure evaluation, immutable authorization decision/lease, approval binding, origin authority, secret handles, policy adapter | ECR-001, ECR-002, ECR-031 | PLANNED | `specs/003-authority-policy-secrets/` |
 | ECR-004 | Verification & Reconciliation | Independent verifier framework, executor-observed vs verified outcomes, UNKNOWN handling, reconciliation, critical-point verification, immutable decision-grade evidence | ECR-001, ECR-002 | PLANNED | `specs/004-verification-receipts/` |
@@ -164,4 +164,4 @@ Every affected slice MUST add/update as part of Definition of Done:
 
 ## Current First Slice
 
-`ECR-001 Trusted Domain Kernel` is `TASKS_READY` after the post-remediation analyze in `specs/001-trusted-domain-kernel/analyze.md`. It is the only implementation-eligible slice. Implementation must remain bounded to the revised ECR-001 package; no later slice becomes eligible until ECR-001 is `CLOSED_CANONICAL`.
+`ECR-001 Trusted Domain Kernel` is `IMPLEMENTING` on PR #1. Exact-head verification passed before review, and review remediation is active for findings discovered before merge. No later slice becomes eligible until ECR-001 is `CLOSED_CANONICAL`.
