@@ -1,89 +1,80 @@
 # ECR-002 Status — Durable Run, Ledger & Budgets
 
 **Slice:** ECR-002  
-**Lifecycle:** TASKS_READY  
+**Lifecycle:** IMPLEMENTING  
 **Dependency:** ECR-001 `CLOSED_CANONICAL`  
-**Branch:** not yet created at planning gate  
-**PR:** none at planning gate  
+**Branch:** `002-durable-run-ledger`  
+**Base main:** `5caf5dc4e7f26d07fabac3333713a44f0af22ea1` — planning/status CI `33103802150` SUCCESS  
+**PR:** Draft PR to be opened from this branch after lifecycle activation  
 **Constitution:** v1.1.0
 
-This file is the active execution ledger once ECR-002 planning is canonical. Normative semantics live in `spec.md`, `data-model.md`, `contracts/run-ledger-v1.md`, and approved convergence updates.
+This is the active ECR-002 execution ledger. Normative semantics live in `spec.md`, `data-model.md`, `contracts/run-ledger-v1.md`, and approved convergence updates.
 
-## Planning gate
-
-```text
-spec.md                  COMPLETE
-research.md              COMPLETE
-run-ledger-v1 contract   COMPLETE
-data-model.md             COMPLETE
-threat-model.md           COMPLETE
-plan.md                   COMPLETE
-quickstart.md             COMPLETE
-tasks.md                  COMPLETE (T001–T073)
-requirements checklist   PASS
-analyze.md                ZERO_BLOCKING_PLANNING_DRIFT_FOUND
-constitution G1–G15      PASS / N/A where explicitly scoped
-```
-
-## Authorized scope
-
-ECR-002 may implement:
-- local serialized/replayable run state;
-- append-only ordered run events;
-- exact ActionAttemptRef preparation/receipt durability;
-- UNKNOWN/unresolved recovery hooks;
-- typed bounded resource accounting;
-- SQLite local store with WAL + FULL semantics;
-- schema migration fixtures;
-- deterministic synthetic/non-sensitive `.ecra` archives;
-- content-addressed synthetic blobs;
-- cancellation/intervention/recovery events.
-
-## Explicitly not authorized
+## Canonical planning gate
 
 ```text
-principal authentication / trust roots / protected keys
-real-sensitive-state storage enablement
-authorization / declassification / approval policy
-independent verification / reconciliation decisions
-browser/model/tool/process provider execution
-remote/network/cloud durability
-multi-device sync
-distributed workflow service
-hash-chain hostile-tamper-resistance claims
+planning package commit  c83a208ad84b2d1da892a80a6911989eaff25ade
+synchronized main head   5caf5dc4e7f26d07fabac3333713a44f0af22ea1
+main CI                   33103802150 — SUCCESS
+analyze                    ZERO_BLOCKING_PLANNING_DRIFT_FOUND
+FR-001–FR-057             OWNED
+SC-001–SC-016             OWNED
+G1–G15                    PASS / explicit N/A
 ```
 
-Owners remain ECR-031/ECR-003/ECR-004 and later slices.
-
-## Implementation order
+## Current implementation position
 
 ```text
-Phase 1 T001–T008  workspace/crate/CI/dependencies
-Phase 2 T009–T018  errors/primitives/events/digest
-Phase 3 T019–T026  pure reducer/state machine
-Phase 4 T027–T034  budgets
-Phase 5 T035–T044  SQLite/migrations/store/projections
-Phase 6 T045–T051  attempt guard/recovery/concurrency
-Phase 7 T052–T059  deterministic .ecra
-Phase 8 T060–T066  portability/security/docs/gates
-Phase 9 T067–T073  traceability/convergence/review/merge/closure
+Phase 1 T001–T008  ACTIVE
+Phase 2 T009–T018  blocked by Phase 1 baseline
+Phase 3 T019–T026  blocked
+Phase 4 T027–T034  blocked
+Phase 5 T035–T044  blocked
+Phase 6 T045–T051  blocked
+Phase 7 T052–T059  blocked
+Phase 8 T060–T066  blocked
+Phase 9 T067–T073  blocked
 ```
 
-## Next exact actions after this package reaches canonical `main`
+Immediate work:
 
 ```text
-1. verify canonical main SHA and no competing PR/branch state
-2. create branch `002-durable-run-ledger` from that exact main SHA
-3. update branch-local roadmap/platform STATUS/EXECUTION/this STATUS to IMPLEMENTING
-4. open Draft PR
-5. execute T001
-6. run the ECR-001 regression gate before broad semantic work
-7. continue task dependency order without skipping gates
+T001 add crates/ecra-run workspace skeleton
+T002 add exact reviewed dependency candidates + lockfile
+T003 forbid unsafe + architecture/misuse docs
+T004/T005 add dependency/unsafe boundary scripts
+T006 add trusted push-only ECR-002 CI
+T007 update donor/license dependency ledger
+T008 prove first workspace head green before semantic implementation
 ```
+
+## Fixed implementation boundaries
+
+```text
+authoritative run truth     append-only ordered events
+projection                  rebuildable/non-authoritative
+attempt before effect       durable commit required
+missing receipt             UNKNOWN/reconciliation-required
+local store                 SQLite / rusqlite, WAL + FULL
+write transaction           Immediate + expected-head compare
+budget arithmetic           typed checked I-JSON-safe integers
+portable artifact           deterministic strict Stored-only .ecra ZIP
+real sensitive persistence  NOT AUTHORIZED
+provider/network execution  NOT IN ECR-002
+hostile tamper resistance   NOT CLAIMED
+```
+
+## Downstream ownership preserved
+
+- authentication/trust roots/protected storage -> ECR-031;
+- authorization/declassification/approval/budget-revision policy -> ECR-003;
+- independent verification/reconciliation decisions -> ECR-004;
+- provider/browser/model/tool/process execution -> later owning slices;
+- telemetry/privacy/redaction product controls -> ECR-025.
 
 ## Evidence discipline
 
-- never claim a task/phase PASS without exact-head evidence where required;
-- any final code/test/workflow/contract/ledger mutation moves the verification head;
-- no merge until clean exact-head CI/review state;
-- no `CLOSED_CANONICAL` until merge + canonical-main ECR-002 gate + closure-ledger convergence.
+- no task/phase PASS without required exact-head evidence;
+- any code/test/workflow/contract/status mutation moves the verification head;
+- no Ready/merge until full exact-head ECR-002 gate + clean reviews;
+- no `CLOSED_CANONICAL` until exact-head merge + canonical-main gate + closure ledger.
