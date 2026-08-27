@@ -63,11 +63,7 @@ pub struct RunError {
 
 impl RunError {
     #[must_use]
-    pub fn new(
-        category: RunErrorCategory,
-        code: RunErrorCode,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn new(category: RunErrorCategory, code: RunErrorCode, message: impl Into<String>) -> Self {
         Self {
             category,
             code,
@@ -110,11 +106,7 @@ impl RunError {
 
     #[must_use]
     pub fn invalid_event(message: impl Into<String>) -> Self {
-        Self::new(
-            RunErrorCategory::Event,
-            RunErrorCode::InvalidEvent,
-            message,
-        )
+        Self::new(RunErrorCategory::Event, RunErrorCode::InvalidEvent, message)
     }
 
     #[must_use]

@@ -1,6 +1,4 @@
-use ecra_core::{
-    ActionAttemptRef, ActionReceipt, ActorId, EpochMillis, RunId, SchemaVersion,
-};
+use ecra_core::{ActionAttemptRef, ActionReceipt, ActorId, EpochMillis, RunId, SchemaVersion};
 use serde::{Deserialize, Deserializer, Serialize, de};
 
 use crate::digest::canonical_event_material;
@@ -178,7 +176,12 @@ impl RunEvent {
 }
 
 #[derive(Deserialize)]
-#[serde(tag = "kind", content = "value", rename_all = "snake_case", deny_unknown_fields)]
+#[serde(
+    tag = "kind",
+    content = "value",
+    rename_all = "snake_case",
+    deny_unknown_fields
+)]
 enum RunEventWire {
     RunCreated {
         actor: ActorId,
@@ -241,9 +244,7 @@ impl From<RunEventWire> for RunEvent {
             RunEventWire::RunStarted {} => Self::RunStarted {},
             RunEventWire::RunSuspended { reason } => Self::RunSuspended { reason },
             RunEventWire::RunResumed {} => Self::RunResumed {},
-            RunEventWire::CancellationRequested { actor } => {
-                Self::CancellationRequested { actor }
-            }
+            RunEventWire::CancellationRequested { actor } => Self::CancellationRequested { actor },
             RunEventWire::RunCancelled {} => Self::RunCancelled {},
             RunEventWire::RunFailed { error } => Self::RunFailed { error },
             RunEventWire::ExecutionCompleted {} => Self::ExecutionCompleted {},

@@ -105,7 +105,8 @@ fn every_v1_event_kind_has_a_strict_valid_fixture() {
 
     for event in events {
         let encoded = serde_json::to_vec(&event).expect("serialize event fixture");
-        let reparsed: RunEvent = serde_json::from_slice(&encoded).expect("round-trip event fixture");
+        let reparsed: RunEvent =
+            serde_json::from_slice(&encoded).expect("round-trip event fixture");
         assert_eq!(event, reparsed);
     }
 }
@@ -119,44 +120,40 @@ fn version_sequence_unknown_field_and_digest_fail_with_typed_codes() {
 
     let mut unsupported_major = base.clone();
     unsupported_major["schema_version"]["major"] = 2.into();
-    let error = RunEventEnvelope::from_json_slice(
-        &serde_json::to_vec(&unsupported_major).expect("json"),
-    )
-    .expect_err("major must fail");
+    let error =
+        RunEventEnvelope::from_json_slice(&serde_json::to_vec(&unsupported_major).expect("json"))
+            .expect_err("major must fail");
     assert_eq!(error.category(), RunErrorCategory::Compatibility);
     assert_eq!(error.code(), RunErrorCode::UnsupportedMajorVersion);
 
     let mut unsupported_minor = base.clone();
     unsupported_minor["schema_version"]["minor"] = 1.into();
-    let error = RunEventEnvelope::from_json_slice(
-        &serde_json::to_vec(&unsupported_minor).expect("json"),
-    )
-    .expect_err("minor must fail");
+    let error =
+        RunEventEnvelope::from_json_slice(&serde_json::to_vec(&unsupported_minor).expect("json"))
+            .expect_err("minor must fail");
     assert_eq!(error.code(), RunErrorCode::UnsupportedMinorVersion);
 
     let mut zero_sequence = base.clone();
     zero_sequence["sequence"] = 0.into();
-    let error = RunEventEnvelope::from_json_slice(
-        &serde_json::to_vec(&zero_sequence).expect("json"),
-    )
-    .expect_err("zero sequence must fail");
+    let error =
+        RunEventEnvelope::from_json_slice(&serde_json::to_vec(&zero_sequence).expect("json"))
+            .expect_err("zero sequence must fail");
     assert_eq!(error.code(), RunErrorCode::InvalidEventSequence);
 
     let mut unknown_field = base.clone();
     unknown_field["unexpected"] = true.into();
-    let error = RunEventEnvelope::from_json_slice(
-        &serde_json::to_vec(&unknown_field).expect("json"),
-    )
-    .expect_err("unknown field must fail");
+    let error =
+        RunEventEnvelope::from_json_slice(&serde_json::to_vec(&unknown_field).expect("json"))
+            .expect_err("unknown field must fail");
     assert_eq!(error.category(), RunErrorCategory::Serialization);
     assert_eq!(error.code(), RunErrorCode::SerializationFailed);
 
     let mut digest_mismatch = base;
-    digest_mismatch["event_digest"]["hex"] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".into();
-    let error = RunEventEnvelope::from_json_slice(
-        &serde_json::to_vec(&digest_mismatch).expect("json"),
-    )
-    .expect_err("digest mismatch must fail");
+    digest_mismatch["event_digest"]["hex"] =
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".into();
+    let error =
+        RunEventEnvelope::from_json_slice(&serde_json::to_vec(&digest_mismatch).expect("json"))
+            .expect_err("digest mismatch must fail");
     assert_eq!(error.category(), RunErrorCategory::Ledger);
     assert_eq!(error.code(), RunErrorCode::LedgerDigestMismatch);
 }
