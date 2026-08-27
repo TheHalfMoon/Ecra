@@ -22,6 +22,7 @@ Active slice: ECR-001 — Trusted Domain Kernel
 Branch: 001-trusted-domain-kernel
 PR: #1 — OPEN / DRAFT / mergeable at last live check
 Lifecycle: FINAL_CONVERGENCE_VERIFICATION
+Current blocker class: EXTERNAL_GITHUB_HOSTED_RUNNER_ACCOUNT_STATE
 ```
 
 Evidence anchors:
@@ -33,8 +34,8 @@ CI:                      33086490495 — success
 Converged executable gate: a7f1ea27e55fe7d41d70a6101dd3f44502e260f0
 CI:                        33087744071 — success
 
-Final semantic analyze head before this ledger update:
-3a6b2c8794d322aee06771a36dd46ed891a95c62
+Latest CI-topology parent head:
+d84f01ad4e1c71aac58a89fcdea8d67179fc89fe
 ```
 
 Always re-read the current branch after this file; these SHAs are evidence anchors, not permanent pointers.
@@ -46,27 +47,70 @@ Always re-read the current branch after this file; these SHAs are evidence ancho
 | 1–9 | T001–T062 | `VERIFIED_ON_BRANCH` |
 | 10 | T063–T069 | `VERIFIED_ON_BRANCH` |
 | 11 | T070–T076 | T070–T072 + T074–T075 complete; T073/T076 remain |
-| 12 | T077–T080 | T077–T079 complete; T080 `BLOCKED_BY_EXACT_HEAD_ACTIONS_STARTUP` |
+| 12 | T077–T080 | T077–T079 complete; T080 `BLOCKED_BY_EXTERNAL_GITHUB_HOSTED_RUNNER_ACCOUNT_STATE` |
 
 ## Convergence truth
 
 - Primary `data-model.md` and `contracts/domain-v1.md` are synchronized with implemented v1 semantics.
 - `implementation-clarifications.md` is folded historical rationale, not a competing wire contract.
-- `quickstart.md` and CI run the current full security/contract gate surface.
+- `quickstart.md` and CI define the full security/contract gate surface.
 - `traceability-closure-2026-08-27.md` maps FR-001–FR-055, SC-001–SC-020, constitution G1–G15 and P-001–P-035.
 - `final-convergence-analyze-2026-08-27.md` reports zero blocking semantic drift and zero unowned requirement/review blockers.
 
-## Current blocker — Actions starts no runner
+## Current blocker — GitHub account state prevents hosted runner allocation
 
-Final head `3a6b2c8794d322aee06771a36dd46ed891a95c62` has no executable failure evidence. Run `33088269829` was attempted four times; every attempt terminated before checkout/build/test with zero executable steps and no allocated runner/log.
+The failure occurs before any Ecra command executes. Multiple independent experiments all terminate with no allocated runner, no job steps and no logs:
 
-Control experiment: re-running the previously successful `33087744071` job at known-good head `a7f1ea27…` now fails in the same pre-runner/zero-step state. Therefore the current blocker is not specific to the final documentation head or an ECR-001 code/test delta.
+```text
+3a6b2c87…  standard ubuntu-latest  run 33088269829  four attempts  zero-step
+238f49a1…  fresh standard run       run 33089816127  zero-step
+a7f1ea27…  re-run of known PASS     control rerun      zero-step
+5a42bf77…  alternate ubuntu-slim    run 33090299540  zero-step
+57c70a76…  restored standard        push/PR runs       zero-step
+d84f01ad…  single PR topology       run 33090580208  zero-step
+```
 
-The delta from last successful converged gate `a7f1ea27…` to final semantic head `3a6b2c87…` is docs-only: `EXECUTION.md`, active `STATUS.md`, `tasks.md`, `implementation-clarifications.md`, and final analyze. No production source, test, fixture, Cargo graph, workflow, or security script changed.
+The `ubuntu-slim` experiment ruled out a single standard-runner pool as the repository-side cause. It was reverted immediately; the final workflow remains on `ubuntu-latest`.
 
-GitHub Status records recent Actions runner-start/assignment incidents; those Actions incidents are marked resolved, while a separate Billing incident remains active. The repository API exposes no specific billing/account annotation for these zero-step jobs, so do not claim a narrower cause without new evidence.
+GitHub check-run metadata reports one failure annotation for these jobs, but the connected repository API cannot read the annotation body and explicitly blocks the personal billing-usage endpoint. GitHub's documentation identifies payment state, exhausted private-repository included usage, and blocking Actions budgets as causes of hosted jobs being stopped before execution.
 
-## Required exact-head CI surface
+Therefore do not mutate product code to chase this failure. The next required action is outside repository content: unlock the owner account's GitHub Actions billing/budget/usage state, or explicitly register an approved self-hosted runner.
+
+## CI usage hardening already applied
+
+The workflow no longer runs duplicate feature-branch jobs. Its intended trigger topology is now:
+
+```text
+pull_request        -> exact feature-head gate
+push: main          -> post-merge canonical-main gate
+workflow_dispatch   -> explicit recheck/recovery
+concurrency          -> cancel superseded work for same PR/ref
+```
+
+This preserves exact-head and post-merge evidence while reducing hosted-runner consumption.
+
+## Required external remediation before retry
+
+For the repository owner account:
+
+```text
+GitHub Settings
+  -> Billing & Licensing
+  -> Budgets and alerts / Actions usage
+```
+
+Resolve the actual account condition:
+
+```text
+- valid payment method if overage is needed
+- positive/non-exhausted Actions budget
+- no overlapping stricter budget that blocks Actions
+- sufficient included private-repository usage, or paid overage authorization
+```
+
+If billing is intentionally unavailable, an isolated self-hosted runner is the only non-public-repository CI alternative supported by the current architecture. Do not make the repository public as a billing workaround and do not register an untrusted persistent runner.
+
+## Required exact-head CI surface after unlock
 
 ```bash
 cargo build --workspace --locked
@@ -90,14 +134,12 @@ cargo tree -p ecra-core
 
 ## Next eligible work
 
-Do not mutate implementation simply to manufacture a new CI result. The next executor must:
-
 ```text
-A. observe the fresh workflow run created by the latest ledger-only commit
-B. if a runner starts, require the entire gate above to PASS
-C. if it fails before runner again, keep PR Draft and record the external blocker without claiming PASS
-D. after exact-head green, finalize T073/T080 evidence
-E. re-run exact-head CI if evidence-ledger commits move the head
+A. unlock GitHub Actions account billing/budget/usage, or register an approved isolated self-hosted runner
+B. trigger/observe the exact current PR-head workflow
+C. require the entire gate above to PASS
+D. finalize T073/T080 with exact head/run evidence
+E. if the evidence-ledger commit moves the head, run the exact-head gate again
 F. inspect reviews/threads/checks and make PR ready only when all pre-merge requirements are met
 G. merge, verify canonical main, then and only then mark T076/CLOSED_CANONICAL
 ```
