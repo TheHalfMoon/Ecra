@@ -42,7 +42,12 @@ impl<T> ScopeConstraint<T> {
 }
 
 #[derive(Deserialize)]
-#[serde(tag = "kind", content = "value", rename_all = "snake_case", deny_unknown_fields)]
+#[serde(
+    tag = "kind",
+    content = "value",
+    rename_all = "snake_case",
+    deny_unknown_fields
+)]
 enum ScopeConstraintWire<T> {
     NotApplicable,
     Exact(T),
@@ -77,10 +82,7 @@ pub struct PurposeRef {
 }
 
 impl PurposeRef {
-    pub fn new(
-        namespace: impl Into<String>,
-        name: impl Into<String>,
-    ) -> Result<Self, DomainError> {
+    pub fn new(namespace: impl Into<String>, name: impl Into<String>) -> Result<Self, DomainError> {
         let namespace = namespace.into();
         let name = name.into();
         if namespace.is_empty() || name.is_empty() {
