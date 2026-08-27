@@ -66,9 +66,8 @@ fn scope_requires_explicit_wildcard_and_rejects_empty_one_of() {
         serde_json::from_str(r#"{"kind":"any_explicit"}"#).expect("explicit wildcard");
     assert!(matches!(any, ScopeConstraint::AnyExplicit));
 
-    let empty = serde_json::from_str::<ScopeConstraint<WorkspaceId>>(
-        r#"{"kind":"one_of","value":[]}"#,
-    );
+    let empty =
+        serde_json::from_str::<ScopeConstraint<WorkspaceId>>(r#"{"kind":"one_of","value":[]}"#);
     assert!(empty.is_err());
 }
 
