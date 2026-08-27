@@ -1,7 +1,9 @@
 name: ECR-002 Lock Finalizer
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - 002-durable-run-ledger
 
 permissions:
   contents: write
@@ -19,20 +21,19 @@ jobs:
         run: |
           set -euo pipefail
           if ! command -v rustup >/dev/null 2>&1; then
-            curl --proto '=https' --tlsv1.2 --fail --silent --show-error https://sh.rust.rs \
+            curl --proto '=https' --tlsv1.2 --fail --silent --show-error https://sh.rustup.rs \
               | sh -s -- -y --profile minimal --default-toolchain none
             export PATH="$HOME/.cargo/bin:$PATH"
             echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           fi
           rustup toolchain install 1.98.0 --profile minimal --component rustfmt,clippy
-      - name: Verify expected branch head
+      - name: Verify event head
         shell: bash
         run: |
           set -euo pipefail
-          expected="34ad692f9971fed0c9cc1937c1d1d30bab3dc18d"
           actual="$(git rev-parse HEAD)"
-          test "$actual" = "$expected" || {
-            echo "refusing lock finalization: expected $expected, found $actual" >&2
+          test "$actual" = "$GITHUB_SHA" || {
+            echo "refusing lock finalization: event SHA $GITHUB_SHA, checkout $actual" >&2
             exit 1
           }
       - name: Generate and verify exact Cargo.lock
@@ -130,6 +131,6 @@ jobs:
           git commit -m "build(run): commit generated lock and trusted CI"
           git push origin HEAD:002-durable-run-ledger
 
-# One-shot trusted finalizer. It verifies the known generated Cargo.lock digest,
+# One-shot trusted finalizer. It verifies the generated Cargo.lock digest,
 # replaces itself with the push-only ECR-002 workflow, and performs a normal
 # fast-forward push. Its own run is bootstrap evidence, never final CI.
