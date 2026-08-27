@@ -38,6 +38,7 @@ pub use id::*;
 pub use identity::{IdentityAssertionRef, PrincipalRef};
 pub use information::{
     InformationClass, InformationClassification, InformationPolicyTag, InformationRef,
+    InformationUse, InformationUseKind,
 };
 pub use origin::{Origin, WebOrigin};
 pub use resource::{ResourceKind, ResourceRef};

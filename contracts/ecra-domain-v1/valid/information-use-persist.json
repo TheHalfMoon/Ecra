@@ -1,0 +1,1 @@
+{"sources":[{"kind":"artifact","id":"00000000-0000-0000-0000-000000000042"}],"kind":"persist","destination":{"id":"00000000-0000-0000-0000-000000000043","kind":"local_resource","locator":"workspace://ecr-001/cache","origin":null},"destination_origin":null,"declared_output_classification":{"class":"sensitive","policy_tags":[]}}

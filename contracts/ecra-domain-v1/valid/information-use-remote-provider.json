@@ -1,0 +1,1 @@
+{"sources":[{"kind":"artifact","id":"00000000-0000-0000-0000-000000000048"}],"kind":"remote_provider","destination":null,"destination_origin":{"kind":"tuple","scheme":"https","host":"provider.example","port":null},"declared_output_classification":{"class":"sensitive","policy_tags":[]}}
