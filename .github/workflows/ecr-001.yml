@@ -1,14 +1,14 @@
 name: ECR-001 CI
 
 on:
-  pull_request:
   push:
     branches:
+      - 001-trusted-domain-kernel
       - main
   workflow_dispatch:
 
 concurrency:
-  group: ecr-001-${{ github.event.pull_request.number || github.ref }}
+  group: ecr-001-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -16,7 +16,6 @@ permissions:
 
 jobs:
   core:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, macOS, X64]
     steps:
       - uses: actions/checkout@v4
