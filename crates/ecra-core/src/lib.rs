@@ -8,6 +8,7 @@
 //! browser/model integration, protocols, secrets and telemetry belong to
 //! downstream slices.
 
+pub mod action;
 pub mod actor;
 pub mod artifact;
 pub mod canonical;
@@ -24,11 +25,15 @@ pub mod scope;
 pub mod time;
 pub mod version;
 
+pub use action::{
+    ActionIntent, ActionParameterRef, ActionParametersRef, ActionRef, EffectProfile,
+    IdempotencyClass, IdempotencySpec, MutationDomain, RetryClass, Reversibility,
+};
 pub use actor::{Actor, ActorKind};
 pub use artifact::{ArtifactKind, ArtifactRef, LineageRef};
 pub use canonical::to_jcs_vec;
 pub use capability::{CapabilityGrant, CapabilityRequest, DelegationRef, OperationRef};
-pub use digest::{ContentDigest, SecurityDigest, SecurityDigestAlgorithm};
+pub use digest::{ActionDigest, ContentDigest, SecurityDigest, SecurityDigestAlgorithm};
 pub use error::{DomainError, ErrorCategory, ErrorCode};
 pub use evidence::{
     DisputeState, EvidenceKind, EvidenceRef, Fact, FactAssessment, FactValue, FreshnessAssessment,
