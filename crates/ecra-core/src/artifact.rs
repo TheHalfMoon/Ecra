@@ -158,10 +158,14 @@ impl<'de> Deserialize<'de> for ArtifactRef {
         let wire = ArtifactRefWire::deserialize(deserializer)?;
         let mut value = Self::new(wire.id, wire.kind, wire.classification);
         if let Some(media_type) = wire.media_type {
-            value = value.with_media_type(media_type).map_err(de::Error::custom)?;
+            value = value
+                .with_media_type(media_type)
+                .map_err(de::Error::custom)?;
         }
         if let Some(logical_name) = wire.logical_name {
-            value = value.with_logical_name(logical_name).map_err(de::Error::custom)?;
+            value = value
+                .with_logical_name(logical_name)
+                .map_err(de::Error::custom)?;
         }
         if let Some(digest) = wire.content_digest {
             value = value.with_content_digest(digest);
