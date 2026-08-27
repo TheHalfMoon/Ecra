@@ -1,4 +1,4 @@
-use serde::{Deserialize, Deserializer, Serialize, de};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use crate::{
     ActorId, ArtifactId, ContentDigest, DomainError, EpochMillis, EvidenceId, FactId,
@@ -321,17 +321,6 @@ pub enum DisputeState {
     Unknown,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
-pub enum FactValue {
-    Text(String),
-    Boolean(bool),
-    Integer(i64),
-    Decimal(String),
-    Resource(ResourceId),
-    Artifact(ArtifactId),
-}
-
 fn validate_decimal(value: &str) -> bool {
     if value.is_empty() || value.starts_with('+') {
         return false;
@@ -365,6 +354,106 @@ fn validate_decimal(value: &str) -> bool {
     true
 }
 
+/// I-JSON-safe integer payload for [`FactValue`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct FactInteger(i64);
+
+impl FactInteger {
+    pub fn new(value: i64) -> Result<Self, DomainError> {
+        if !(I_JSON_MIN_SAFE_INTEGER..=I_JSON_MAX_SAFE_INTEGER).contains(&value) {
+            return Err(DomainError::InvalidInformation(
+                "fact integer must remain in the I-JSON exact integer range".to_owned(),
+            ));
+        }
+        Ok(Self(value))
+    }
+
+    #[must_use]
+    pub const fn get(self) -> i64 {
+        self.0
+    }
+}
+
+impl Serialize for FactInteger {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_i64(self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for FactInteger {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = i64::deserialize(deserializer)?;
+        Self::new(value).map_err(de::Error::custom)
+    }
+}
+
+/// Canonical decimal-string payload for [`FactValue`].
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct FactDecimal(String);
+
+impl FactDecimal {
+    pub fn new(value: impl Into<String>) -> Result<Self, DomainError> {
+        let value = value.into();
+        if !validate_decimal(&value) {
+            return Err(DomainError::InvalidInformation(
+                "fact decimal must use canonical decimal-string form".to_owned(),
+            ));
+        }
+        Ok(Self(value))
+    }
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Serialize for FactDecimal {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for FactDecimal {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        Self::new(value).map_err(de::Error::custom)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
+pub enum FactValue {
+    Text(String),
+    Boolean(bool),
+    Integer(FactInteger),
+    Decimal(FactDecimal),
+    Resource(ResourceId),
+    Artifact(ArtifactId),
+}
+
+impl FactValue {
+    pub fn integer(value: i64) -> Result<Self, DomainError> {
+        FactInteger::new(value).map(Self::Integer)
+    }
+
+    pub fn decimal(value: impl Into<String>) -> Result<Self, DomainError> {
+        FactDecimal::new(value).map(Self::Decimal)
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(
     tag = "kind",
@@ -375,8 +464,8 @@ fn validate_decimal(value: &str) -> bool {
 enum FactValueWire {
     Text(String),
     Boolean(bool),
-    Integer(i64),
-    Decimal(String),
+    Integer(FactInteger),
+    Decimal(FactDecimal),
     Resource(ResourceId),
     Artifact(ArtifactId),
 }
@@ -389,18 +478,8 @@ impl<'de> Deserialize<'de> for FactValue {
         match FactValueWire::deserialize(deserializer)? {
             FactValueWire::Text(value) => Ok(Self::Text(value)),
             FactValueWire::Boolean(value) => Ok(Self::Boolean(value)),
-            FactValueWire::Integer(value)
-                if (I_JSON_MIN_SAFE_INTEGER..=I_JSON_MAX_SAFE_INTEGER).contains(&value) =>
-            {
-                Ok(Self::Integer(value))
-            }
-            FactValueWire::Integer(_) => Err(de::Error::custom(
-                "fact integer must remain in the I-JSON exact integer range",
-            )),
-            FactValueWire::Decimal(value) if validate_decimal(&value) => Ok(Self::Decimal(value)),
-            FactValueWire::Decimal(_) => Err(de::Error::custom(
-                "fact decimal must use canonical decimal-string form",
-            )),
+            FactValueWire::Integer(value) => Ok(Self::Integer(value)),
+            FactValueWire::Decimal(value) => Ok(Self::Decimal(value)),
             FactValueWire::Resource(id) => Ok(Self::Resource(id)),
             FactValueWire::Artifact(id) => Ok(Self::Artifact(id)),
         }
