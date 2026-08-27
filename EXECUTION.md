@@ -22,9 +22,9 @@ Active slice: **ECR-001 — Trusted Domain Kernel**
 Package: `specs/001-trusted-domain-kernel/`  
 Implementation branch: `001-trusted-domain-kernel`  
 PR: `#1` — draft until the entire ECR-001 slice satisfies closure gates.  
-Latest fully verified implementation head: `0b273f41f853f61e3dd691d4dcd5c2149c28f166`.
+Latest fully verified implementation head: `946e95366ed681c724192cd01ece199d5e8f55a7`.
 
-At that head ECR-001 CI run `33080355344` passed:
+At that head ECR-001 CI run `33083362584` passed:
 
 ```text
 cargo build --workspace --locked
@@ -50,39 +50,46 @@ Do not treat this SHA as permanent. Always re-read the branch before mutation.
 | 6 — Information Use / Source-to-Sink Intent | T039–T042 | `VERIFIED_ON_BRANCH` | exact-head `b0f4ae4c…`; CI `33075545972` green |
 | 7 — Effects, Idempotency, Retry, Action Digest | T043–T051 | `VERIFIED_ON_BRANCH` | exact-head `ea177363…`; CI `33078470973` green |
 | 8 — Attempts, Receipts, Independent Verification | T052–T057 | `VERIFIED_ON_BRANCH` | exact-head `0b273f41…`; CI `33080355344` green |
-| 9 — Strict v1 Contract / Fixture Runner / Portability | T058–T062 | `NEXT_ACTIVE_PHASE` | audit strictness, fixture completeness, rustdoc and portability |
-| 10 — Cross-cutting Security / Architecture Gates | T063–T069 | `BLOCKED_BY_PHASE_9` | final security/dependency/docs gates after contract convergence |
-| 11 — Closure / Analyze / Canonicalization | T070–T076 | `BLOCKED` | final traceability, analyze, PR/merge/post-merge evidence |
+| 9 — Strict v1 Contract / Fixture Runner / Portability | T058–T062 | `VERIFIED_ON_BRANCH` | exact-head `946e9536…`; CI `33083362584` green |
+| 10 — Cross-cutting Security / Architecture Gates | T063–T069 | `NEXT_ACTIVE_PHASE` | dependency/unsafe/error/free-form/provenance/architecture/offline convergence |
+| 11 — Closure / Analyze / Canonicalization | T070–T076 | `BLOCKED_BY_PHASE_10` | final traceability, analyze, PR/merge/post-merge evidence |
 
 `VERIFIED_ON_BRANCH` is not `CLOSED_CANONICAL`. The slice becomes `CLOSED_CANONICAL` only after all ECR-001 tasks, convergence/analyze, exact-head gates, PR merge, and required post-merge evidence are complete.
 
 ## Immediate next work
 
-Continue ECR-001 from Phase 9 in `tasks.md`:
+Continue ECR-001 from Phase 10 in `tasks.md`:
 
 ```text
-T058 audit/fix strict explicit Serde names and unknown-field handling
-T059 make valid/invalid fixture runners cover every normative committed fixture
-T060 enforce canonical bytes + ActionDigest expected outputs
-T061 add rustdoc safe-construction/type-separation examples
-T062 prove portability and zero environment/service dependence
+T063 verify/strengthen dependency-boundary automation against FR-050 prohibited categories
+T064 add explicit static/CI proof of zero unsafe code in addition to crate-level forbid lint
+T065 cover every machine-readable ErrorCode/ErrorCategory without display-string parsing
+T066 audit free-form metadata fields and prove/document non-authoritative semantics
+T067 update canonical donor/license ledger for exact locked dependencies and no-source-copy provenance
+T068 add ecra-core README architecture map and seven mandatory misuse warnings
+T069 record exact-head offline/no-service-access evidence
 ```
+
+Existing evidence already includes `scripts/check-core-deps.sh`, a CI dependency-boundary step, `#![forbid(unsafe_code)]`, and the offline replay gate. Do not duplicate them mechanically: verify the canonical task and FR wording, strengthen only gaps, then record exact evidence.
 
 Required invariants remain:
 
 ```text
 Actor != authenticated Principal
 CapabilityRequest != CapabilityGrant
+classification != permission
 InformationUse != authorization
+locator != resource security identity
+ActionDigest != signature/approval
 ActionIntent != ActionAttemptRef != ActionReceipt != VerificationReceipt
 executor_observed_success != verified
 UNKNOWN remains UNKNOWN
 ContentDigest != ActionDigest/security proof
 ```
 
-Phase 9 is convergence, not an excuse to widen ECR-001. Do not add I/O/runtime orchestration, filesystem/process execution abstractions, network clients, clocks, policy engines, browser/model SDKs, or provider protocols.
+Phase 10 remains zero-I/O trusted-core convergence. Do not add runtime orchestration, filesystem/process execution abstractions, network clients, clocks, policy engines, browser/model SDKs, or provider protocols.
 
-`implementation-clarifications.md` contains bounded implementation resolutions discovered while completing Phases 5–8. These must be folded into primary canonical documents during final convergence before ECR-001 can close.
+`implementation-clarifications.md` contains bounded implementation resolutions discovered while completing Phases 5–8. These must be folded into primary canonical documents during Phase 11 before ECR-001 can close.
 
 After every bounded implementation batch:
 
