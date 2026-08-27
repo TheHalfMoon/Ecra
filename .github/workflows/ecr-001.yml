@@ -15,7 +15,7 @@ on:
       - '.github/workflows/ecr-001.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   core:
@@ -26,11 +26,18 @@ jobs:
         run: rustup toolchain install 1.98.0 --profile minimal --component rustfmt,clippy
       - name: Generate lockfile for bootstrap
         run: cargo generate-lockfile
-      - name: Emit bootstrap Cargo.lock
+      - name: Commit bootstrap Cargo.lock when missing or changed
+        if: github.event_name == 'push'
         run: |
-          echo '=== ECRA_CARGO_LOCK_BEGIN ==='
-          cat Cargo.lock
-          echo '=== ECRA_CARGO_LOCK_END ==='
+          git add Cargo.lock
+          if git diff --cached --quiet; then
+            echo 'Cargo.lock is already current.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'build: pin ECR-001 Cargo.lock'
+          git push origin HEAD:001-trusted-domain-kernel
       - name: Format
         run: cargo fmt --all --check
       - name: Clippy
