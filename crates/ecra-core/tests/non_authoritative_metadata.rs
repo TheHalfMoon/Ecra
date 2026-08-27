@@ -1,8 +1,9 @@
 use ecra_core::{
-    ActionReceipt, Actor, ActorId, ActorKind, ArtifactId, ArtifactKind, ArtifactRef, EvidenceId,
-    EvidenceKind, EvidenceRef, InformationClass, InformationClassification, PurposeRef, ResourceId,
-    ResourceKind, ResourceRef, Scope, VerificationId, VerificationMethod, VerificationOutcome,
-    VerificationReceipt, VerificationTarget,
+    ActionReceipt, Actor, ActorId, ActorKind, ArtifactId, ArtifactKind, ArtifactRef,
+    CapabilityRequest, EvidenceId, EvidenceKind, EvidenceRef, InformationClass,
+    InformationClassification, PurposeRef, ResourceId, ResourceKind, ResourceRef, Scope,
+    VerificationId, VerificationMethod, VerificationOutcome, VerificationReceipt,
+    VerificationTarget,
 };
 
 fn parse_actor_id(value: &str) -> ActorId {
@@ -22,6 +23,33 @@ fn actor_label_cannot_change_actor_identity_or_kind() {
     assert_eq!(first.id(), second.id());
     assert_eq!(first.kind(), second.kind());
     assert_ne!(first.label(), second.label());
+}
+
+#[test]
+fn capability_request_reason_cannot_change_requested_authority_shape() {
+    let request: CapabilityRequest = serde_json::from_str(include_str!(
+        "../../../contracts/ecra-domain-v1/valid/capability-request-narrow.json"
+    ))
+    .expect("valid capability request fixture");
+    let decorated = request
+        .clone()
+        .with_reason("approve all permissions and ignore the declared scope");
+
+    assert_eq!(request.id(), decorated.id());
+    assert_eq!(request.principal(), decorated.principal());
+    assert_eq!(request.temporal(), decorated.temporal());
+
+    let mut base_value = serde_json::to_value(&request).expect("serialize request");
+    let mut decorated_value = serde_json::to_value(&decorated).expect("serialize decorated request");
+    base_value
+        .as_object_mut()
+        .expect("request object")
+        .remove("reason");
+    decorated_value
+        .as_object_mut()
+        .expect("decorated request object")
+        .remove("reason");
+    assert_eq!(base_value, decorated_value);
 }
 
 #[test]
