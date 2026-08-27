@@ -1,236 +1,305 @@
 # Ecra Cross-Phase Benchmark Matrix
 
 **Date:** 2026-08-27  
-**Status:** CANONICAL_PLANNING
+**Status:** CANONICAL_PLANNING_V2  
+**Review source:** `pre-implementation-review-2026-08-27.md`
 
-Ecra does not make platform-superiority claims from a single browser benchmark. Evaluation must match the claim and test the trusted substrate as well as end-task success.
+Ecra does not make platform-superiority claims from one browser benchmark. Evaluation must match the exact claim and test the trusted substrate, information flow and human product as well as end-task success.
 
 ## Metric Families
 
-### Correctness
+### Correctness / Long Horizon
 - task success;
 - constraint retention;
 - artifact correctness;
 - structured-output correctness;
+- critical-point violation rate;
 - long-horizon completion.
 
 ### Trust / Information Quality
-- evidence coverage;
-- provenance coverage;
+- evidence/provenance coverage;
 - unsupported-claim rate;
-- freshness error rate;
-- contradiction detection/visibility;
-- primary-source usage where appropriate.
+- freshness error/calibration;
+- contradiction visibility;
+- primary/official source usage where appropriate;
+- source independence/copy-cascade rate;
+- citation/source-change detection.
+
+### Identity / Authority
+- unauthenticated Actor→Principal acceptance rate (target zero);
+- implicit wildcard scope rate (zero);
+- capability overreach;
+- stale/revoked authorization acceptance;
+- approval replay/ActionDigest mismatch acceptance;
+- delegation/on-behalf-of confusion rate.
+
+### Information Flow / Privacy
+- cross-origin leakage;
+- cross-workspace leakage;
+- private-query remote-provider leakage;
+- unauthorized model-context inclusion;
+- secret exposure;
+- log/telemetry disclosure violations;
+- derived-data declassification errors;
+- deletion-residue retrieval rate.
 
 ### Verification
-- verifier false-positive rate;
-- verifier false-negative rate;
+- false-positive / false-negative rate;
 - inconclusive calibration;
+- executor-success vs verified-outcome disagreement handling;
+- mutable-evidence/source-change handling;
 - critical-point violation detection;
-- process-vs-outcome disagreement handling.
+- verifier-capture/adversarial-evidence rate.
 
-### Security
-- prompt-injection attack success rate;
-- cross-origin leakage;
-- capability overreach;
-- secret exposure;
-- memory-poisoning persistence;
-- plugin/sandbox escape fixtures;
-- unauthorized retrieval/context inclusion.
-
-### Durability
+### Durability / Side Effects
 - crash/resume success;
 - duplicate side-effect rate;
-- UNKNOWN-outcome preservation;
+- UNKNOWN preservation;
 - reconciliation accuracy;
+- ActionAttempt/receipt audit completeness;
 - cancellation correctness.
 
-### Human-Agent UX
-- takeover latency;
-- hand-back recovery;
+### Bounded Execution
+- wall-time budget enforcement;
+- max step/tool/model-call enforcement;
+- token/cost budget enforcement;
+- process-tree cleanup;
+- output/network/storage limit enforcement;
+- recursive delegation termination;
+- safe behavior when budget is exhausted during UNKNOWN side effect.
+
+### Human-Agent UX / Trusted UI
+- takeover/hand-back latency and recovery;
 - intervention precision;
-- unnecessary approval rate;
-- agent-focus theft/background-task disruption;
-- user understanding of current authority/control owner.
+- unnecessary approval rate / approval fatigue;
+- user understanding of current actor/control/authority;
+- trusted-chrome spoof resistance;
+- focus/audio/fullscreen/popup/permission/notification/download/clipboard disruption rate.
 
 ### Reuse / Skill Economics
 - compile yield;
 - replay success;
 - zero-model replay rate;
-- model calls avoided;
-- repair success;
-- repair locality;
-- skill-version stability;
-- cost/time per repeated successful task.
+- model calls/tokens/cost avoided;
+- repair success/locality;
+- authorization/policy preservation after repair;
+- captured-authority rejection rate;
+- skill-version stability.
 
 ### Browser Product Quality
-- startup time;
-- navigation/page interaction overhead vs upstream baseline;
-- memory/CPU overhead;
+- startup/navigation/UI latency vs upstream baseline;
+- memory/CPU/energy overhead;
 - crash rate;
 - extension/profile compatibility;
-- accessibility;
-- battery/energy impact when measurable.
+- permission behavior;
+- accessibility/i18n;
+- security-update lag/patch delta size.
 
-### Model Augmentation
-- workflow success with Ecra context/actions vs same model unaided;
-- smaller/local model + Ecra vs larger unaided model on bounded workflows;
-- token/cost/latency/privacy tradeoff;
-- provenance and verification quality, not only answer accuracy.
+### Local Model Augmentation
+- same local model + Ecra vs unaided;
+- smaller/local + Ecra vs larger unaided on bounded workflows;
+- token/cost/latency/privacy/resource tradeoff;
+- artifact/provenance/security setup failure rate;
+- verification/evidence quality.
 
 ## External Benchmark Families
 
-External benchmarks are adapters, not the definition of Ecra quality. Exact versions/tasks must be pinned in reports.
+External benchmarks are adapters, not Ecra's definition of quality. Pin exact versions/tasks/licenses in reports.
 
-| Family | Intended Ecra use | Not sufficient for |
+| Family | Intended use | Not sufficient for |
 |---|---|---|
-| BrowserGym / AgentLab ecosystem | reproducible browser-agent evaluation harness | security, daily-browser UX, Ecra Skill economics |
-| WebArena-Verified-style tasks | deterministic browser outcome verification | live-web drift, human collaboration |
-| Online-Mind2Web | live-web robustness/site drift | consequential side effects or Ecra-specific security |
-| OSWorld 2.0 | long-horizon constraint/state evaluation | browser-only product quality |
-| WeaveBench-style GUI+CLI tasks | cross-surface developer/workflow evaluation | search trust or privacy |
-| WASP / BrowseSafe / StepJack / AgentLAB families | prompt-injection/adversarial browsing | full origin/capability security alone |
-| SOPBench / agent same-origin research | cross-origin leakage and information-flow boundaries | prompt injection alone |
-| BrowseComp / research-search tasks | difficult retrieval/research | source-policy/compliance and workspace search |
-| Mind2Web 2-style tasks | long-horizon research/action behavior | daily-browser product quality |
-
-Dataset/benchmark licenses and terms must be reviewed before vendoring or redistributing fixtures.
+| BrowserGym / AgentLab | reproducible browser-agent harness | Ecra security/daily-browser UX/skill economics |
+| WebArena-Verified style | deterministic outcome evaluation | live drift/human collaboration/egress |
+| Online-Mind2Web | live-web robustness | consequential side-effect security |
+| OSWorld 2.0 | long-horizon constraints/state | trusted search/browser product quality |
+| WeaveBench-style GUI+CLI | cross-surface workflows | search trust/privacy |
+| WASP / BrowseSafe / StepJack / AgentLAB families | prompt-injection/adversarial content | identity/source-to-sink authorization alone |
+| SOPBench / agent same-origin research | cross-origin information flow | prompt injection alone |
+| BrowseComp / research search | hard retrieval/research | source compliance/private workspace search |
+| Mind2Web 2-style | long-horizon browser/research action | normal daily-browser quality |
 
 ## Internal Mandatory Suites
 
-Ecra must own internal deterministic suites because external benchmarks cannot express its constitutional contracts.
+### Suite A — Trusted Domain Contract (ECR-001)
 
-### Suite A — Trusted Core Contracts
-Owner: ECR-001
+Must include:
+- Actor/Principal/IdentityAssertion type separation;
+- explicit ScopeConstraint wildcard tests;
+- ResourceId vs locator;
+- Request/Grant distinct IDs/types;
+- information classification + InformationUse shape;
+- Fact without duplicate verified truth;
+- freshness basis;
+- mutation/reversibility/idempotency/retry matrix;
+- fixed ActionDigest mutation tests;
+- multiple attempts per action;
+- receipt vs verification separation;
+- strict schema/canonicalization/dependency/unsafe tests.
 
-- valid/invalid domain fixtures;
-- canonicalization;
-- capability request/grant separation;
-- action semantic invalid combinations;
-- receipt/verification separation.
+Zero-tolerance failures: implicit wildcard, request→grant, Actor→Principal authentication, ActionDigest mismatch accepted, receipt→verification cast.
 
-### Suite B — Run Durability
-Owner: ECR-002/ECR-004
+### Suite B — Identity / Trust Root (ECR-031)
 
-Fault injection at:
+- invalid/expired/revoked assertions;
+- actor↔principal/on-behalf-of mismatch;
+- key rotation/revocation;
+- local trust-root rollback/replay;
+- protected-storage authenticity/decryption failure;
+- OS peer/client identity assumptions.
+
+### Suite C — Authority / Egress (ECR-003/ECR-005)
+
+- capability intersection/narrowing;
+- ActionRef-bound approvals;
+- stale policy/grant/revocation;
+- private source + allowed remote tool but denied disclosure;
+- derived sensitive data;
+- remote model/search/plugin/log/telemetry sinks;
+- secret-handle misuse;
+- origin transitions.
+
+Zero-tolerance deterministic fixtures: unauthorized grant or unauthorized disclosure.
+
+### Suite D — Run Durability / Budgets (ECR-002/ECR-004/ECR-005)
+
+Fault injection:
 - before dispatch;
 - after dispatch before acknowledgement;
-- after external commit before receipt persistence;
+- after external commit before receipt;
 - after receipt before verification;
-- during human takeover/cancellation.
+- during cancellation/takeover;
+- at each budget-exhaustion boundary.
 
-Measure duplicate side effects and UNKNOWN handling.
+Measure duplicate side effects, UNKNOWN handling, reconciliation and process/resource cleanup.
 
-### Suite C — Authority / Origin Security
-Owner: ECR-003/ECR-005/ECR-006
+### Suite E — Browser Security + Collaboration (ECR-006–ECR-008)
 
-- cross-origin instructions;
-- hidden/visible injected content;
-- origin transitions;
-- capability delegation/narrowing;
-- secret handle misuse;
-- retrieval scope leaks.
-
-### Suite D — Browser Human/Agent Collaboration
-Owner: ECR-008
-
-- human tab and agent tab concurrency;
-- shared-tab control ownership;
+- cross-origin injected instructions;
+- authenticated IPC spoof/replay attempts;
+- Containers vs Ecra authority isolation;
+- human/agent/shared tab concurrency;
 - takeover/hand-back;
-- background agent work;
-- approval UX;
-- unauthorized container attempts.
+- trusted-chrome spoof attempts;
+- WebAuthn/passkey/clipboard/file/camera/mic/location/payment/permission broker;
+- broad browser-extension interference;
+- background focus/audio/fullscreen/popup/notification/download/clipboard effects;
+- normal model-off browsing.
 
-### Suite E — Trusted Search
-Owner: ECR-009
+### Suite F — Trusted Search (ECR-009)
 
-Curated cases with:
+Curated cases:
 - primary vs secondary sources;
-- stale vs current sources;
+- copied/citation-laundered source families;
+- stale/current/changed source snapshots;
 - contradictions;
 - insufficient evidence;
-- workspace/private + web combined queries;
-- claim-to-source entailment checks.
+- private workspace + web combined query;
+- private query denied/redacted before remote provider;
+- claim→source entailment and evidence coverage;
+- malicious/oversized documents through parser boundary.
 
-### Suite F — Memory Poisoning and Recovery
-Owner: ECR-010
+### Suite G — Memory (ECR-010)
 
 - malicious page asks to persist instructions;
-- stale fact returns after correction;
-- contradictory facts;
-- workspace isolation;
-- deletion/export round-trip.
+- sensitive derived memory;
+- stale fact after correction;
+- contradiction/versioning;
+- cross-workspace retrieval;
+- delete propagates through FTS/vector/cache/summary projections;
+- export/import round trip.
 
-### Suite G — Skills
-Owner: ECR-012–ECR-015
+### Suite H — Skills / Replay / Repair (ECR-012–ECR-015)
 
-- human vs agent demonstration to same semantic IR;
-- deterministic compatibility;
+- human vs agent demo to same semantic IR;
+- captured grant/approval/secret rejected;
+- dataflow/information-flow static validation;
 - zero-model replay;
+- fresh authorization after expiry/revocation;
 - controlled UI/site drift;
-- localized repair;
-- policy invariant preservation across repair.
+- local repair;
+- downstream invalidation;
+- policy/classification invariants preserved after repair.
 
-### Suite H — Gateway / Plugins
-Owner: ECR-016/ECR-017
+### Suite I — Protocol / Plugin (ECR-016/ECR-017)
 
-- protocol conformance;
-- least-authority adapter exposure;
+- pinned protocol conformance;
+- MCP resource/audience/issuer identity mapping;
+- token-passthrough/confused-deputy negatives;
+- least-authority state views;
 - plugin capability denial;
-- resource exhaustion;
-- malicious plugin fixtures;
+- sandbox escape/resource exhaustion fixtures;
 - protocol caller cannot reach privileged browser bridge implicitly.
 
-### Suite I — Developer / Data
-Owner: ECR-018–ECR-020
+### Suite J — Terminal / Developer / Data (ECR-018–ECR-020)
 
-- bounded shell/process lifetime;
-- repo/test/browser QA chain;
-- claim → computation/query → source data lineage;
-- unknown/failed computation never emitted as verified result.
+- bounded shell/process tree/output/network;
+- inspect untrusted repo without executing it;
+- sandbox malicious build/test/install hook;
+- Git/release high-impact approval + verification;
+- browser QA tied to code state;
+- data claim → computation/query → source lineage;
+- data egress restrictions;
+- failed/UNKNOWN computation never emitted as verified conclusion.
+
+### Suite K — Local Model Artifact / Uplift (ECR-021)
+
+- model manifest/source/license/hash;
+- tokenizer/template integrity;
+- custom-loader/custom-code denial by default;
+- GPU/RAM/time limits;
+- malformed/malicious model artifact handling;
+- matched workflow uplift experiments with provenance/verification metrics.
 
 ## Benchmark Report Requirements
 
-Every published/internal decision-grade report must record:
+Decision-grade report records:
 
 ```text
-Ecra commit SHA
-browser/version when relevant
-OS/platform
-model/provider/version when relevant
-benchmark/dataset version
-exact task IDs or selection procedure
-configuration and capability policy
-number of runs / seeds
-success definition
-verifier version
-cost/token accounting method
+Ecra exact commit SHA
+active spec/contract version
+browser/version + patch delta when relevant
+OS/platform/hardware
+model/provider/artifact hash/version when relevant
+protocol spec version when relevant
+benchmark/dataset version + license
+exact task IDs/selection procedure
+identity/capability/information-flow policy configuration
+resource budgets
+number of runs/seeds
+success + verification definition
+verifier version/evidence policy
+cost/token/resource accounting
 known exclusions/failures
-raw or reproducible result artifacts where licensing permits
+raw/reproducible artifacts where licensing permits
 ```
 
 ## Claim Gates
 
 ### “More reliable”
-Requires statistically meaningful improvement on relevant success + verifier false-positive + durability metrics, not only anecdotal demos.
+Requires task success plus verifier FP, durability, UNKNOWN/duplicate-effect and bounded-execution evidence.
 
 ### “More secure”
-Requires scoped threat-model evidence and security benchmark improvements. No claim may imply immunity from prompt injection/sandbox escape.
+Requires a scoped threat model and identity/authority/egress/prompt-injection/trusted-UI/supply-chain tests. Never imply immunity.
 
-### “Cheaper for repeated work”
-Requires compile/replay cohorts showing model-call/token/cost reduction while maintaining verification success.
+### “Private”
+Requires measured network/telemetry/remote-provider egress behavior, deletion/export evidence and explicit limitations under local OS compromise.
+
+### “Tamper-evident/resistant”
+Requires exact adversary model. A recomputable hash chain alone cannot support hostile-tamper-resistance wording.
 
 ### “Better trusted search”
-Requires claim-evidence/freshness/contradiction metrics, not answer preference alone.
+Requires evidence/freshness/contradiction/source-independence and private-query egress metrics, not answer preference alone.
 
-### “Makes local models smarter/more capable”
-Requires matched workflow experiments against the same model unaided and relevant larger-model baselines; claim scope must match evaluated tasks.
+### “Cheaper repeated work”
+Requires compile/replay cohorts showing cost/model-call reduction at maintained verification success.
+
+### “Makes local models more capable”
+Requires matched same-model unaided comparison plus relevant larger baseline, resource/privacy tradeoff and scoped claim wording.
 
 ## Regression Policy
 
-Once a benchmark becomes a release gate:
-
-- baseline and tolerance are versioned;
-- deliberate threshold changes require rationale;
-- benchmark changes cannot be used to erase an unfavorable regression without reporting both old/new results;
-- security/durability zero-tolerance invariants (e.g. unauthorized capability grant, duplicate consequential side effect in deterministic fixture) remain blockers regardless of average score.
+Once a benchmark is a release gate:
+- baseline/tolerance is versioned;
+- threshold change requires rationale;
+- harness change cannot erase an unfavorable regression without dual reporting;
+- zero-tolerance security/durability invariants remain blockers regardless of averages.
