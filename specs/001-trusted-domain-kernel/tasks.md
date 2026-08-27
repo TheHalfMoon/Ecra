@@ -1,176 +1,147 @@
 # Tasks: Trusted Domain Kernel
 
 **Feature:** ECR-001  
-**Input:** revised `spec.md`, `research.md`, `data-model.md`, `contracts/domain-v1.md`, `plan.md`, `quickstart.md`, analyze artifacts  
-**Status:** CONVERGENCE_ACTIVE
+**Status:** FINAL_CONVERGENCE_GATE  
+**Canonical inputs:** `spec.md`, `research.md`, `data-model.md`, `contracts/domain-v1.md`, `plan.md`, `quickstart.md`, analyze/traceability artifacts  
 
-## Format
-
-`[ID] [P?] [Story] Description with exact target path — requirement coverage`
-
-- `[P]` means safe to parallelize only after stated dependencies are complete.
-- `[US#]` maps to the numbered user story in `spec.md`.
-- All tests are mandatory because the spec makes security-sensitive contract behavior normative.
-- `[x]` means the task is satisfied on the feature branch; it does not by itself mean `CLOSED_CANONICAL`.
-
----
+`[x]` means satisfied on the feature branch; it does not mean `CLOSED_CANONICAL`. Exact merge/post-merge closure remains governed by `AGENTS.md` and the constitution.
 
 ## Phase 1 — Reproducible Rust Workspace
 
-- [x] T001 Create root Cargo workspace with only `crates/ecra-core` as a production member in `Cargo.toml`.
-- [x] T002 Pin Rust 1.98.x stable and Edition 2024 in `rust-toolchain.toml` and `crates/ecra-core/Cargo.toml`.
-- [x] T003 Add workspace lint policy and `#![forbid(unsafe_code)]` in `crates/ecra-core/src/lib.rs`. **FR-052**
-- [x] T004 Add only research-approved pure dependency candidates to `crates/ecra-core/Cargo.toml` with minimal features; update `research/donor-license-ledger.md` for exact versions/licenses before merge. **FR-050, G10**
-- [x] T005 Create `contracts/ecra-domain-v1/{valid,invalid}/` plus `contracts/ecra-domain-v1/README.md` documenting fixture naming/error-code conventions.
-- [x] T006 Add baseline CI/script commands for fmt, Clippy, tests, rustdoc, offline test, unsafe check and dependency-boundary check without adding ECR-024 release infrastructure. **SC-016, SC-018**
-
----
+- [x] T001 Create the root Cargo workspace with `crates/ecra-core` as the sole production member.
+- [x] T002 Pin Rust 1.98.x / Edition 2024.
+- [x] T003 Enforce workspace lints and `#![forbid(unsafe_code)]`. **FR-052**
+- [x] T004 Add only reviewed pure dependencies and record exact dependency/license provenance. **FR-050, G10**
+- [x] T005 Create the v1 valid/invalid contract fixture corpus and conventions.
+- [x] T006 Add locked build/fmt/Clippy/test/rustdoc/offline/unsafe/dependency CI gates. **SC-016, SC-018**
 
 ## Phase 2 — Version, Errors, IDs, Time, Canonicalization and Digests
 
-- [x] T007 [P] Implement `SchemaVersion`, `Versioned<T>` and strict supported-version dispatch in `crates/ecra-core/src/version.rs`. **FR-001, FR-047**
-- [x] T008 [P] Implement machine-readable error categories/codes in `crates/ecra-core/src/error.rs`, including compatibility/identity/scope/information/digest/action/attempt/receipt/verification errors. **FR-053**
-- [x] T009 [P] Implement all strong ID newtypes named by FR-002 in `crates/ecra-core/src/id.rs`, with no implicit cross-ID conversion. **FR-002, FR-003**
-- [x] T010 [P] Implement `EpochMillis`, `TemporalValidity`, `EvaluationContext` and I-JSON/range validation in `crates/ecra-core/src/time.rs`. **FR-018, FR-049**
-- [x] T011 [P] Implement RFC 8785 JCS wrapper in `crates/ecra-core/src/canonical.rs`. **FR-004, FR-051**
-- [x] T012 [P] Implement `ContentDigest`, `SecurityDigest` (`sha256`) and validation in `crates/ecra-core/src/digest.rs`. **FR-031, FR-032**
-- [x] T013 Add unit/property tests for ID separation, version strictness, temporal ranges, digest encoding and canonicalization error behavior in `crates/ecra-core/tests/properties.rs`. **SC-002, SC-014, SC-016**
-- [x] T014 Add RFC 8785 canonical fixture expectations/fixed-point tests in `crates/ecra-core/tests/canonicalization.rs` and `contracts/ecra-domain-v1/`. **SC-015**
+- [x] T007 Implement `SchemaVersion` / `Versioned<T>` strict dispatch. **FR-001, FR-047**
+- [x] T008 Implement machine-readable `DomainError` / `ErrorCode` / `ErrorCategory`. **FR-053**
+- [x] T009 Implement all strong ID newtypes. **FR-002, FR-003**
+- [x] T010 Implement I-JSON-safe `EpochMillis`, `TemporalValidity`, `EvaluationContext`. **FR-018, FR-049**
+- [x] T011 Implement RFC 8785 JCS canonicalization. **FR-004, FR-051**
+- [x] T012 Implement `ContentDigest`, SHA-256 `SecurityDigest`, and validation. **FR-031, FR-032**
+- [x] T013 Add foundational unit/property tests. **SC-002, SC-014, SC-016**
+- [x] T014 Add canonical byte/fixed-point fixtures. **SC-015**
 
----
+## Phase 3 — Actors, Principals, Origins, Resources and Scope
 
-## Phase 3 — US1: Actors, Principals, Origins, Resources and Explicit Scope
+- [x] T015 Implement `Actor` / `ActorKind` and non-authoritative label metadata. **FR-005, FR-007**
+- [x] T016 Implement opaque `PrincipalRef` / `IdentityAssertionRef`. **FR-006**
+- [x] T017 Implement `Origin` / `WebOrigin`, including opaque origins. **FR-008, FR-009**
+- [x] T018 Implement stable `ResourceRef` identity plus non-authoritative locator/origin metadata. **FR-010**
+- [x] T019 Implement fail-closed `ScopeConstraint<T>`. **FR-011, FR-012**
+- [x] T020 Implement typed multi-dimensional `Scope` + `PurposeRef`. **FR-013**
+- [x] T021 Add valid Actor/Principal/Origin/Resource/Scope fixtures. **SC-001, SC-005, SC-006**
+- [x] T022 Add invalid origin/resource/scope/ID fixtures. **SC-002, SC-006**
+- [x] T023 Prove Actor/Principal, locator, origin and scope cannot be type/text-confused. **FR-006, FR-009, FR-010, FR-054, SC-005**
 
-- [x] T015 [P] [US1] Implement `Actor`, `ActorKind` and non-authoritative display metadata in `crates/ecra-core/src/actor.rs`. **FR-005, FR-007**
-- [x] T016 [P] [US1] Implement `PrincipalRef` and `IdentityAssertionRef` as opaque references in `crates/ecra-core/src/identity.rs`; provide no assertion-validity/authentication behavior. **FR-006**
-- [x] T017 [P] [US1] Implement `Origin`, `OriginKind`, standards-aware `WebOrigin` and opaque-origin support in `crates/ecra-core/src/origin.rs`. **FR-008, FR-009**
-- [x] T018 [P] [US1] Implement `ResourceRef`, `ResourceKind` with strong ResourceId and explicit non-authoritative locator/origin metadata in `crates/ecra-core/src/resource.rs`. **FR-010**
-- [x] T019 [US1] Implement generic `ScopeConstraint<T>` (`not_applicable`, `exact`, non-empty `one_of`, `any_explicit`) in `crates/ecra-core/src/scope.rs`. **FR-011, FR-012**
-- [x] T020 [US1] Implement `Scope` with typed Workspace/BrowserSpace/Container/Tab/Session/Task/Origin/Resource constraints and structured PurposeRef in `crates/ecra-core/src/scope.rs`. **FR-013**
-- [x] T021 [P] [US1] Add valid fixtures for Actor/Principal/IdentityAssertion/origins/resources and every ScopeConstraint variant under `contracts/ecra-domain-v1/valid/`. **SC-001, SC-005, SC-006**
-- [x] T022 [P] [US1] Add invalid fixtures for malformed origin/resource, empty `one_of`, implicit wildcard attempts and ID-type mismatch representations under `contracts/ecra-domain-v1/invalid/`. **SC-002, SC-006**
-- [x] T023 [US1] Add compile/runtime tests proving ActorId cannot implicitly become PrincipalId, Resource locator text grants nothing, and arbitrary external strings do not change origin/scope semantics in `crates/ecra-core/tests/contract_fixtures.rs` and `properties.rs`. **FR-006, FR-009, FR-010, FR-054, SC-005**
+## Phase 4 — Capability Request/Grant, Delegation and Time
 
----
+- [x] T024 Implement `OperationRef`, distinct request/grant types, delegation and structural validation. **FR-014–FR-019**
+- [x] T025 Add valid narrow request/grant/delegation/expiry fixtures. **SC-001, SC-013**
+- [x] T026 Add invalid request/grant/temporal/scope fixtures. **SC-002, SC-006, SC-013**
+- [x] T027 Prove no implicit Request→Grant, ID or Actor→Principal conversion. **FR-014, FR-055, SC-013**
+- [x] T028 Prove temporal evaluation uses caller context and no OS clock. **FR-018, FR-049**
 
-## Phase 4 — US4: Capability Request/Grant, Delegation and Temporal Shape
+## Phase 5 — Information, Observation, Fact, Freshness, Evidence and Artifacts
 
-- [x] T024 [US4] Implement `OperationRef`, `CapabilityRequest`, `CapabilityGrant`, `DelegationRef` and structural validation in `crates/ecra-core/src/capability.rs`. **FR-014–FR-019**
-- [x] T025 [P] [US4] Add valid narrow request/grant/delegation/expiry fixtures using distinct CapabilityRequestId/CapabilityGrantId under `contracts/ecra-domain-v1/valid/`. **SC-001, SC-013**
-- [x] T026 [P] [US4] Add invalid request-as-grant, invalid temporal, invalid scope and empty-wildcard fixtures under `contracts/ecra-domain-v1/invalid/`. **SC-002, SC-006, SC-013**
-- [x] T027 [US4] Add compile/runtime tests proving no `From<CapabilityRequest> for CapabilityGrant`, no generic ID conversion and no Actor→Principal authentication shortcut in `crates/ecra-core/tests/contract_fixtures.rs`. **FR-014, FR-055, SC-013**
-- [x] T028 [US4] Add caller-supplied temporal evaluation tests proving no OS-clock access is needed in `crates/ecra-core/tests/properties.rs`. **FR-018, FR-049**
+- [x] T029 Implement information classification and structured policy tags. **FR-027, FR-028**
+- [x] T030 Implement classified provenance-bearing Observation + bounded payload reference. **FR-020, FR-021, FR-027**
+- [x] T031 Implement ArtifactRef identity/classification/digest/size/locator/lineage. **FR-029–FR-031**
+- [x] T032 Implement inspectable FreshnessAssessment. **FR-024**
+- [x] T033 Implement Fact/FactValue/Provenance/Dispute without `Fact.verified`. **FR-020–FR-024, FR-029**
+- [x] T034 Implement bounded EvidenceRef with digest/as-of metadata. **FR-025, FR-026**
+- [x] T035 Add valid classification/observation/artifact/fact/conflict/freshness fixtures. **SC-001, SC-007**
+- [x] T036 Add invalid information/freshness/evidence/digest/byte-size fixtures. **SC-002**
+- [x] T037 Prove provenance/classification/freshness/verification remain orthogonal. **FR-022–FR-029, SC-007**
+- [x] T038 Add lineage/classification property tests including unknown != public. **FR-027–FR-029**
 
----
+## Phase 6 — Information Use / Source-to-Sink Intent
 
-## Phase 5 — US2: Information Classification, Observation, Fact, Freshness, Evidence and Artifacts
+- [x] T039 Implement `InformationRef`, `InformationUseKind`, `InformationUse`. **FR-034, FR-035**
+- [x] T040 Add valid local/model/persist/log/external/remote use fixtures. **SC-008**
+- [x] T041 Add invalid InformationUse fixtures. **SC-002, SC-008**
+- [x] T042 Prove InformationUse is declaration only and cannot synthesize A→B authorization. **FR-035, FR-055, SC-008**
 
-- [x] T029 [P] [US2] Implement `InformationClass`, `InformationPolicyTag`, `InformationClassification` and validation in `crates/ecra-core/src/information.rs`. **FR-027, FR-028**
-- [x] T030 [P] [US2] Implement `Observation`, payload reference and classified provenance-bearing observation data in `crates/ecra-core/src/evidence.rs`. **FR-020, FR-021, FR-027**
-- [x] T031 [P] [US2] Implement `ArtifactRef`, `ArtifactKind`, classification, ContentDigest/size/storage locator and lineage in `crates/ecra-core/src/artifact.rs`. **FR-029–FR-031**
-- [x] T032 [US2] Implement `FreshnessAssessment`, `FreshnessState`, `FreshnessBasisKind` with assessed/basis metadata in `crates/ecra-core/src/evidence.rs`. **FR-024**
-- [x] T033 [US2] Implement `Fact`, `FactValue`, `Provenance`, `DisputeState` and derived InformationRef lineage **without any `verified` truth flag** in `crates/ecra-core/src/evidence.rs`. **FR-020–FR-024, FR-029**
-- [x] T034 [US2] Implement `EvidenceRef`, `EvidenceKind` with optional immutable capture digest/as-of metadata in `crates/ecra-core/src/evidence.rs`. **FR-025, FR-026**
-- [x] T035 [P] [US2] Add valid fixtures for public/private/sensitive/secret/unknown classifications, classified observation/artifact, model-inferred Fact, conflict/dispute and freshness basis under `contracts/ecra-domain-v1/valid/`. **SC-001, SC-007**
-- [x] T036 [P] [US2] Add invalid classification/tag/freshness/evidence/digest/byte-size fixtures under `contracts/ecra-domain-v1/invalid/`. **SC-002**
-- [x] T037 [US2] Add tests proving provenance/classification/freshness remain orthogonal and no Fact contains or derives a canonical VERIFIED state without a VerificationReceipt in `crates/ecra-core/tests/contract_fixtures.rs`. **FR-022–FR-029, SC-007**
-- [x] T038 [US2] Add lineage/classification round-trip property tests, including derived sensitive information remaining representable as sensitive and `unknown` never normalizing to public in `crates/ecra-core/tests/properties.rs`. **FR-027–FR-029**
+## Phase 7 — Action Effects, Idempotency, Retry and Immutable Binding
 
----
+- [x] T043 Implement mutation/reversibility/idempotency/retry value types. **FR-036–FR-038**
+- [x] T044 Implement fail-closed cross-field compatibility. **FR-036–FR-038, FR-048**
+- [x] T045 Implement pre-authorization `ActionIntent` and exact bound parameters. **FR-033–FR-039**
+- [x] T046 Implement domain-separated RFC8785+SHA-256 `ActionDigest` / `ActionRef`. **FR-032, FR-039, FR-051**
+- [x] T047 Add valid action semantic fixtures. **SC-001, SC-011**
+- [x] T048 Add invalid effect/idempotency/retry fixtures. **SC-002, SC-011**
+- [x] T049 Add exhaustive/table/property compatibility tests. **FR-036–FR-038**
+- [x] T050 Add fixed ActionDigest golden + security-field mutation tests. **FR-039, SC-009, SC-015**
+- [x] T051 Reject wrong-digest ActionRef. **SC-002, SC-009**
 
-## Phase 6 — US2/US4: Information Use / Source-to-Sink Intent
+## Phase 8 — Attempts, Executor Receipts and Independent Verification
 
-- [x] T039 [US2] Implement `InformationRef`, `InformationUseKind`, `InformationUse` with non-empty sources and optional destination ResourceRef/WebOrigin in `crates/ecra-core/src/information.rs`. **FR-034, FR-035**
-- [x] T040 [P] [US2] Add valid local-compute/model-context/persist/log/external-disclosure/remote-provider fixtures under `contracts/ecra-domain-v1/valid/`. **SC-008**
-- [x] T041 [P] [US2] Add invalid empty-source and malformed destination InformationUse fixtures under `contracts/ecra-domain-v1/invalid/`. **SC-002, SC-008**
-- [x] T042 [US4] Add tests proving InformationUse is declaration only: no conversion to CapabilityGrant/authorization object and no implicit A→B disclosure created by separate read/write capabilities in `crates/ecra-core/tests/contract_fixtures.rs`. **FR-035, FR-055, SC-008**
+- [x] T052 Implement distinct `ActionAttemptRef`. **FR-040**
+- [x] T053 Implement executor-only `ActionReceipt` / `ActionOutcome`. **FR-041–FR-043**
+- [x] T054 Implement independent `VerificationReceipt` target/method/outcome validation. **FR-044–FR-046**
+- [x] T055 Add valid multi-attempt/receipt/all-verification-outcome fixtures. **SC-010, SC-012**
+- [x] T056 Add invalid binding/timing/type-confusion/evidence fixtures. **SC-002, SC-010, SC-012**
+- [x] T057 Prove attempts remain distinct, UNKNOWN round-trips, receipt != verification, executor success != VERIFIED. **FR-040–FR-046, SC-010–SC-012**
 
----
+## Phase 9 — Strict Versioned Contract, Fixture Runner and Portability
 
-## Phase 7 — US5: Action Effect, Idempotency, Retry and Immutable Action Digest
-
-- [x] T043 [US5] Implement `MutationDomain`, `Reversibility`, `EffectProfile`, `IdempotencyClass`, `IdempotencySpec`, `RetryClass` in `crates/ecra-core/src/action.rs`. **FR-036–FR-038**
-- [x] T044 [US5] Implement cross-field conservative effect/idempotency/retry validation in `crates/ecra-core/src/action.rs`. **FR-036–FR-038, FR-048**
-- [x] T045 [US3] Implement `ActionIntent`, `ActionParametersRef`, principal/identity references, explicit operation/scope, InformationUse list and correlation fields in `crates/ecra-core/src/action.rs`. **FR-033–FR-039**
-- [x] T046 [US3] Implement Ecra-owned ActionDigest calculation and `ActionRef { id, digest }` in `crates/ecra-core/src/digest.rs` / `action.rs` using the normative domain-separated JCS+SHA-256 contract. **FR-032, FR-039, FR-051**
-- [x] T047 [P] [US5] Add valid fixtures for read-only, irreversible local, reversible external, keyed-idempotent and conservative non-idempotent actions under `contracts/ecra-domain-v1/valid/`. **SC-001, SC-011**
-- [x] T048 [P] [US5] Add invalid mutation/reversibility contradictions, missing idempotency key and unsafe retry combinations under `contracts/ecra-domain-v1/invalid/`. **SC-002, SC-011**
-- [x] T049 [US5] Add exhaustive/table/property tests for effect × reversibility × idempotency × retry combinations in `crates/ecra-core/tests/properties.rs`. **FR-036–FR-038**
-- [x] T050 [US3] Add fixed ActionDigest fixtures and field-mutation tests proving every security-relevant ActionIntent change changes digest in `crates/ecra-core/tests/action_digest.rs`. **FR-039, SC-009, SC-015**
-- [x] T051 [US3] Add invalid ActionRef wrong-digest fixture/tests under `contracts/ecra-domain-v1/invalid/` and `crates/ecra-core/tests/action_digest.rs`. **SC-002, SC-009**
-
----
-
-## Phase 8 — US3: Action Attempts, Executor Receipts and Independent Verification
-
-- [x] T052 [US3] Implement `ActionAttemptRef` using distinct ActionAttemptId + exact ActionRef in `crates/ecra-core/src/action.rs`. **FR-040**
-- [x] T053 [US3] Implement `ActionReceipt`, `ActionOutcome` (`executor_observed_success`, `executor_observed_failure`, `unknown`) and validation in `crates/ecra-core/src/receipt.rs`. **FR-041–FR-043**
-- [x] T054 [US3] Implement `VerificationReceipt`, target/method/outcome and validation in `crates/ecra-core/src/verification.rs`. **FR-044–FR-046**
-- [x] T055 [P] [US3] Add valid fixtures with two attempts for one ActionRef, UNKNOWN receipt, executor-observed success/failure and verified/rejected/inconclusive/not-evaluated verification under `contracts/ecra-domain-v1/valid/`. **SC-010, SC-012**
-- [x] T056 [P] [US3] Add invalid wrong ActionRef-attempt binding, receipt timing, type-confusion, missing verification target/verifier/evidence fixtures under `contracts/ecra-domain-v1/invalid/`. **SC-002, SC-010, SC-012**
-- [x] T057 [US3] Add tests proving two attempts remain distinct, receipts bind exact ActionRef+attempt, UNKNOWN round-trips, ActionReceipt cannot deserialize/cast to VerificationReceipt and executor success never equals VERIFIED in `crates/ecra-core/tests/contract_fixtures.rs`. **FR-040–FR-046, SC-010–SC-012**
-
----
-
-## Phase 9 — US6: Strict Versioned Contract, Fixture Runner and Portability
-
-- [x] T058 [US6] Ensure all normative public v1 objects use explicit Serde names and strict unknown-field behavior where required in `crates/ecra-core/src/*.rs`. **FR-047**
-- [x] T059 [US6] Build valid/invalid fixture runners that discover every committed fixture and assert expected type/error code in `crates/ecra-core/tests/contract_fixtures.rs` and `invalid_fixtures.rs`. **SC-001, SC-002, SC-014**
-- [x] T060 [US6] Add canonical byte + ActionDigest expected outputs for normative fixtures in `crates/ecra-core/tests/canonicalization.rs`, `action_digest.rs` and `contracts/ecra-domain-v1/`. **FR-051, SC-015**
-- [x] T061 [US6] Add rustdoc examples for safe Actor/Principal, explicit Scope, capability request/grant, classified information, ActionRef/attempt/receipt and verification construction in relevant `src/*.rs`. **SC-004**
-- [x] T062 [US6] Add portability tests proving supported contract behavior is identical across platform-independent fixture inputs and does not inspect environment/OS services in `crates/ecra-core/tests/contract_fixtures.rs`. **FR-049, SC-016, SC-017**
-
----
+- [x] T058 Apply explicit Serde names and strict unknown-field handling. **FR-047**
+- [x] T059 Build exhaustive valid/invalid fixture manifests and typed runners. **SC-001, SC-002, SC-014**
+- [x] T060 Add canonical-byte and ActionDigest expected outputs. **FR-051, SC-015**
+- [x] T061 Add executable/compile-fail rustdoc construction/type-safety examples. **SC-004**
+- [x] T062 Add portability/static-source evidence with no OS/service dependence. **FR-049, SC-016, SC-017**
 
 ## Phase 10 — Cross-Cutting Security / Architecture Gates
 
-- [x] T063 Add dependency-boundary automation using `cargo metadata`/`cargo tree` or a small repository script; fail on prohibited categories from FR-050. **SC-003, SC-017**
-- [x] T064 Enforce/verify zero unsafe code in `ecra-core` via crate lint plus CI/static evidence. **FR-052, SC-016**
-- [x] T065 Add structured error-code tests covering all contract categories without display-string parsing in `crates/ecra-core/tests/invalid_fixtures.rs`. **FR-053**
-- [x] T066 [P] Audit all free-form fields (`label`, `reason`, `purpose`, `notes`, locator, provider metadata, external refs) and add rustdoc/tests proving they are non-authoritative. **FR-054**
-- [x] T067 [P] Update canonical donor/license ledger for exact Serde/JSON/UUID/URL/JCS/SHA-256/error/property-test dependencies and verify no donor source was copied without exact provenance. **G10**
-- [x] T068 Add `crates/ecra-core/README.md` / crate-level architecture map linking each module/type to owning FR/entity/contract and explicitly documenting seven misuse warnings from `plan.md`. **SC-004**
-- [x] T069 Run offline tests after dependency availability and demonstrate no network/browser/model/database/process/secret-service access. **FR-049, FR-050, SC-016**
+- [x] T063 Enforce direct dependency allowlist + prohibited transitive dependency categories. **FR-050, SC-003, SC-017**
+- [x] T064 Enforce zero unsafe by crate lint + static CI script. **FR-052, SC-016**
+- [x] T065 Test all 16 ErrorCategory / 19 ErrorCode mappings without display parsing. **FR-053**
+- [x] T066 Audit `label`, `reason`, purpose, notes, locators/provider/external metadata as non-authoritative. **FR-054**
+- [x] T067 Reconcile exact locked dependency licenses/provenance/no-source-copy ledger. **G10**
+- [x] T068 Add crate architecture map + seven misuse warnings. **SC-004**
+- [x] T069 Prove offline/no-service-access behavior. **FR-049, FR-050, SC-016**
 
-Phase 10 exact-head evidence: `5dfe4c09b2abceeec14bc94b8e13d2dccddfd37c`, CI `33086490495` — success.
+**Phase 10 exact-head evidence:** `5dfe4c09b2abceeec14bc94b8e13d2dccddfd37c`; CI `33086490495` — success.
 
----
+## Phase 11 — Pre-Closure Traceability / Review Remediation
 
-## Phase 11 — Pre-Closure Spec Kit Traceability / Review Remediation
-
-- [ ] T070 Map FR-001–FR-055 and SC-001–SC-020 to tasks/tests/contracts; record matrix in implementation PR/report or a feature traceability artifact. **SC-020**
-- [ ] T071 Re-check constitution v1.1.0 gates G1–G15 against exact implementation; any failed gate blocks closure.
-- [ ] T072 Resolve every ECR-001-owned blocker from `specs/000-ecra-platform/pre-implementation-review-2026-08-27.md` with exact code/test evidence; do not mark downstream-only findings as implemented. **SC-019**
-- [ ] T073 Run all commands/manual cases in revised `quickstart.md` on exact feature head and record toolchain/changed files/test totals/dependency/unsafe/fixture/digest evidence. **SC-018**
-- [x] T074 Run `/speckit.analyze`-equivalent review across spec/research/data-model/contract/plan/tasks/implementation; treat MUST-level drift as blocker. **SC-020** — `post-implementation-analyze-2026-08-27.md` returned `CONVERGENCE_REQUIRED`.
-- [x] T075 If implementation reveals unmet requirements, append a `Phase 12 — Convergence` section with new traceable tasks; complete it before closure rather than hiding/reclassifying the gap.
-- [ ] T076 Update `specs/000-ecra-platform/roadmap.md` to `CLOSED_CANONICAL` only after all exact-head Definition-of-Done evidence passes; otherwise use truthful intermediate status.
-
----
+- [x] T070 Map FR-001–FR-055 and SC-001–SC-020 to implementation/test/contract evidence in `traceability-closure-2026-08-27.md`. **SC-020**
+- [x] T071 Re-check constitution v1.1.0 G1–G15 in the traceability artifact; downstream/N/A ownership remains explicit.
+- [x] T072 Map all P-001–P-035 pre-implementation findings to exact ECR-001 remediation or named downstream owner. **SC-019**
+- [ ] T073 Record revised quickstart/full exact-head final results after the last repository convergence mutation. **SC-018**
+- [x] T074 Run post-implementation analyze; `post-implementation-analyze-2026-08-27.md` returned `CONVERGENCE_REQUIRED`. **SC-020**
+- [x] T075 Activate Phase 12 rather than hiding MUST-level drift.
+- [ ] T076 Mark roadmap `CLOSED_CANONICAL` only after PR merge + required post-merge evidence; before then keep truthful intermediate status.
 
 ## Phase 12 — Convergence
 
-- [x] T077 Fold implementation clarifications C1–C12 plus actual version-envelope and machine error semantics into `specs/001-trusted-domain-kernel/data-model.md` and `specs/001-trusted-domain-kernel/contracts/domain-v1.md`; primary canonical docs match the implemented/tested v1 contract. **FR-001, FR-020–FR-054, SC-020**
-- [x] T078 Revise `specs/001-trusted-domain-kernel/quickstart.md`, `specs/001-trusted-domain-kernel/tasks.md`, `specs/001-trusted-domain-kernel/STATUS.md`, and `EXECUTION.md` to the current verified gate surface and truthful phase state; include dedicated fixture, portability, metadata, unsafe, dependency and offline gates. **SC-018, SC-020**
-- [ ] T079 Produce exact implementation traceability covering FR-001–FR-055, SC-001–SC-020, constitution G1–G15 and every ECR-001-owned pre-implementation-review finding in a feature traceability artifact with code/test/fixture evidence and explicit downstream deferrals. **SC-019, SC-020**
-- [ ] T080 Re-run the revised quickstart, full exact-head CI and `/speckit.analyze`-equivalent review after T077–T079; PR readiness is authorized only if zero blocking drift remains. **SC-018, SC-020**
+- [x] T077 Fold C1–C12 plus actual version-envelope/machine-error semantics into primary `data-model.md` and `contracts/domain-v1.md`. **FR-001, FR-020–FR-054, SC-020**
+- [x] T078 Converge `quickstart.md`, this task ledger, active `STATUS.md`, and `EXECUTION.md` to current gate/phase truth. **SC-018, SC-020**
+- [x] T079 Produce `traceability-closure-2026-08-27.md` covering FRs, SCs, G1–G15 and pre-review findings with downstream deferrals. **SC-019, SC-020**
+- [ ] T080 Run final analyze-equivalent review and the revised quickstart/CI on the exact converged feature head; zero blocking drift is required before PR readiness. **SC-018, SC-020**
 
----
+### T080 intermediate executable-gate evidence
 
-## Dependency Graph
+Head `a7f1ea27e55fe7d41d70a6101dd3f44502e260f0`, CI `33087744071` passed build, fmt, Clippy, full workspace tests, all eight dedicated contract/security targets, rustdoc, offline replay, unsafe boundary, dependency boundary and `cargo tree -p ecra-core`. This is not final evidence because the final analyze/ledger documents are still being committed after that head.
+
+## Remaining dependency graph
 
 ```text
-Phases 1–10 VERIFIED_ON_BRANCH
-        ↓
-Phase 11 T074 analyze
-        ↓ CONVERGENCE_REQUIRED
-Phase 12 T077–T080
-        ↓ zero blocking drift
-Phase 11 T070–T073 closure evidence
-        ↓
-PR readiness / review / merge / post-merge verification
-        ↓
-T076 roadmap canonical closure
+T080 final analyze + exact-head gate
+  ↓ zero blocking drift
+T073 final evidence record
+  ↓
+PR readiness / required review / fixes
+  ↓
+merge + post-merge main verification
+  ↓
+T076 roadmap/status canonical closure
+  ↓
+CLOSED_CANONICAL
 ```
 
-No later ECR implementation becomes eligible from a partially complete ECR-001 slice.
+No dependent ECR implementation becomes eligible before ECR-001 is `CLOSED_CANONICAL`.
