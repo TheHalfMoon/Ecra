@@ -1,0 +1,1 @@
+{"id":"00000000-0000-0000-0000-000000000504","verifier":"00000000-0000-0000-0000-000000000001","verifier_principal":null,"target":{"kind":"claim","value":{"namespace":"ecra.test","reference":"claim-504"}},"method":"other","evidence":[],"outcome":"not_evaluated","evaluated_at":1003,"notes":null}
