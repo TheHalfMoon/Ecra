@@ -1,15 +1,17 @@
-name: ECR-002 Lock Finalizer
+name: ECR-002 Lock Committer
 
 on:
   push:
     branches:
       - 002-durable-run-ledger
+    paths-ignore:
+      - Cargo.lock
 
 permissions:
   contents: write
 
 jobs:
-  finalize:
+  commit-lock:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +35,7 @@ jobs:
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
           test "$actual" = "$GITHUB_SHA" || {
-            echo "refusing lock finalization: event SHA $GITHUB_SHA, checkout $actual" >&2
+            echo "refusing lock commit: event SHA $GITHUB_SHA, checkout $actual" >&2
             exit 1
           }
       - name: Generate and verify exact Cargo.lock
@@ -47,90 +49,21 @@ jobs:
             echo "generated Cargo.lock digest drifted: expected $expected, found $actual" >&2
             exit 1
           }
-      - name: Install final ECR-002 workflow
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat > .github/workflows/ecr-002.yml <<'YAML'
-          name: ECR-002 CI
-
-          on:
-            push:
-              branches:
-                - 002-durable-run-ledger
-                - main
-            workflow_dispatch:
-
-          concurrency:
-            group: ecr-002-${{ github.ref }}
-            cancel-in-progress: true
-
-          permissions:
-            contents: read
-
-          jobs:
-            run-ledger:
-              runs-on: self-hosted
-              steps:
-                - uses: actions/checkout@v4
-                - name: Install pinned Rust toolchain
-                  shell: bash
-                  run: |
-                    set -euo pipefail
-                    if ! command -v rustup >/dev/null 2>&1; then
-                      curl --proto '=https' --tlsv1.2 --fail --silent --show-error https://sh.rustup.rs \
-                        | sh -s -- -y --profile minimal --default-toolchain none
-                      export PATH="$HOME/.cargo/bin:$PATH"
-                      echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-                    fi
-                    rustup toolchain install 1.98.0 --profile minimal --component rustfmt,clippy
-                - name: Build locked workspace
-                  run: cargo build --workspace --locked
-                - name: Format
-                  run: cargo fmt --all --check
-                - name: Clippy
-                  run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-                - name: Test workspace
-                  run: cargo test --workspace --locked
-                - name: ECR-001 regression contract targets
-                  run: |
-                    cargo test -p ecra-core --test valid_fixtures --locked
-                    cargo test -p ecra-core --test invalid_fixtures --locked
-                    cargo test -p ecra-core --test contract_fixtures --locked
-                    cargo test -p ecra-core --test canonicalization --locked
-                    cargo test -p ecra-core --test action_digest --locked
-                    cargo test -p ecra-core --test properties --locked
-                    cargo test -p ecra-core --test portability --locked
-                    cargo test -p ecra-core --test non_authoritative_metadata --locked
-                - name: ECR-002 package tests
-                  run: cargo test -p ecra-run --locked
-                - name: Rustdoc tests
-                  run: cargo test --doc --workspace --locked
-                - name: Offline replay gate
-                  run: cargo test --workspace --locked --offline
-                - name: ECR-001 boundaries
-                  run: |
-                    bash scripts/check-core-unsafe.sh
-                    bash scripts/check-core-deps.sh
-                    cargo tree -p ecra-core
-                - name: ECR-002 boundaries
-                  run: |
-                    bash scripts/check-run-unsafe.sh
-                    bash scripts/check-run-deps.sh
-                    cargo tree -p ecra-run
-          YAML
-          rm .github/workflows/ecr-002-lock-bootstrap.yml
-      - name: Commit final lock and workflow
+      - name: Commit generated lockfile only
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Cargo.lock .github/workflows/ecr-002.yml .github/workflows/ecr-002-lock-bootstrap.yml
+          git add Cargo.lock
           git diff --cached --check
-          git commit -m "build(run): commit generated lock and trusted CI"
+          git diff --cached --quiet && {
+            echo "Cargo.lock already matches the verified generated graph"
+            exit 0
+          }
+          git commit -m "build(run): commit generated Cargo.lock"
           git push origin HEAD:002-durable-run-ledger
 
-# One-shot trusted finalizer. It verifies the generated Cargo.lock digest,
-# replaces itself with the push-only ECR-002 workflow, and performs a normal
-# fast-forward push. Its own run is bootstrap evidence, never final CI.
+# Temporary trusted helper. It can modify Cargo.lock only. The push event created
+# by the Cargo.lock-only commit is ignored, preventing a loop. Delete this file
+# with the GitHub connector immediately after the generated lock commit lands.
