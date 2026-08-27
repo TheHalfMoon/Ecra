@@ -4,19 +4,26 @@
 **Architecture/dependency authority:** `roadmap.md`.  
 **Current execution detail:** `../../EXECUTION.md`.
 
-## Active slice
+## Canonically closed slice
 
 | ID | Slice | Lifecycle | Notes |
 |---|---|---|---|
-| ECR-001 | Trusted Domain Kernel | `IMPLEMENTING` | PR #1 Ready; Phase 13 review remediation verified on exact head; final ledger head requires exact-head CI before merge |
+| ECR-001 | Trusted Domain Kernel | `CLOSED_CANONICAL` | PR #1 merged as `d1021616…`; post-merge main CI `33099033214` passed the complete gate |
 
-No later ECR slice is implementation-eligible until ECR-001 becomes `CLOSED_CANONICAL`, except bounded research explicitly authorized by its own spec/dependencies.
+ECR-001 is now a satisfied roadmap dependency. Closure is backed by final feature-head CI `33098892820`, merge commit `d1021616eae721e0b89bd5d4114531c4b9cc8a58`, and post-merge canonical-main CI `33099033214`.
+
+## Next dependency-eligible candidate
+
+| ID | Slice | Lifecycle | Depends on | Eligibility note |
+|---|---|---|---|---|
+| ECR-002 | Durable Run, Ledger & Budgets | `PLANNED` | ECR-001 | dependency satisfied; must still pass its own Spec Kit specify/plan/tasks/analyze gates before implementation |
+
+Do not treat dependency eligibility as implementation authorization. `EXECUTION.md` must first recover or create the bounded ECR-002 Spec Kit package and advance it through the repository lifecycle.
 
 ## Planned critical path
 
 | ID | Slice | Lifecycle | Depends on |
 |---|---|---|---|
-| ECR-002 | Durable Run, Ledger & Budgets | `PLANNED` | ECR-001 |
 | ECR-031 | Identity, Trust Root & Sensitive Storage | `PLANNED` | ECR-001, ECR-002 |
 | ECR-004 | Verification & Reconciliation | `PLANNED` | ECR-001, ECR-002 |
 | ECR-003 | Authority, Information Flow, Policy & Secrets | `PLANNED` | ECR-001, ECR-002, ECR-031 |
@@ -56,7 +63,7 @@ Follow exact dependencies in `roadmap.md` for ECR-022 through ECR-030:
 
 ```text
 A. Trusted substrate
-   ECR-001 → ECR-002 → ECR-031/ECR-004 → ECR-003 → ECR-005
+   ECR-001 [CLOSED] → ECR-002 → ECR-031/ECR-004 → ECR-003 → ECR-005
 
 B. Browser wedge
    ECR-006 → ECR-007 → ECR-008
