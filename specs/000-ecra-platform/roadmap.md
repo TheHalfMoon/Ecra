@@ -28,7 +28,7 @@ Build the default trusted gateway between human/model intent and digital informa
 
 | ID | Slice | Primary outcome | Depends on | Initial status | Sub-spec |
 |---|---|---|---|---|---|
-| ECR-001 | Trusted Domain Kernel | Versioned, zero-I/O domain types and invariants for actor/origin/capability/provenance/action/receipt/verification | — | PLANNED | `specs/001-trusted-domain-kernel/` |
+| ECR-001 | Trusted Domain Kernel | Versioned, zero-I/O domain types and invariants for actor/origin/capability/provenance/action/receipt/verification | — | TASKS_READY | `specs/001-trusted-domain-kernel/` |
 | ECR-002 | Durable Run & Ledger | Serializable run machine, append-only/tamper-evident local ledger, portable `.ecra` run artifact | ECR-001 | PLANNED | `specs/002-durable-run-ledger/` |
 | ECR-003 | Authority, Policy & Secrets | Fail-closed capability evaluation, approval binding, origin authority, secret handles, policy adapter | ECR-001, ECR-002 | PLANNED | `specs/003-authority-policy-secrets/` |
 | ECR-004 | Verification & Side-Effect Semantics | Independent verifier framework, UNKNOWN handling, retry/idempotency classes, critical-point verification | ECR-001, ECR-002 | PLANNED | `specs/004-verification-receipts/` |
