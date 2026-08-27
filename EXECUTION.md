@@ -1,6 +1,6 @@
 # Ecra Execution Guide
 
-> **Operational start-here document.** Recover live work from this file, the platform roadmap/status, the relevant slice package, and exact GitHub truth; do not depend on private chat state.
+> **Operational start-here document.** Recover live work from this file, the platform roadmap/status, the active slice package, and exact GitHub truth; do not depend on private chat state.
 
 ## Source-of-truth order
 
@@ -10,7 +10,7 @@
 4. `specs/000-ecra-platform/STATUS.md`
 5. relevant platform architecture/threat/gap/risk/benchmark/decision artifacts
 6. `specs/README.md`
-7. the current or next eligible bounded Spec Kit package
+7. active package `specs/002-durable-run-ledger/`
 8. exact live branch/head, PR, CI, reviews and changed files
 
 Stale prose must be updated to live evidence, never the reverse.
@@ -19,97 +19,131 @@ Stale prose must be updated to live evidence, never the reverse.
 
 ```text
 ECR-001 — Trusted Domain Kernel: CLOSED_CANONICAL
-PR #1: MERGED
-Merge commit: d1021616eae721e0b89bd5d4114531c4b9cc8a58
-Post-merge CI: 33099033214 — SUCCESS
-Current phase: ECR-001 closure-ledger finalization on canonical main
-Next dependency-eligible candidate: ECR-002 — Durable Run, Ledger & Budgets
+ECR-001 closure-ledger head: 85e4bf657b6c33e3f88d83e92e7a35279d177349
+ECR-001 closure-ledger CI: 33099434232 — SUCCESS
+
+Active slice: ECR-002 — Durable Run, Ledger & Budgets
+Lifecycle: TASKS_READY
+Planning package commit: c83a208ad84b2d1da892a80a6911989eaff25ade
+Planning analyze: ZERO_BLOCKING_PLANNING_DRIFT_FOUND
+Tasks: T001–T073
+Implementation branch: create `002-durable-run-ledger` from exact canonical main after planning-status synchronization
 ```
 
-Do not begin ECR-002 implementation merely because its ECR-001 dependency is now satisfied. First require the final ECR-001 closure-ledger head on `main` to pass the complete exact-head CI surface, then re-read the ECR-002 package and advance it through its own Spec Kit lifecycle.
+ECR-002 implementation is authorized only within the package's bounded local/synthetic/non-sensitive durability scope. This does not authorize real sensitive persistence, authentication/trust roots, authorization/declassification, independent verification/reconciliation, provider execution, distributed workflow infrastructure or multi-device sync.
 
-## ECR-001 canonical closure evidence
+## ECR-002 planning package
 
-Final feature verification:
+Read in order:
 
 ```text
-Head:   1d3c319c3317d3572baad1784f18eea771c5ac6e
-CI:     33098892820 — SUCCESS
-Runner: macbook — self-hosted macOS
-Rust:   1.98.0-aarch64-apple-darwin
+specs/002-durable-run-ledger/STATUS.md
+specs/002-durable-run-ledger/spec.md
+specs/002-durable-run-ledger/research.md
+specs/002-durable-run-ledger/data-model.md
+specs/002-durable-run-ledger/contracts/run-ledger-v1.md
+specs/002-durable-run-ledger/threat-model.md
+specs/002-durable-run-ledger/plan.md
+specs/002-durable-run-ledger/tasks.md
+specs/002-durable-run-ledger/quickstart.md
+specs/002-durable-run-ledger/analyze.md
+specs/002-durable-run-ledger/checklists/requirements.md
 ```
 
-Merge and canonical verification:
+Planning result:
 
 ```text
-PR:           #1 — MERGED
-Merge commit: d1021616eae721e0b89bd5d4114531c4b9cc8a58
-Main CI:      33099033214 — SUCCESS
+FR-001–FR-057: OWNED
+SC-001–SC-016: OWNED
+G1–G15: PASS / explicit N/A
+unresolved security decisions: 0
+unresolved dependency decisions: 0
+real-sensitive-state authorization: NO
 ```
 
-The final feature head and resulting canonical merge commit both passed the complete ECR-001 gate. All actionable Qodo review threads were resolved/outdated before merge, including final Phase 13 task-path traceability, and CodeRabbit was successful.
+## ECR-002 fixed architecture decisions
 
-## ECR-001 phase ledger
+```text
+authoritative truth     append-only RunEventEnvelope history
+ordering                EventSequence only
+projection              rebuildable/non-authoritative RunState cache
+attempt safety          committed AttemptPrepared before provider invocation
+missing receipt         UNKNOWN / reconciliation-required; never inferred success/failure
+integrity               domain-separated RFC8785 + SHA-256 LedgerDigest
+local store             SQLite via bounded rusqlite adapter
+SQLite durability       WAL + synchronous=FULL, asserted at open
+write transaction       BEGIN IMMEDIATE equivalent + expected-head compare
+budget accounting       typed I-JSON-safe checked integer dimensions
+portable artifact       deterministic strict Stored-only ZIP `.ecra`
+archive/store content   synthetic/non-sensitive v1 acceptance only
+hostile rewrite claim   NOT provided by plain hash chain
+```
 
-| Phase | Tasks | State |
-|---|---:|---|
-| 1–9 | T001–T062 | complete |
-| 10 | T063–T069 | complete |
-| 11 | T070–T076 | complete |
-| 12 | T077–T080 | complete |
-| 13 | T081–T084 | complete |
+## ECR-002 implementation order
 
-ECR-001 is no longer the active implementation slice. Its package remains the canonical record for the trusted-domain kernel.
+```text
+Phase 1 T001–T008  workspace/crate/CI/dependencies
+Phase 2 T009–T018  errors/primitives/events/digest
+Phase 3 T019–T026  reducer/state machine
+Phase 4 T027–T034  budgets
+Phase 5 T035–T044  SQLite/migrations/store/projections
+Phase 6 T045–T051  attempt guard/recovery/concurrency
+Phase 7 T052–T059  deterministic .ecra
+Phase 8 T060–T066  portability/security/docs/gates
+Phase 9 T067–T073  traceability/convergence/review/merge/closure
+```
+
+Do not skip ahead across dependency boundaries merely because files can be edited in parallel.
 
 ## CI architecture
 
-GitHub-hosted runners were blocked because the owner account had an Actions budget of `$0` with stop-usage enabled and no payment method. The approved repository-scoped self-hosted macOS runner `macbook` preserves the full verification surface without making the repository public or enabling paid overage.
+The approved repository-scoped self-hosted macOS runner `macbook` remains the trusted execution oracle. Persistent personal runners must not execute untrusted fork PR code.
 
-Current trusted workflow topology:
+ECR-001 workflow remains authoritative for closed core regression on `main`. ECR-002 T006 adds a trusted push-only workflow for `002-durable-run-ledger` and `main` with the full workspace, core-regression and run-specific gate surfaces.
 
-```text
-push: 001-trusted-domain-kernel -> trusted feature-head verification
-push: main                      -> canonical-main verification
-workflow_dispatch               -> explicit recovery/recheck
-concurrency                      -> cancel superseded same-ref runs
-runs-on                          -> self-hosted
-permissions                     -> contents: read
-```
+## ECR-002 full verification target
 
-Do not restore untrusted `pull_request` execution on this persistent self-hosted machine without an explicit security design.
-
-## Exact-head CI surface
+When implementation exists:
 
 ```bash
 cargo build --workspace --locked
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --workspace --locked
-cargo test -p ecra-core --test valid_fixtures --locked
-cargo test -p ecra-core --test invalid_fixtures --locked
-cargo test -p ecra-core --test contract_fixtures --locked
-cargo test -p ecra-core --test canonicalization --locked
-cargo test -p ecra-core --test action_digest --locked
-cargo test -p ecra-core --test properties --locked
-cargo test -p ecra-core --test portability --locked
-cargo test -p ecra-core --test non_authoritative_metadata --locked
 cargo test --doc --workspace --locked
 cargo test --workspace --locked --offline
 bash scripts/check-core-unsafe.sh
 bash scripts/check-core-deps.sh
+bash scripts/check-run-unsafe.sh
+bash scripts/check-run-deps.sh
+cargo test -p ecra-core --locked
+cargo test -p ecra-run --test event_contract --locked
+cargo test -p ecra-run --test reducer --locked
+cargo test -p ecra-run --test attempts --locked
+cargo test -p ecra-run --test budgets --locked
+cargo test -p ecra-run --test sqlite_store --locked
+cargo test -p ecra-run --test migration --locked
+cargo test -p ecra-run --test crash_recovery --locked
+cargo test -p ecra-run --test archive --locked
+cargo test -p ecra-run --test portability --locked
+cargo test -p ecra-run --test boundaries --locked
 cargo tree -p ecra-core
+cargo tree -p ecra-run
 ```
 
-## Next eligible work after closure-ledger CI
+## Immediate next work
 
 ```text
-A. require exact-head main CI PASS on the final ECR-001 closure-ledger head
-B. re-read canonical roadmap/platform status and confirm ECR-002 is still the next dependency-eligible slice
-C. inspect `specs/002-durable-run-ledger/` and any active STATUS/spec/research/plan/tasks/analyze artifacts
-D. determine the exact ECR-002 lifecycle state from repository truth
-E. if planning artifacts are incomplete, continue specify/research/plan/contracts/tasks/analyze before implementation
-F. if ECR-002 is genuinely TASKS_READY with clean analyze and constitution gates, create/use its bounded feature branch and begin only its first eligible task
-G. preserve the same exact-head/review/merge/post-merge evidence discipline
+A. finish lifecycle synchronization on canonical main: roadmap + platform status + spec index
+B. require canonical planning/status head CI to remain healthy
+C. create branch `002-durable-run-ledger` from exact canonical main
+D. update branch-local lifecycle to IMPLEMENTING and open Draft PR
+E. execute T001 then T002... in dependency order
+F. after each material phase, require exact-head CI and repair any actual failure
+G. complete T067–T070 convergence/analyze after implementation
+H. mark Ready only on exact-head green + clean review state
+I. merge with expected head, require post-merge main ECR-002 CI
+J. only then T073 / CLOSED_CANONICAL and re-read roadmap for next eligible slice
 ```
 
 ## Non-negotiable inherited invariants
@@ -119,12 +153,12 @@ Actor != authenticated Principal
 CapabilityRequest != CapabilityGrant
 classification != permission
 InformationUse != authorization
-locator/provider/free-form text != authority or resource identity
 ActionDigest != signature/approval
 ActionIntent != ActionAttemptRef != ActionReceipt != VerificationReceipt
 executor_observed_success != verified
 UNKNOWN remains UNKNOWN
-ContentDigest != ActionDigest/security proof
+projection != authoritative event history
+LedgerDigest != authentication/signature/MAC/VerificationReceipt
+budget != authority
+`.ecra` != protected secret container
 ```
-
-ECR-002 must build on ECR-001 rather than reopening or duplicating these trusted-domain semantics.
