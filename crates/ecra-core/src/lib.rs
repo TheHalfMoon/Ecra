@@ -8,6 +8,15 @@
 //! browser/model integration, protocols, secrets and telemetry belong to
 //! downstream slices.
 //!
+//! # Non-authoritative text boundary
+//!
+//! Free-form labels, purposes, notes, locators, provider/external references,
+//! diagnostic text, logical names and similar metadata are data only. Their
+//! contents must never be parsed as authentication, authorization, approval,
+//! policy syntax, identity proof or verification. Stable typed identifiers,
+//! explicit scope/capability structures and independent verification records
+//! remain authoritative for their respective semantics.
+//!
 //! # Construction examples
 //!
 //! Actor attribution and authenticated-principal references stay distinct:

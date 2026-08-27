@@ -1,14 +1,16 @@
 # Ecra Donor and License Ledger
 
-**Status:** CANONICAL_PLANNING  
-**Created:** 2026-08-27
+**Status:** CANONICAL_IMPLEMENTATION_LEDGER  
+**Created:** 2026-08-27  
+**Updated:** 2026-08-27 for ECR-001 locked dependency review
 
-This ledger separates **conceptual reference**, **dependency candidate**, and **source-reuse candidate**. Listing a project here never authorizes copying its source. Source reuse requires exact-file review, license compatibility, notice handling, and an implementation change that records what was copied/modified.
+This ledger separates **conceptual reference**, **dependency candidate**, **locked dependency**, and **source-reuse candidate**. Listing a project here never authorizes copying its source. Source reuse requires exact-file review, license compatibility, notice handling, and an implementation change that records what was copied/modified.
 
 ## Status Definitions
 
 - `REFERENCE_ONLY` — study architecture/product/research; do not copy source under current plan.
 - `DEPENDENCY_CANDIDATE` — may be used through normal package dependency after implementation-time license/security review.
+- `LOCKED_DEPENDENCY` — exact release is present in the committed lockfile and reviewed for the owning slice.
 - `SOURCE_REUSE_CANDIDATE` — selective source reuse may be considered only with exact provenance/notice handling.
 - `FOUNDATION_CANDIDATE` — upstream project may become a maintained product foundation; requires dedicated upstream strategy.
 - `BLOCKED_UNTIL_REVIEW` — licensing or maintenance conditions make source reuse unsuitable without explicit decision.
@@ -74,6 +76,32 @@ This ledger separates **conceptual reference**, **dependency candidate**, and **
 | uuid | Strong UUID values | MIT OR Apache-2.0 | DEPENDENCY_CANDIDATE | ECR-001 candidate. |
 | url | Standards-aware URL parsing | MIT OR Apache-2.0 | DEPENDENCY_CANDIDATE | ECR-001 `WebOrigin` parsing candidate. |
 
+## ECR-001 Locked Dependency Review
+
+The versions below are the exact packages committed in `Cargo.lock` for ECR-001. License expressions were checked against the exact package manifests/license files where available and the corresponding upstream project license. `scripts/check-core-deps.sh` separately fail-closes the production direct-dependency set and prohibited FR-050 runtime categories.
+
+| Package | Exact locked version | Scope | License | ECR-001 role | Source reuse |
+|---|---:|---|---|---|---|
+| `serde` | 1.0.229 | runtime | MIT OR Apache-2.0 | typed serialization/deserialization | dependency API only; no source copied |
+| `serde_json` | 1.0.151 | runtime | MIT OR Apache-2.0 | strict JSON wire parsing/value tests | dependency API only; no source copied |
+| `serde_jcs` | 0.2.0 | runtime | MIT OR Apache-2.0 | RFC 8785 canonical JSON implementation | dependency API only; no source copied |
+| `sha2` | 0.11.0 | runtime | MIT OR Apache-2.0 | SHA-256 security-binding digest | dependency API only; no source copied |
+| `thiserror` | 2.0.20 | runtime | MIT OR Apache-2.0 | typed error derivation | dependency API only; no source copied |
+| `url` | 2.5.8 | runtime | MIT OR Apache-2.0 | standards-aware web-origin parsing | dependency API only; no source copied |
+| `uuid` | 1.26.0 | runtime | Apache-2.0 OR MIT | opaque UUID-backed ID values; generation features are not enabled | dependency API only; no source copied |
+| `proptest` | 1.11.0 | dev-only | MIT OR Apache-2.0 | property/invariant tests | test dependency API only; no source copied |
+
+### ECR-001 review notes
+
+- `Cargo.lock` is the exact version authority; permissive version ranges in `crates/ecra-core/Cargo.toml` resolve reproducibly through the lockfile.
+- Runtime direct dependencies are limited to the seven packages above; `proptest` is dev-only and is excluded from the runtime dependency boundary.
+- ECR-001 does not vendor these crates or copy/adapt their implementation source into `crates/ecra-core`.
+- The implementation uses public dependency APIs and independently written Ecra domain code. Repository review found no copied/adapted donor code requiring an exact-file provenance entry under the Source Reuse Rules below.
+- `serde_jcs` is used as a dependency rather than copying canonicalization source; Ecra owns the wrapper, domain separator, normative fixtures and digest contract.
+- `sha2` is used as a dependency rather than copying a SHA-256 implementation; Ecra owns the `SecurityDigest`/`ActionDigest` domain semantics.
+- `uuid` is used for parsing/storage of strong opaque identifiers. ECR-001 does not treat UUID version/display text as authority and does not require random generation.
+- Future dependency additions or feature changes require a new ledger delta and must pass the direct-dependency allowlist before merge.
+
 ## Durable Execution References With Licensing Caution
 
 | Project | Role | Observed license | Status | Ecra use / constraint |
@@ -125,4 +153,4 @@ Before a candidate becomes a locked dependency:
 
 ## Current Authorization
 
-At planning time, this ledger authorizes **research and planning only**. ECR-001 tasks may add the small Rust dependency candidates listed in its `research.md` after implementation-time review. No browser/donor source code has been authorized for copying into Ecra yet.
+ECR-001 is authorized to use only the locked runtime/dev dependency set recorded above within the trusted-domain-kernel slice and subject to its dependency boundary. This does not authorize source copying. Browser, runtime, protocol, model, policy, persistence, telemetry, sandbox and other later-slice dependencies remain governed by their owning ECR package and require separate review.
