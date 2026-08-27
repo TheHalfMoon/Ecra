@@ -1,395 +1,334 @@
 # Ecra Initial Platform Threat Model
 
 **Status:** CANONICAL_PLANNING  
-**Date:** 2026-08-27
+**Date:** 2026-08-27  
+**Updated after:** pre-implementation architecture review  
+**Constitution:** v1.1.0
 
-This is the initial platform-level threat model. Each privileged or externally exposed slice MUST refine it with implementation-specific assets, trust boundaries, attack paths, and tests.
+Each privileged/exposed slice MUST refine this model with implementation-specific assets, boundaries, abuse cases and tests.
 
 ## 1. Security Objective
 
-Ecra should allow humans and agents to find, understand, and act across digital systems without granting agents, models, web content, plugins, or external protocols ambient authority over the user's browser, secrets, data, or operating system.
+Allow humans/agents to find, understand and act across digital systems without granting models, web content, plugins, repositories, browser extensions, external protocols or local processes ambient authority over the user's identity, browser, secrets, information or OS.
 
-Security is defined primarily by **authority containment, provenance, explicit side-effect semantics, durable evidence, and independent verification**—not by prompt wording or attack detection alone.
+Security is defined by:
 
-## 2. Assets
+```text
+authenticated identity where required
++ explicit authority
++ explicit source→sink information flow
++ provenance
++ bounded execution
++ exact side-effect/attempt semantics
++ durable receipts
++ independent verification
+```
 
-High-value assets include:
+Prompt-injection detection is defense-in-depth, not the authority boundary.
+
+## 2. High-Value Assets
 
 - authenticated browser sessions/cookies;
-- credentials, API keys, tokens, passkeys and secret handles;
-- user files and workspace data;
-- browser history/bookmarks/tabs;
-- private search/retrieval context;
-- long-term memory and accepted facts;
-- repositories/source code;
-- terminal/process/filesystem authority;
-- databases and analytical data;
-- approval decisions and policy configuration;
-- compiled skills/workflows;
-- run ledger and receipts;
-- update/signing keys and distributed binaries;
-- plugin/registry trust metadata;
-- model/provider credentials and outputs.
+- identity assertions, authorization decisions, approval records;
+- credentials/API tokens/passkeys/secret handles;
+- user files/workspace/private search context;
+- browser history/bookmarks/tabs/containers;
+- long-term memory and derived indexes/summaries;
+- repositories/source/build credentials;
+- terminal/process/filesystem/network authority;
+- database/data/analytics sources;
+- compiled skills and repair history;
+- run ledger, ActionRefs/attempts/receipts/verification evidence;
+- local trust-root/key material and protected storage metadata;
+- update/signing keys/binaries/SBOM/provenance;
+- plugin/registry/extension trust metadata;
+- local/cloud model artifacts, provider credentials and context.
 
-## 3. Potential Adversaries / Failure Sources
+## 3. Adversaries / Failure Sources
 
-- malicious website/page content;
-- compromised legitimate website;
-- indirect prompt injection in page/document/email/repo/tool content;
-- malicious or compromised MCP/A2A/tool server;
-- malicious plugin/skill/connector;
-- malicious model output or compromised model provider;
-- accidental model/tool hallucination;
-- malicious retrieved memory or poisoned index;
-- local untrusted process/user on the same machine;
-- compromised browser extension;
-- supply-chain compromise in Rust/npm/Firefox dependencies;
+- malicious/compromised page/site/document/email/repository;
+- indirect/multi-step prompt injection;
+- malicious/compromised tool/MCP/A2A/WebMCP server;
+- malicious plugin/skill/connector/browser extension;
+- malicious/local/cloud model output, model artifact or provider;
+- poisoned memory/index/search result;
+- untrusted local process under the same user session;
+- untrusted repository build/test/install script;
+- malicious parser input/archive/PDF/media;
+- supply-chain compromise in Rust/Firefox/model/plugin dependencies;
 - malicious update/build artifact;
-- adversarial data intended to confuse verifier/search/memory;
-- user mistake or ambiguous approval;
-- race/crash/network fault producing unknown external outcomes.
+- adversarial evidence intended to capture verifier;
+- user mistake/approval fatigue/UI spoofing;
+- crash/network/race faults producing UNKNOWN external outcome;
+- resource-exhaustion/recursive-agent/tool loops.
 
-Ecra does not assume that “local” equals trusted.
+“Local” is not equivalent to trusted.
+
+### Security-boundary disclaimer
+
+Ecra aims to isolate unrelated/unprivileged local clients and reduce accidental leakage. A fully compromised kernel/user account/debugger or attacker holding equivalent OS key-store authority is outside guaranteed containment unless a later slice states a narrower protected-hardware guarantee.
 
 ## 4. Trust Boundaries
 
-### TB-1 Human ↔ Agent
+### TB-1 Actor ↔ Authenticated Principal
 
-Agent is not equivalent to user identity. Human control/approval is explicit and scoped.
-
-Threats:
-- agent overreach;
-- misleading approval request;
-- stale blanket approval reuse;
-- human/agent concurrent mutation.
-
-Controls:
-- Actor identity;
-- exact-action approval binding;
-- control ownership;
-- visible authority;
-- durable intervention events.
-
-### TB-2 Web Content ↔ Browser/Agent
-
-Page content is untrusted data even when rendered inside an authenticated tab.
+Actor attribution does not prove security identity.
 
 Threats:
-- prompt injection;
-- data exfiltration;
-- cross-origin instruction chaining;
-- hidden content/invisible instructions;
-- content attempting to modify memory or policy.
+- self-selected ActorId treated as authentication;
+- confused on-behalf-of delegation;
+- stale/revoked identity assertion;
+- privilege inherited from a human merely because an agent acts in their run.
 
 Controls:
-- Origin provenance;
-- content-is-data invariant;
-- capability re-evaluation;
-- agent same-origin policy concepts;
-- context scoping;
-- adversarial harness.
+- Actor/Principal/IdentityAssertion type separation;
+- ECR-031 assertion/trust-root/revocation;
+- ECR-003 authorization bound to validated identity context.
 
-### TB-3 Browser Privileged Bridge ↔ Rust Core
+### TB-2 Human ↔ Agent
 
-Browser integration is high privilege.
+Threats: overreach, approval confusion/replay, concurrent mutation, spoofed approval UI.
+
+Controls: exact ActionRef approval binding, trusted browser chrome, visible control ownership/authority, pause/takeover/hand-back and durable intervention events.
+
+### TB-3 Information Source ↔ Information Sink
+
+Permission to read does not imply permission to disclose.
 
 Threats:
-- arbitrary local RPC execution;
-- page/extension reaching privileged bridge;
-- confused deputy;
-- bridge method surface expansion;
-- unauthenticated/forged calls.
+- private workspace → remote search/model;
+- secret data → logs/telemetry/plugin;
+- cross-origin browser exfiltration;
+- derived summary silently declassified;
+- memory/retrieval crossing workspace/model scope.
 
 Controls:
-- narrow authenticated local IPC;
-- explicit operation types;
-- capability/policy check in Rust core;
-- fuzzing/strict parsing;
-- no generic “execute arbitrary browser command” privileged API where avoidable.
+- InformationClassification/lineage;
+- InformationUse declaration;
+- source-to-sink ECR-003 policy/declassification;
+- redaction/minimization;
+- egress benchmark fixtures.
 
-### TB-4 Model ↔ Trusted Runtime
+### TB-4 Web Content ↔ Browser/Agent
+
+Page content is untrusted even inside authenticated tabs.
+
+Threats: prompt injection, hidden instructions, cross-origin chaining, policy/memory manipulation, spoofed Ecra UI.
+
+Controls: Origin provenance, content-is-data invariant, origin/scoped authority, information-flow gate, trusted browser chrome, adversarial harness.
+
+### TB-5 Browser Privileged Bridge ↔ Rust Core
+
+Threats:
+- arbitrary local RPC/superuser surface;
+- page/extension reaching bridge;
+- same-user rogue process;
+- replay/forged messages;
+- overly broad remote-debug command.
+
+Controls owned ECR-007:
+- OS endpoint ACL/peer identity;
+- ephemeral channel/session binding;
+- sequence/replay protection;
+- narrow versioned method set;
+- strict validation;
+- capability + information-flow policy in core;
+- no generic remote-debug endpoint by default;
+- teardown/revocation/fuzzing.
+
+### TB-6 Browser Permission/Presence Boundary
+
+WebAuthn/passkeys, credential fill, clipboard, file chooser/upload, downloads, camera/mic/geolocation, notifications, payment handlers, fullscreen and external protocol/site permission prompts have special semantics.
+
+Controls: ECR-003/ECR-006/ECR-008 permission broker; some operations human-presence-only/non-delegable by default.
+
+### TB-7 Browser Extensions ↔ Page/Browser/Core
+
+Broad-permission extension may observe/modify content across origins.
+
+Controls: extension trust tiers, compatibility restrictions, labeling of extension-modified observations where material, no implicit extension authority over Ecra core.
+
+### TB-8 Model ↔ Trusted Runtime
 
 Model output is untrusted proposal.
 
-Threats:
-- fabricated success;
-- tool-call injection;
-- secret solicitation;
-- bypass via lower-level tools;
-- malicious structured output.
+Threats: fabricated success, tool bypass, secret solicitation, malformed structured output, endless planning.
+
+Controls: schemas; concrete ActionRef before policy; independent authorization/verification; no raw secrets by default; budgets.
+
+### TB-9 External Protocol ↔ Gateway
+
+MCP/ACP/A2A callers/servers may be untrusted.
+
+Threats: state exposure, token passthrough/confused deputy, identity/audience mismatch, capability escalation.
+
+Controls: version-pinned protocol research; external auth mapped to Ecra identity assertions/capabilities; audience/resource binding; no token passthrough as ambient authority; least-authority views.
+
+### TB-10 Plugin / Parser / Untrusted Code ↔ Core/OS
+
+Includes plugins, dangerous file parsers, repo build scripts and native model loaders.
+
+Controls: Wasm/process/VM tier as justified; explicit capabilities; time/memory/output/network/fs limits; advisory monitoring; sandbox assumed fallible.
+
+### TB-11 Persistence ↔ Runtime
+
+Threats: malformed/newer state, rollback, forged receipts, poisoned memory, recomputed hash chain, sensitive plaintext leakage.
 
 Controls:
-- strict schemas;
-- policy independent of model;
-- capability router;
-- receipt/verification separation;
-- no raw secrets by default.
+- strict versioned schemas;
+- integrity chaining with accurately scoped claim;
+- ECR-031 protected authenticity/storage when required;
+- migration/rollback controls;
+- sensitive real-state gate before persistence;
+- provenance/classification validation.
 
-### TB-5 External Protocol ↔ Gateway
+### TB-12 Search/Retrieval ↔ Context/Memory
 
-MCP/ACP/A2A/Agent Skills callers/servers may be untrusted.
+Threats: SEO/source manipulation, stale citations, source-copy laundering, changed sources, cross-workspace leakage, private query egress, parser attacks, silent memory promotion.
 
-Threats:
-- broad state exposure;
-- tool schema confusion;
-- server prompt injection;
-- capability escalation;
-- confused-deputy delegation.
+Controls: source identity/lineage/independence, captured hash/as-of, source policy, information-flow authorization before remote query, scoped retrieval, candidate-memory transition, parser/resource isolation.
 
-Controls:
-- explicit gateway grants;
-- adapters outside trusted domain;
-- per-provider identity/origin;
-- request/grant distinction;
-- least-authority resource views.
+### TB-13 Local Model Artifacts ↔ Runtime
 
-### TB-6 Plugin ↔ Core/OS
+Threats: malicious executable loader/custom code, tokenizer/template manipulation, unsafe native libraries, resource/GPU exhaustion, license/provenance ambiguity.
 
-Threats:
-- sandbox escape;
-- denial of service;
-- network/filesystem exfiltration;
-- secret access;
-- malicious updates.
-
-Controls:
-- Wasm/process isolation;
-- explicit capability manifest;
-- resource/time/output limits;
-- signing/reputation later;
-- advisory monitoring;
-- treat sandbox as defense layer, not proof of safety.
-
-### TB-7 Persistence ↔ Runtime
-
-Stored data can be stale, malformed, maliciously modified, or from a newer incompatible version.
-
-Threats:
-- deserialization abuse;
-- rollback of policy/memory state;
-- forged receipts;
-- schema confusion;
-- poisoned memory.
-
-Controls:
-- versioned strict schemas;
-- integrity/tamper evidence for run ledger;
-- migrations;
-- provenance/trust state;
-- signed/encrypted sync only after dedicated design.
-
-### TB-8 Search/Retrieval ↔ Context/Memory
-
-Threats:
-- malicious SEO/source manipulation;
-- stale results;
-- citation laundering;
-- cross-workspace leakage;
-- retrieved prompt injection;
-- silent durable-memory promotion.
-
-Controls:
-- source identity/freshness;
-- evidence contracts;
-- capability/scope-aware retrieval;
-- candidate-memory boundary;
-- contradiction handling;
-- source/content policy.
+Controls: ECR-021 artifact provenance/hash/license/trust policy; ECR-017/024 containment/supply-chain controls; bounded runtime; no `trust_remote_code`-equivalent default without explicit authorization.
 
 ## 5. High-Priority Attack Classes
 
-### A1 — Indirect Prompt Injection
+### A1 Indirect Prompt Injection
+Invariant: content can influence reasoning but never directly grant/declassify/approve.
 
-Attacker places instructions in external content intended for the model/agent.
+### A2 Cross-Origin / Cross-Provider Exfiltration
+Invariant: source read authority and sink call/write authority do not imply source→sink disclosure.
 
-Security invariant:
-> Content may affect reasoning but cannot directly grant authority or bypass policy.
+### A3 Identity / On-Behalf-Of Confusion
+Invariant: ActorId is not authenticated Principal; delegation/proof/revocation are explicit.
 
-Required tests:
-- visible/hidden page injection;
-- injected tool output;
-- document/repo injection;
-- multi-page/multi-step instruction chains;
-- attempts to persist malicious memory.
+### A4 Secret Exfiltration
+Invariant: mediated handles/use permissions replace raw secret bytes when possible.
 
-Owners: ECR-003/ECR-005/ECR-006/ECR-010/ECR-028.
+### A5 Approval Confusion / Replay
+Invariant: approval binds exact ActionDigest, identity/context/scope, expiry and one-use/policy semantics.
 
-### A2 — Cross-Origin Exfiltration
+### A6 Side-Effect Duplication
+Invariant: exact ActionAttempt identity + UNKNOWN/reconciliation/idempotency prevent blind retry.
 
-Agent reads private origin A and is induced to send data to origin B.
+### A7 False Completion / Verifier Capture
+Invariant: VerificationReceipt and decision-grade evidence, not executor/model statement.
 
-Invariant:
-> Access to information at one origin does not automatically authorize disclosure/action at another origin.
+### A8 Memory Poisoning / Deletion Residue
+Invariant: memory provenance/classification; deleted memory does not remain retrievable through derived projections.
 
-Owners: ECR-003/ECR-005/ECR-006/ECR-008/ECR-011.
+### A9 Skill Poisoning / Authority Capture / Repair Drift
+Invariant: skills store required capabilities/approvals, never captured live grants/tokens/secrets; repairs re-authorize/re-verify.
 
-### A3 — Secret Exfiltration
+### A10 Plugin / Extension / Supply-Chain Compromise
+Invariant: third-party code receives bounded capabilities and provenance/release controls.
 
-Agent/plugin/content attempts to obtain raw credential material.
+### A11 Retrieval Scope / Query Leakage
+Invariant: context/query egress is authorized before remote provider invocation.
 
-Invariant:
-> Where mediated use is possible, model/plugin receives a handle/use permission, not raw secret bytes.
+### A12 Resource Exhaustion / Infinite Delegation
+Invariant: wall-time/step/tool/model/token/cost/process/output/network/storage/delegation budgets terminate/suspend safely.
 
-Owners: ECR-003/ECR-025.
+### A13 Trusted-UI Spoofing
+Invariant: page content cannot impersonate native approval/agent-authority/takeover chrome.
 
-### A4 — Approval Confusion / Replay
+### A14 Untrusted Repo / Parser Execution
+Invariant: inspection does not imply executing build hooks/parsers with ambient host authority.
 
-An approval for one action is reused for a different action, changed parameters, origin, or later time.
+## 6. Side-Effect Model
 
-Invariant:
-> Approval binds to exact/narrow action digest/scope, issuer and expiry/one-use semantics.
-
-Owner: ECR-003.
-
-### A5 — Side-Effect Duplication
-
-Crash/network ambiguity causes repeated purchase/send/publish/delete/etc.
-
-Invariant:
-> UNKNOWN persists and unsafe retries require reconciliation or same idempotency key where valid.
-
-Owners: ECR-002/ECR-004.
-
-### A6 — False Completion / Verifier Capture
-
-Actor/executor says “done” or manipulated evidence convinces verifier incorrectly.
-
-Invariant:
-> Verification is independently represented and prefers deterministic external evidence.
-
-Owners: ECR-004/ECR-005/ECR-028.
-
-### A7 — Memory Poisoning
-
-Untrusted content becomes durable trusted memory or overrides corrected facts.
-
-Invariant:
-> Memory has provenance/trust/freshness and cannot self-authorize.
-
-Owner: ECR-010.
-
-### A8 — Skill Poisoning / Repair Drift
-
-A learned/imported skill contains malicious capabilities or repair broadens behavior silently.
-
-Invariant:
-> Skill validation includes capabilities/origins/side effects/verifiers and repaired versions re-run policy/verification gates.
-
-Owners: ECR-012–ECR-015/ECR-023.
-
-### A9 — Plugin / Supply-Chain Compromise
-
-Malicious dependency/plugin/update executes with excessive authority.
-
-Invariant:
-> Third-party code receives bounded capabilities and releases are reproducible/signed with tracked provenance.
-
-Owners: ECR-017/ECR-023/ECR-024.
-
-### A10 — Retrieval Scope Leakage
-
-Private workspace A data appears in context/search for workspace B or an unauthorized model/provider.
-
-Invariant:
-> Retrieval/context assembly is authority- and workspace-scoped before model invocation.
-
-Owners: ECR-003/ECR-009/ECR-010/ECR-016.
-
-## 6. Side-Effect Risk Classes
-
-Canonical action semantics are owned by ECR-001/ECR-004. Security policy should consider at least:
+Policy must treat these dimensions independently:
 
 ```text
-read-only
-local mutation
-reversible external mutation
-irreversible/destructive external mutation
-unknown
+MutationDomain: none / local / external / unknown
+Reversibility: not_applicable / reversible / conditional / irreversible / unknown
+Idempotency: natural / keyed / non-idempotent / unknown
+Retry: safe / same-key / reconcile / never-blind
 ```
 
-High-impact examples:
-- payment/purchase;
-- send/publish/post;
-- delete;
-- push/merge/release;
-- permissions/access control;
-- account/security setting changes;
-- external workflow invocation.
+High-impact examples include payment, send/publish, delete, push/merge/release, permissions/security changes, account settings and external workflow invocation.
 
-“Low-level” browser click or shell command is not inherently low-risk; policy evaluates intended/targeted capability and context.
+A browser click or shell command is not inherently low risk; policy evaluates canonical intent/resource/information flow.
 
 ## 7. Security Invariants
 
 1. No ambient agent authority.
-2. External content is not authority.
-3. CapabilityRequest is not CapabilityGrant.
-4. Lower-level tool choice cannot bypass policy.
-5. Raw secret material is minimized/mediated.
-6. Cross-origin disclosure/action is independently authorized.
-7. Consequential action has durable receipt.
-8. UNKNOWN is not silently retried or coerced.
-9. Executor receipt is not verification.
-10. Memory/skills/plugins do not self-authorize.
-11. External protocols do not imply local trust.
-12. Model/provider compromise should not automatically become core-policy compromise.
-13. Browser compromise should not automatically grant arbitrary OS/core/plugin authority by design.
-14. Stored data is validated/versioned on load.
-15. Security-critical updates outrank feature velocity.
+2. Actor != authenticated Principal.
+3. External content is not authority/declassification.
+4. CapabilityRequest != CapabilityGrant.
+5. Missing scope != ANY.
+6. Read authority != disclosure authority.
+7. Lower-level route cannot bypass semantic policy.
+8. Raw secrets minimized/mediated.
+9. Approval binds exact ActionRef/context.
+10. ActionIntent != ActionAttempt.
+11. UNKNOWN is first-class; no blind retry.
+12. Executor receipt != verification.
+13. Fact has no independent verified-truth channel.
+14. Memory/skill/plugin/model/protocol does not self-authorize.
+15. Browser Containers assist storage/session partitioning but do not replace Ecra policy/sandboxing.
+16. Privileged bridge is narrow/authenticated/replay-resistant.
+17. Resource budgets are explicit for recursive/executable surfaces.
+18. Stored local bytes are validated; hostile-tamper claims require protected trust root.
+19. Security updates outrank feature velocity.
 
-## 8. Verification and Detection
+## 8. Required Security Evidence
 
-Preventive controls are preferred, but Ecra also needs evidence for detection:
-
-- denied capability attempts;
+As slices mature, retain locally inspectable records for:
+- validated identity/assertion references;
+- authorization/disclosure decisions;
+- denied capability/egress attempts;
 - origin transitions;
-- policy decisions;
-- approval events;
-- action receipts;
-- verification outcomes;
-- UNKNOWN/reconciliation states;
-- plugin resource/capability violations;
+- approval/takeover events;
+- ActionRef/Attempt/Receipt;
+- VerificationReceipt;
+- UNKNOWN/reconciliation;
+- budget exhaustion/cancellation;
+- plugin/sandbox violations;
 - schema/integrity failures;
-- explicit security benchmark results.
+- benchmark attack results.
 
-Logging these events locally does not authorize remote telemetry.
+Local logging does not authorize remote telemetry.
 
 ## 9. Privacy Threats
 
-Privacy risk exists even without an attacker:
-
-- sending unnecessary browser/workspace context to cloud models;
-- retaining excessive search/page content;
+- unnecessary browser/workspace context sent to cloud model/search/tool;
+- provider-retained prompts/tool output;
+- copied/retained source content beyond allowed policy;
+- support/crash bundles containing sensitive data;
 - hidden telemetry;
-- diagnostic bundles containing secrets/PII;
-- sync exposing metadata;
-- model providers retaining prompts/tool results;
-- context assembly crossing workspace boundaries.
+- derived memory/index surviving deletion;
+- cross-workspace context assembly;
+- optional sync metadata leakage.
 
-Owners: ECR-009/ECR-010/ECR-021/ECR-022/ECR-025/ECR-027.
+Owners: ECR-003/ECR-009/ECR-010/ECR-021/ECR-022/ECR-025/ECR-027/ECR-029/ECR-031.
 
-## 10. Open Research Requiring Dedicated Slice Resolution
+## 10. Open Research With Named Owners
 
-- exact browser privileged IPC/authentication/process topology (ECR-007);
-- at-rest encryption/key management for sensitive local state (ECR-003/ECR-025);
-- WebMCP origin/principal/tool trust-binding semantics (ECR-011);
-- sandbox composition on Windows/macOS/Linux and Wasm/process/VM tiers (ECR-017);
-- plugin/skill signing and registry reputation model (ECR-023);
-- encrypted multi-device sync/key recovery (ECR-022);
-- team/multi-principal workspace authority model (future roadmap amendment).
+- browser IPC/process topology and extension trust tiers → ECR-007;
+- browser special permission/presence semantics → ECR-003/ECR-006/ECR-008;
+- identity assertions/trust root/key management/sensitive storage → ECR-031;
+- WebMCP principal/tool binding → ECR-011/ECR-016;
+- OS-specific sandbox tiers → ECR-017;
+- plugin/skill signing/registry reputation → ECR-023;
+- encrypted multi-device sync/key recovery → ECR-022;
+- team/multi-principal governance → future roadmap amendment.
 
-No implementation may silently choose these as incidental details in another slice.
+No other slice may silently settle these as incidental implementation detail.
 
-## 11. Threat-Model Update Triggers
+## 11. Update Triggers
 
-Update this document when any change introduces:
-
-- a new privileged process/IPC path;
-- new secret class;
-- new persistent user data class;
-- new protocol/remote caller;
-- new plugin/native-code execution path;
-- new browser patch exposing privileged behavior;
-- new cross-workspace/team sharing;
-- new sync/cloud storage;
-- new side-effecting capability;
-- new public security/privacy claim.
+Update this threat model for any new:
+- privileged process/IPC;
+- authenticated principal/secret class;
+- persistent sensitive data;
+- remote provider/caller/protocol version;
+- plugin/native/parser/repository execution path;
+- browser privileged patch/permission;
+- local-model executable artifact path;
+- cross-workspace/team/sync feature;
+- consequential action;
+- public security/privacy/tamper claim.
