@@ -8,7 +8,7 @@
 
 | ID | Slice | Lifecycle | Notes |
 |---|---|---|---|
-| ECR-001 | Trusted Domain Kernel | `IMPLEMENTING` | active branch/PR; Phases 1–4 verified on branch; Phase 5 next |
+| ECR-001 | Trusted Domain Kernel | `IMPLEMENTING` | PR #1 review remediation active after exact-head verification; no later slice eligible before canonical closure |
 
 No later ECR slice is implementation-eligible until ECR-001 becomes `CLOSED_CANONICAL`, except bounded research explicitly authorized by its own spec/dependencies.
 
