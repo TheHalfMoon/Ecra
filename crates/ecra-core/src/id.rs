@@ -61,6 +61,7 @@ define_id!(ContainerId, "container");
 define_id!(TabId, "tab");
 define_id!(SessionId, "session");
 define_id!(TaskId, "task");
+define_id!(OpaqueOriginId, "opaque_origin");
 define_id!(CapabilityRequestId, "capability_request");
 define_id!(CapabilityGrantId, "capability_grant");
 define_id!(ObservationId, "observation");
