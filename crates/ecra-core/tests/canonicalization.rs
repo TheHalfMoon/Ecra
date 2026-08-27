@@ -1,4 +1,4 @@
-use ecra_core::{SchemaVersion, Versioned, to_jcs_vec};
+use ecra_core::{ActionIntent, SchemaVersion, Versioned, to_jcs_vec};
 use serde_json::json;
 
 #[test]
@@ -25,4 +25,17 @@ fn negative_zero_normalizes_per_jcs() {
     let value = json!({"n": -0.0});
     let canonical = to_jcs_vec(&value).expect("canonicalize negative zero");
     assert_eq!(canonical, br#"{"n":0}"#);
+}
+
+#[test]
+fn golden_action_intent_has_fixed_versioned_canonical_bytes() {
+    let intent: ActionIntent = serde_json::from_str(include_str!(
+        "../../../contracts/ecra-domain-v1/valid/action-digest-golden.json"
+    ))
+    .expect("golden action intent fixture");
+    let canonical = to_jcs_vec(&Versioned::v1(&intent)).expect("canonical golden action intent");
+    let expected = include_bytes!(
+        "../../../contracts/ecra-domain-v1/expected/action-digest-golden.v1.jcs"
+    );
+    assert_eq!(canonical.as_slice(), expected);
 }

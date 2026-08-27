@@ -22,8 +22,19 @@ fn golden_action_digest_matches_domain_separated_contract() {
     let intent = golden_intent();
     let digest = intent.digest().expect("action digest");
     assert_eq!(digest.hex(), GOLDEN_DIGEST);
+    assert_eq!(
+        digest.hex(),
+        include_str!("../../../contracts/ecra-domain-v1/expected/action-digest-golden.sha256")
+            .trim()
+    );
 
     let canonical = to_jcs_vec(&Versioned::v1(&intent)).expect("canonical action intent");
+    assert_eq!(
+        canonical.as_slice(),
+        include_bytes!(
+            "../../../contracts/ecra-domain-v1/expected/action-digest-golden.v1.jcs"
+        )
+    );
     let mut bytes = Vec::with_capacity(ACTION_INTENT_V1_DOMAIN.len() + canonical.len());
     bytes.extend_from_slice(ACTION_INTENT_V1_DOMAIN);
     bytes.extend_from_slice(&canonical);
