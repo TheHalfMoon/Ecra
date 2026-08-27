@@ -62,7 +62,12 @@ fn discovered_fixture_names() -> BTreeSet<String> {
     fs::read_dir(fixture_dir())
         .expect("read valid fixture directory")
         .map(|entry| entry.expect("valid fixture directory entry"))
-        .filter(|entry| entry.path().extension().is_some_and(|extension| extension == "json"))
+        .filter(|entry| {
+            entry
+                .path()
+                .extension()
+                .is_some_and(|extension| extension == "json")
+        })
         .map(|entry| entry.file_name().to_string_lossy().into_owned())
         .collect()
 }
@@ -164,7 +169,10 @@ fn assert_valid_fixture(name: &str, text: &str) {
 #[test]
 fn every_committed_valid_fixture_is_typed_and_round_trips() {
     let discovered = discovered_fixture_names();
-    let expected: BTreeSet<String> = VALID_FIXTURES.iter().map(|name| (*name).to_owned()).collect();
+    let expected: BTreeSet<String> = VALID_FIXTURES
+        .iter()
+        .map(|name| (*name).to_owned())
+        .collect();
     assert_eq!(
         discovered, expected,
         "valid fixture directory and typed manifest diverged"

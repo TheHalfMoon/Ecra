@@ -8,6 +8,7 @@ use ecra_core::{
 };
 use serde::Deserialize;
 
+#[rustfmt::skip]
 const INVALID_FIXTURES: &[(&str, &str, ErrorCode)] = &[
     ("action-attempt-wrong-ref.json", "action_attempt", ErrorCode::InvalidAttempt),
     ("action-invalid-key-missing.json", "action_intent", ErrorCode::SerializationFailed),
@@ -69,7 +70,12 @@ fn discovered_fixture_names() -> BTreeSet<String> {
     fs::read_dir(invalid_fixture_dir())
         .expect("read invalid fixture directory")
         .map(|entry| entry.expect("invalid fixture directory entry"))
-        .filter(|entry| entry.path().extension().is_some_and(|extension| extension == "json"))
+        .filter(|entry| {
+            entry
+                .path()
+                .extension()
+                .is_some_and(|extension| extension == "json")
+        })
         .map(|entry| entry.file_name().to_string_lossy().into_owned())
         .collect()
 }
@@ -97,10 +103,12 @@ where
 fn invalid_error(name: &str, kind: &str, text: &str) -> DomainError {
     match kind {
         "action_attempt" => {
-            let attempt: ActionAttemptRef = serde_json::from_str(text)
-                .unwrap_or_else(|error| panic!("{name} should remain structurally parseable: {error}"));
-            let intent: ActionIntent = serde_json::from_str(&valid_fixture_text("action-digest-golden.json"))
-                .expect("golden action intent");
+            let attempt: ActionAttemptRef = serde_json::from_str(text).unwrap_or_else(|error| {
+                panic!("{name} should remain structurally parseable: {error}")
+            });
+            let intent: ActionIntent =
+                serde_json::from_str(&valid_fixture_text("action-digest-golden.json"))
+                    .expect("golden action intent");
             attempt
                 .validate_for(&intent)
                 .expect_err("wrong action-attempt binding must fail")
@@ -108,8 +116,9 @@ fn invalid_error(name: &str, kind: &str, text: &str) -> DomainError {
         "action_intent" => serialization_failure::<ActionIntent>(text),
         "action_receipt" => serialization_failure::<ActionReceipt>(text),
         "action_ref_binding" => {
-            let fixture: ActionRefFixture = serde_json::from_str(text)
-                .unwrap_or_else(|error| panic!("{name} should remain structurally parseable: {error}"));
+            let fixture: ActionRefFixture = serde_json::from_str(text).unwrap_or_else(|error| {
+                panic!("{name} should remain structurally parseable: {error}")
+            });
             fixture
                 .reference
                 .validate_for(&fixture.action)
