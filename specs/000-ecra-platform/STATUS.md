@@ -8,7 +8,7 @@
 
 | ID | Slice | Lifecycle | Notes |
 |---|---|---|---|
-| ECR-001 | Trusted Domain Kernel | `IMPLEMENTING` | PR #1 review remediation active after exact-head verification; no later slice eligible before canonical closure |
+| ECR-001 | Trusted Domain Kernel | `IMPLEMENTING` | PR #1 Ready; Phase 13 review remediation verified on exact head; final ledger head requires exact-head CI before merge |
 
 No later ECR slice is implementation-eligible until ECR-001 becomes `CLOSED_CANONICAL`, except bounded research explicitly authorized by its own spec/dependencies.
 
