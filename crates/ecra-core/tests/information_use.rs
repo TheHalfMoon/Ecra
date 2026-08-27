@@ -75,10 +75,12 @@ fn declaration_is_not_authorization_or_capability_grant() {
         "../../../contracts/ecra-domain-v1/valid/information-use-external-disclosure.json"
     ))
     .expect("valid disclosure declaration");
-    let serialized = serde_json::to_string(&declared_use).expect("serialize declaration");
+    let serialized = serde_json::to_value(&declared_use).expect("serialize declaration");
+    let object = serialized.as_object().expect("information use object");
 
-    assert!(!serialized.contains("capability_grant"));
-    assert!(!serialized.contains("authorization"));
+    assert!(object.contains_key("sources"));
+    assert!(!object.contains_key("capability_grant"));
+    assert!(!object.contains_key("authorization"));
 }
 
 #[test]
@@ -96,12 +98,18 @@ fn separate_capabilities_do_not_encode_source_to_sink_authorization() {
     ))
     .expect("valid remote-provider declaration");
 
-    let read_json = serde_json::to_string(&read_grant).expect("serialize read grant");
-    let write_json = serde_json::to_string(&write_grant).expect("serialize write grant");
-    let use_json = serde_json::to_string(&declared_use).expect("serialize information use");
+    let read_json = serde_json::to_value(&read_grant).expect("serialize read grant");
+    let write_json = serde_json::to_value(&write_grant).expect("serialize write grant");
+    let use_json = serde_json::to_value(&declared_use).expect("serialize information use");
 
-    assert!(!read_json.contains("sources"));
-    assert!(!write_json.contains("sources"));
-    assert!(use_json.contains("sources"));
-    assert!(use_json.contains("remote_provider"));
+    assert!(!read_json.as_object().expect("grant object").contains_key("sources"));
+    assert!(!write_json
+        .as_object()
+        .expect("grant object")
+        .contains_key("sources"));
+    assert!(use_json.as_object().expect("use object").contains_key("sources"));
+    assert_eq!(
+        use_json.get("kind").and_then(serde_json::Value::as_str),
+        Some("remote_provider")
+    );
 }
