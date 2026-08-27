@@ -1,63 +1,102 @@
 # Requirements Quality Checklist — ECR-001
 
-**Purpose:** Validate specification quality before implementation. This is not an implementation test checklist.
+**Purpose:** validate revised planning quality before first implementation. This is not an implementation test checklist.  
+**Review basis:** constitution v1.1.0 + `pre-implementation-review-2026-08-27.md`.
 
 ## Scope and Independence
 
-- [x] The slice has one bounded purpose: canonical zero-I/O trusted domain semantics.
-- [x] Browser, model, storage, policy-engine and protocol execution are explicitly out of scope.
-- [x] ECR-001 is independently testable without any downstream slice.
-- [x] No requirement silently depends on cloud services or a browser process.
+- [x] One bounded purpose: canonical zero-I/O trusted domain value/reference semantics.
+- [x] Authentication, authorization, persistence, browser/model/tool execution, secret storage and protocol execution are explicitly downstream.
+- [x] ECR-001 remains independently testable without any downstream process/service.
+- [x] No requirement silently depends on cloud/browser/database/keychain/process execution.
+- [x] Review remediation did not create a second production crate/service abstraction.
 
-## User Stories
+## Identity / Authority / Scope
 
-- [x] Each P1 user story has an independent test description.
-- [x] Acceptance scenarios distinguish actor attribution, provenance, authority representation, action semantics and verification semantics.
-- [x] User stories are implementation-neutral enough to survive dependency replacement.
+- [x] Actor attribution is explicitly distinct from PrincipalRef/IdentityAssertionRef.
+- [x] ActorId and PrincipalId are distinct typed IDs.
+- [x] CapabilityRequest and CapabilityGrant are distinct types with distinct IDs.
+- [x] Missing/empty scope cannot imply wildcard; `any_explicit` is explicit.
+- [x] `not_applicable` is distinct from unrestricted.
+- [x] strong IDs exist for security-relevant workspace/browser/container/tab/session/task/resource dimensions.
+- [x] Resource locator/free-form text is explicitly non-authoritative.
+- [x] no subset/authentication/policy decision is falsely claimed by structural types.
 
-## Functional Requirements
+## Information Flow / Provenance
 
-- [x] FR-001 through FR-040 are individually testable or reviewable.
-- [x] Requesting authority is distinct from possessing authority.
-- [x] External content origin is distinct from instruction authority.
-- [x] Observation is distinct from Fact.
-- [x] Original provenance is distinct from later verification state.
+- [x] Observation and Fact are distinct.
+- [x] provenance is distinct from verification outcome.
+- [x] Fact has no independent canonical `verified` truth flag.
+- [x] information classification is representable without becoming permission.
+- [x] InformationUse/source-to-sink intent is representable separately from read/write capability.
+- [x] remote-provider/model-context/persist/log/external-disclosure use classes are addressable.
+- [x] derived information can retain lineage/classification for later conservative policy.
+- [x] freshness has inspectable assessment/basis metadata.
+- [x] evidence can carry immutable capture digest/as-of metadata where available.
+
+## Actions / Attempts / Side Effects
+
+- [x] ActionIntent is distinct from authorization/grant.
+- [x] MutationDomain is distinct from Reversibility.
+- [x] Idempotency and RetryClass are orthogonal and conservative.
+- [x] ActionRef binds ActionId + deterministic ActionDigest.
+- [x] ActionDigest domain/algorithm are versioned and explicit.
+- [x] ActionAttemptId is distinct from ActionId.
+- [x] receipts bind exact ActionRef + attempt.
+- [x] UNKNOWN is explicit and never coerced.
+
+## Verification
+
 - [x] ActionReceipt is distinct from VerificationReceipt.
-- [x] UNKNOWN external outcome is explicitly representable.
-- [x] Idempotency and retry semantics are explicit before execution.
-- [x] Unsupported schema versions fail with typed compatibility behavior.
-- [x] Zero-I/O and dependency boundaries are explicit.
-- [x] Unknown-field/forward-compatibility behavior is explicitly planned rather than delegated to serializer defaults.
+- [x] executor outcome names do not claim independent confirmation.
+- [x] VerificationReceipt is the authoritative verification record.
+- [x] verification targets can bind exact action/attempt/receipt/fact/artifact/claim references.
+- [x] verification does not rewrite Fact provenance/classification/freshness.
 
-## Success Criteria
+## Functional Requirements / Success Criteria
 
-- [x] SC-001 through SC-015 are measurable on an exact repository state.
-- [x] Success criteria do not claim browser/search/model performance that ECR-001 cannot demonstrate.
-- [x] Contract fixture coverage is a first-class acceptance artifact.
-- [x] Architecture/dependency purity is measurable.
-- [x] Traceability/analyze review is part of closure.
+- [x] FR-001 through FR-055 are individually testable/reviewable.
+- [x] SC-001 through SC-020 are measurable on exact repository state.
+- [x] each new critical review finding owned by ECR-001 has requirement/contract/task coverage.
+- [x] downstream-only enforcement is explicitly assigned rather than counterfeited in ECR-001.
+- [x] normative valid/invalid fixture classes are a first-class acceptance artifact.
+- [x] exact ActionDigest fixtures are first-class contract evidence.
+- [x] architecture/dependency purity is measurable.
 
-## Security and Constitution
+## Constitution v1.1.0
 
-- [x] All 12 mandatory constitution gates are addressed in `plan.md`.
-- [x] No ambient agent authority is introduced.
-- [x] No model/self-report completion path exists.
-- [x] No secret store/value handling is introduced.
-- [x] No `unsafe` is authorized.
-- [x] No donor source reuse is implicitly authorized by research references.
+- [x] G1–G15 are explicitly addressed in revised `plan.md`.
+- [x] G13 information-flow/egress representation is covered without implementing policy.
+- [x] G14 identity/principal binding is covered by distinct references and ECR-031 ownership.
+- [x] G15 is truthfully N/A to ECR-001 because no recursive/runtime execution exists.
+- [x] no ambient authority, raw secret handling, hidden telemetry, unsafe code or external protocol core dependency is authorized.
+- [x] no donor source reuse is authorized merely by reference.
 
-## Planning Completeness
+## Planning Artifacts
 
-- [x] `research.md` resolves all blocking technical choices needed for planning.
-- [x] `data-model.md` owns conceptual entities and invariants.
-- [x] `contracts/domain-v1.md` owns externally observable v1 semantics.
-- [x] `plan.md` identifies exact intended repository structure and validation strategy.
-- [x] `tasks.md` maps all FR groups and SC closure evidence to executable tasks.
-- [x] `quickstart.md` defines exact reviewer verification commands/evidence expectations.
-- [x] No unresolved `[NEEDS CLARIFICATION]` marker remains.
+- [x] revised `spec.md` reflects review blockers.
+- [x] revised `research.md` resolves ECR-001-owned blocking design choices.
+- [x] revised `data-model.md` is consistent with spec ownership boundaries.
+- [x] revised `contracts/domain-v1.md` is normative and strict.
+- [x] revised `plan.md` maps constitution v1.1.0 and exact project structure.
+- [x] revised `tasks.md` maps FR/SC groups to executable paths/tasks.
+- [x] revised `quickstart.md` verifies the new identity/scope/egress/action-digest/attempt/verification invariants.
+- [x] no `[NEEDS CLARIFICATION]` marker is accepted as unresolved blocking work.
+
+## Pre-Implementation Review Status
+
+- [x] P-001 information-flow representation: remediated in ECR-001 planning; enforcement remains ECR-003.
+- [x] P-002 Actor/Principal confusion: remediated; authentication remains ECR-031.
+- [x] P-003 scope wildcard ambiguity: remediated.
+- [x] P-004 action digest binding: remediated.
+- [x] P-005 action-attempt identity: remediated.
+- [x] P-006 duplicate verification truth: remediated.
+- [x] P-007–P-012 relevant ECR-001 model weaknesses: remediated/assigned.
+- [x] P-028–P-030 relevant domain-contract weaknesses: remediated/assigned.
+- [x] all browser/search/memory/runtime/local-model findings retain explicit downstream owners.
 
 ## Result
 
-**PASS — ECR-001 planning artifacts are complete enough for Spec Kit implementation.**
+**REQUIREMENTS_CHECKLIST_PASS — pending final analyze-style consistency review.**
 
-This PASS authorizes planning completeness only. It does not authorize claiming the feature implemented, passing, or CLOSED_CANONICAL.
+This checklist means the revised planning package is internally specified enough to analyze. It does **not** yet change the roadmap from `PLANNING_REWORK` or authorize implementation. `TASKS_READY` requires the final post-remediation analyze result to find no critical planning defect.
