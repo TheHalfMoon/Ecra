@@ -1,0 +1,55 @@
+name: ECR-002 Lock Bootstrap
+
+on:
+  push:
+    branches:
+      - 002-durable-run-ledger
+  workflow_dispatch:
+
+concurrency:
+  group: ecr-002-lock-bootstrap-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lock-bootstrap:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --fail --silent --show-error https://sh.rustup.rs \
+              | sh -s -- -y --profile minimal --default-toolchain none
+            export PATH="$HOME/.cargo/bin:$PATH"
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt,clippy
+      - name: Generate proposed lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo generate-lockfile
+          echo 'ECRA_CARGO_LOCK_BASE64_BEGIN'
+          base64 < Cargo.lock | tr -d '\n'
+          echo
+          echo 'ECRA_CARGO_LOCK_BASE64_END'
+      - name: Bootstrap compile check
+        run: |
+          cargo build --workspace
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets --all-features -- -D warnings
+          cargo test --workspace
+      - name: Boundary smoke checks
+        run: |
+          bash scripts/check-core-unsafe.sh
+          bash scripts/check-core-deps.sh
+          bash scripts/check-run-unsafe.sh
+          bash scripts/check-run-deps.sh
+
+# Temporary lockfile-generation workflow. It MUST be deleted after the generated
+# Cargo.lock is committed; no bootstrap run is a final exact-head verification.
