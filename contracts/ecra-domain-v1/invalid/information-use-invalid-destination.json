@@ -1,0 +1,1 @@
+{"sources":[{"kind":"fact","id":"00000000-0000-0000-0000-000000000049"}],"kind":"remote_provider","destination":{"id":"00000000-0000-0000-0000-000000000050","kind":"web_resource","locator":"","origin":null},"destination_origin":{"kind":"tuple","scheme":"https","host":"provider.example","port":null},"declared_output_classification":null}

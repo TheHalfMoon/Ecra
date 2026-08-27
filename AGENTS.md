@@ -7,22 +7,29 @@ This repository uses Spec-Driven Development based on GitHub Spec Kit concepts a
 Before any material implementation or architecture change, read in this order:
 
 1. `.specify/memory/constitution.md` — binding governance and cross-spec gates.
-2. `specs/000-ecra-platform/roadmap.md` — immutable platform slice IDs, dependencies, statuses.
-3. `specs/000-ecra-platform/gap-audit.md` — planning coverage and explicit deferrals/open research.
-4. `specs/000-ecra-platform/risk-register.md` — platform-critical risks.
-5. the active slice under `specs/<NNN-feature>/`:
-   - `spec.md`
-   - `research.md`
-   - `data-model.md` when applicable
-   - `contracts/`
-   - `plan.md`
-   - `quickstart.md`
-   - `tasks.md`
-   - `analyze.md` when present
-   - checklists
-6. implementation truth on the exact current branch/head.
+2. `EXECUTION.md` — current active slice, branch/PR phase ledger, next eligible work, and exact verification rules.
+3. `specs/000-ecra-platform/roadmap.md` — immutable platform slice IDs and dependency graph.
+4. `specs/000-ecra-platform/STATUS.md` — compact platform lifecycle view.
+5. `specs/000-ecra-platform/gap-audit.md` — planning coverage and explicit deferrals/open research.
+6. `specs/000-ecra-platform/risk-register.md` — platform-critical risks.
+7. `specs/README.md` — Spec Kit package navigation.
+8. the active slice under `specs/<NNN-feature>/`:
+   - `STATUS.md`;
+   - `spec.md`;
+   - `research.md`;
+   - `data-model.md` when applicable;
+   - `contracts/`;
+   - `implementation-clarifications.md` when present;
+   - `plan.md`;
+   - `quickstart.md`;
+   - `tasks.md`;
+   - `analyze.md` when present;
+   - checklists.
+9. implementation truth on the exact current branch/head, PR, CI, reviews, and changed files.
 
-Root `README.md`, `VISION.md`, `CONSTITUTION.md`, and `ROADMAP.md` are product-readable strategic documents. The Spec Kit constitution, canonical platform roadmap, and active feature package govern implementation details when wording differs.
+Root `README.md`, `VISION.md`, `CONSTITUTION.md`, and `ROADMAP.md` are product-readable strategic documents. The Spec Kit constitution, `EXECUTION.md` for operational state, canonical platform roadmap, and active feature package govern implementation details when wording differs.
+
+If implementation evidence makes a planning status stale, update the stale status document. Never downgrade live repository truth to match old prose.
 
 ## Spec Kit Lifecycle
 
@@ -49,6 +56,8 @@ verify exact head
   ↓
 converge remaining gaps
   ↓
+merge + required post-merge verification
+  ↓
 CLOSED_CANONICAL
 ```
 
@@ -58,34 +67,38 @@ For this platform, the roadmap is a spec-of-specs. Do not create one giant imple
 
 A slice is implementation-eligible only when:
 
-- its roadmap dependencies are `CLOSED_CANONICAL`, or
-- its own spec explicitly authorizes bounded fixture-only/research work that cannot counterfeit a missing dependency;
+- its roadmap dependencies are `CLOSED_CANONICAL`, or its own spec explicitly authorizes bounded fixture-only/research work that cannot counterfeit a missing dependency;
 - it has `SPEC_READY`, then `PLAN_READY`, then `TASKS_READY` artifacts as required;
 - the latest required analyze pass has no critical planning defect;
 - mandatory constitution gates pass.
 
 Do not skip to a visually exciting later phase (Firefox fork, Search, Terminal, plugins, local models) while an earlier trust/dependency slice is incomplete.
 
-## Current First Slice
+## Current Slice Discovery
 
-At the time of constitution v1.1.0 planning convergence, the first implementation slice is:
+Do not rely on this file for a frozen current SHA. Read `EXECUTION.md` and the active slice `STATUS.md`, then verify live GitHub truth.
+
+At repository bootstrap the first slice is:
 
 ```text
 ECR-001 — Trusted Domain Kernel
 specs/001-trusted-domain-kernel/
 ```
 
-Re-read `specs/000-ecra-platform/roadmap.md` before acting because status may change.
+No later ECR implementation becomes eligible until the roadmap dependencies say so.
 
 ## Task Execution
 
 - Follow task IDs and dependency order from the active `tasks.md`.
-- Do not mark a task complete because code merely compiles; satisfy the task's linked FR/SC/contract/test intent.
+- Use the active `STATUS.md` to understand which task range is already verified on the feature branch and which task is next.
+- `VERIFIED_ON_BRANCH` does not equal `CLOSED_CANONICAL`.
+- Do not mark a task complete because code merely compiles; satisfy the linked FR/SC/contract/test intent.
 - `[P]` permits parallel work only when files/dependencies truly do not conflict.
-- Exact file paths in tasks are authoritative unless implementation proves the planned structure impossible; amend plan/tasks before creating a different architecture.
+- Exact file paths in tasks are authoritative unless implementation proves the planned structure impossible; amend/converge the plan before creating a different architecture.
 - Do not silently broaden scope to adjacent roadmap slices.
 - Do not add speculative abstractions/crates/providers “for later”.
-- If implementation discovers a MUST-level planning defect, stop the affected task, record the defect and amend/converge the active Spec Kit package rather than silently weakening the requirement.
+- If implementation discovers a MUST-level planning defect, stop the affected task, record it in the active package (including `implementation-clarifications.md` when appropriate), and converge the package rather than silently weakening the requirement.
+- Keep `EXECUTION.md` and the active slice `STATUS.md` current whenever execution materially advances.
 
 ## Technical Content Language
 
@@ -125,6 +138,7 @@ Never implement a shortcut that violates the constitution. In particular:
 - No force-push, rebase, or destructive history rewriting unless repository governance is explicitly amended to permit it.
 - Do not claim PASS, MERGED, or CLOSED_CANONICAL without exact-head/post-merge evidence as applicable.
 - A docs-only planning state is not implementation completion.
+- Do not leave critical continuation state only in chat. Repository status documents must be sufficient to recover the next eligible work.
 
 ## Testing and Closure
 
@@ -135,9 +149,11 @@ Before a slice closes:
 3. record exact head SHA and results;
 4. re-check constitution gates;
 5. check spec → research/data-model/contracts → plan → tasks → implementation traceability;
-6. append convergence tasks for remaining gaps instead of hiding them;
-7. update donor/license records;
-8. update the master roadmap status truthfully.
+6. reconcile implementation clarifications into canonical package documents;
+7. append convergence tasks for remaining gaps instead of hiding them;
+8. update donor/license records;
+9. update `EXECUTION.md`, active `STATUS.md`, platform `STATUS.md`, and roadmap status truthfully;
+10. merge only when the slice is genuinely ready, then record required post-merge evidence.
 
 `CLOSED_CANONICAL` means the implemented repository state satisfies the active Spec Kit package. It is not a narrative status label.
 
@@ -149,7 +165,8 @@ When a new requirement or idea appears:
 2. if not, update the spec-of-specs with a new immutable `ECR-###` entry;
 3. name dependencies and owning acceptance evidence;
 4. update gap audit/risk register if it creates a new persistent data class, privileged capability, identity/trust-root concern, information-flow/remote-egress path, external protocol, public claim, browser patch, or security boundary;
-5. create a bounded Spec Kit package before implementation.
+5. create a bounded Spec Kit package before implementation;
+6. add/update `STATUS.md` once execution begins.
 
 ## Donor / Research Use
 

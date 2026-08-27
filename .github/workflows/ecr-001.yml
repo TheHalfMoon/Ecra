@@ -1,0 +1,60 @@
+name: ECR-001 CI
+
+on:
+  push:
+    branches:
+      - 001-trusted-domain-kernel
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ecr-001-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --fail --silent --show-error https://sh.rustup.rs \
+              | sh -s -- -y --profile minimal --default-toolchain none
+            export PATH="$HOME/.cargo/bin:$PATH"
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt,clippy
+      - name: Build locked workspace
+        run: cargo build --workspace --locked
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - name: Test
+        run: cargo test --workspace --locked
+      - name: Dedicated contract and security targets
+        run: |
+          cargo test -p ecra-core --test valid_fixtures --locked
+          cargo test -p ecra-core --test invalid_fixtures --locked
+          cargo test -p ecra-core --test contract_fixtures --locked
+          cargo test -p ecra-core --test canonicalization --locked
+          cargo test -p ecra-core --test action_digest --locked
+          cargo test -p ecra-core --test properties --locked
+          cargo test -p ecra-core --test portability --locked
+          cargo test -p ecra-core --test non_authoritative_metadata --locked
+      - name: Rustdoc tests
+        run: cargo test --doc --workspace --locked
+      - name: Offline replay gate
+        run: cargo test --workspace --locked --offline
+      - name: Unsafe code boundary
+        run: bash scripts/check-core-unsafe.sh
+      - name: Dependency boundary
+        run: |
+          bash scripts/check-core-deps.sh
+          cargo tree -p ecra-core

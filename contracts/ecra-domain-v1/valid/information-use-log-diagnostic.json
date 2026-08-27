@@ -1,0 +1,1 @@
+{"sources":[{"kind":"observation","id":"00000000-0000-0000-0000-000000000044"}],"kind":"log_or_diagnostic","destination":{"id":"00000000-0000-0000-0000-000000000045","kind":"local_resource","locator":"diagnostic://local/run","origin":null},"destination_origin":null,"declared_output_classification":{"class":"private","policy_tags":[]}}

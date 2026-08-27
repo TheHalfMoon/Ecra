@@ -8,6 +8,20 @@ The long-term goal is not to build another AI browser, search wrapper, agent fra
 
 Ecra should become to the AI era what the browser and search engine became to the web era: the trusted gateway between intent and information, and between intent and action.
 
+## Development Navigation
+
+If you want to understand or continue implementation, start here:
+
+- `EXECUTION.md` — **current operational truth, next task, phase ledger, and verification gates**.
+- `PLANNING.md` — planning index and current slice summary.
+- `specs/README.md` — Spec Kit package navigation.
+- `specs/000-ecra-platform/roadmap.md` — full immutable `ECR-###` dependency graph.
+- `specs/000-ecra-platform/STATUS.md` — compact platform lifecycle view.
+- `specs/001-trusted-domain-kernel/STATUS.md` — active ECR-001 progress and exact next phase.
+- `AGENTS.md` — execution rules for coding agents.
+
+Do not use a chat handoff as the source of truth. Live repository state plus these documents should be enough to continue.
+
 ## Product Thesis
 
 Ecra unifies five things that are usually fragmented:
@@ -15,8 +29,8 @@ Ecra unifies five things that are usually fragmented:
 1. **Find** — trusted search and evidence-backed answers across the web, local data, connected tools, files, repositories, and workspaces.
 2. **Understand** — durable memory, provenance, context, relationships, and source-aware knowledge that both humans and models can use.
 3. **Act** — browser, terminal, MCP, APIs, plugins, data tools, and developer workflows behind one capability-scoped execution layer.
-4. **Verify** — every consequential action and important answer must be grounded in evidence, policy, receipts, and independent verification.
-5. **Learn** — successful work can be compiled into reusable, deterministic skills that become cheaper, faster, and more reliable over time.
+4. **Verify** — consequential actions and important answers are grounded in evidence, policy, receipts, and independent verification.
+5. **Learn** — successful work can be compiled into reusable deterministic skills that become cheaper, faster, and more reliable over time.
 
 ## Two First-Class Actors
 
@@ -25,7 +39,7 @@ Ecra is built for both:
 - **Humans** — browse, search, work, code, research, organize, teach, approve, and take over.
 - **Agents** — search, reason, operate tools, use the browser, execute workflows, inspect data, and collaborate under scoped authority.
 
-Neither actor is an afterthought. Ecra's core model explicitly represents actors, origins, authority, capabilities, artifacts, actions, receipts, and verification.
+Neither actor is an afterthought. Ecra's core model explicitly represents actors, principals, origins, authority, capabilities, information flow, artifacts, actions, receipts, and verification.
 
 ## The Core Loop
 
@@ -83,15 +97,15 @@ A local model should be able to use Ecra as its gateway to current knowledge and
 
 Ecra can increase the effective capability of smaller or local models by providing:
 
-- current trusted sources,
-- structured browser capabilities,
-- workspace and repository context,
-- searchable durable memory,
-- tools and MCP servers,
-- verified reusable skills,
-- safe secret mediation,
-- independent verifiers,
-- and execution receipts.
+- current trusted sources;
+- structured browser capabilities;
+- workspace and repository context;
+- searchable durable memory;
+- tools and MCP servers;
+- verified reusable skills;
+- safe secret mediation;
+- independent verifiers;
+- execution receipts.
 
 The long-term objective is simple: **models should not need to know everything if they can reliably use Ecra to find, verify, and act.**
 
@@ -122,32 +136,31 @@ This wedge creates the foundation for Search, Terminal, Developer, Data, Memory,
 
 ## Architecture Direction
 
-- **Browser foundation:** Firefox / Gecko, with selective UX ideas from projects such as Zen Browser.
 - **Trusted core:** Rust.
-- **Browser automation contract:** WebDriver BiDi plus a privileged Ecra browser bridge.
-- **Structured web capabilities:** WebMCP where available.
-- **Policy:** capability-scoped, origin-aware authorization.
+- **Browser foundation:** stock Firefox/WebDriver BiDi prototype first; a maintained Firefox/Gecko distribution only after the prototype earns that cost.
+- **Structured web capabilities:** WebMCP/native APIs where available, then compiled skills, semantic DOM/accessibility, browser protocol control, and vision only as fallback.
+- **Policy:** capability-scoped, origin-aware, source-to-sink-aware authorization.
 - **Durability:** append-only run ledger and serializable state machines.
 - **Verification:** independent process/outcome/constraint verification.
 - **Skills:** typed, artifact-aware executable IR rather than recorded clicks.
-- **Protocols:** MCP, ACP, A2A, Agent Skills as external compatibility layers.
-- **Plugins:** capability-isolated WebAssembly where appropriate.
+- **Protocols:** MCP, ACP, A2A, and Agent Skills as compatibility boundaries.
+- **Plugins:** capability-isolated WebAssembly/process sandboxes where appropriate.
 - **Search/context:** source-aware hybrid retrieval across web, local, workspace, code, and memory.
 
 ## What Ecra Is Not
 
 Ecra is not:
 
-- a Browser Use clone,
-- a Perplexity clone,
-- a Comet clone,
-- a Zen clone,
-- a chatbot sidebar,
-- a wrapper around one model provider,
-- an unrestricted autonomous browser,
-- or a collection of unrelated AI features.
+- a Browser Use clone;
+- a Perplexity clone;
+- a Comet clone;
+- a Zen clone;
+- a chatbot sidebar;
+- a wrapper around one model provider;
+- an unrestricted autonomous browser;
+- a collection of unrelated AI features.
 
-Ecra is the common trust, context, and execution substrate beneath all of those experiences.
+Ecra is the common trust, context, and execution substrate beneath those experiences.
 
 ## Success
 
