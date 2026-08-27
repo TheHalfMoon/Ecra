@@ -1,19 +1,15 @@
 name: ECR-001 CI
 
 on:
+  pull_request:
   push:
     branches:
-      - 001-trusted-domain-kernel
-  pull_request:
-    paths:
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'rust-toolchain.toml'
-      - 'crates/**'
-      - 'contracts/ecra-domain-v1/**'
-      - 'scripts/check-core-deps.sh'
-      - 'scripts/check-core-unsafe.sh'
-      - '.github/workflows/ecr-001.yml'
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ecr-001-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
