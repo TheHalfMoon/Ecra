@@ -300,7 +300,11 @@ fn every_domain_error_code_and_category_is_machine_readable_without_display_pars
         categories.insert(expected_category);
     }
 
-    assert_eq!(code_names.len(), 19, "all ErrorCode variants must be covered");
+    assert_eq!(
+        code_names.len(),
+        19,
+        "all ErrorCode variants must be covered"
+    );
     assert_eq!(
         categories.len(),
         16,
