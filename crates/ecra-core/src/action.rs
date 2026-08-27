@@ -192,6 +192,47 @@ fn validate_retry(
     Ok(())
 }
 
+/// Validated grouping of the three orthogonal action safety axes.
+///
+/// This helper exists only to keep construction explicit and Clippy-clean; its
+/// fields remain separately serialized in [`ActionIntent`].
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ActionSemantics {
+    effect: EffectProfile,
+    idempotency: IdempotencySpec,
+    retry: RetryClass,
+}
+
+impl ActionSemantics {
+    pub fn new(
+        effect: EffectProfile,
+        idempotency: IdempotencySpec,
+        retry: RetryClass,
+    ) -> Result<Self, DomainError> {
+        validate_retry(effect, &idempotency, retry)?;
+        Ok(Self {
+            effect,
+            idempotency,
+            retry,
+        })
+    }
+
+    #[must_use]
+    pub const fn effect(&self) -> EffectProfile {
+        self.effect
+    }
+
+    #[must_use]
+    pub const fn idempotency(&self) -> &IdempotencySpec {
+        &self.idempotency
+    }
+
+    #[must_use]
+    pub const fn retry(&self) -> RetryClass {
+        self.retry
+    }
+}
+
 /// Exact parameter binding for an action intent. References are location only;
 /// every non-empty parameter set carries a strong security digest.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
@@ -322,6 +363,7 @@ pub struct ActionIntent {
 }
 
 impl ActionIntent {
+    #[must_use]
     pub fn new(
         id: ActionId,
         actor: ActorId,
@@ -329,12 +371,9 @@ impl ActionIntent {
         target: ResourceRef,
         scope: Scope,
         parameters: ActionParametersRef,
-        effect: EffectProfile,
-        idempotency: IdempotencySpec,
-        retry: RetryClass,
-    ) -> Result<Self, DomainError> {
-        validate_retry(effect, &idempotency, retry)?;
-        Ok(Self {
+        semantics: ActionSemantics,
+    ) -> Self {
+        Self {
             id,
             actor,
             principal: None,
@@ -344,12 +383,12 @@ impl ActionIntent {
             scope,
             parameters,
             information_use: Vec::new(),
-            effect,
-            idempotency,
-            retry,
+            effect: semantics.effect,
+            idempotency: semantics.idempotency,
+            retry: semantics.retry,
             created_at: None,
             correlation_id: None,
-        })
+        }
     }
 
     pub fn with_principal(mut self, principal: PrincipalRef) -> Result<Self, DomainError> {
@@ -465,6 +504,8 @@ impl<'de> Deserialize<'de> for ActionIntent {
         D: Deserializer<'de>,
     {
         let wire = ActionIntentWire::deserialize(deserializer)?;
+        let semantics = ActionSemantics::new(wire.effect, wire.idempotency, wire.retry)
+            .map_err(de::Error::custom)?;
         let mut value = Self::new(
             wire.id,
             wire.actor,
@@ -472,11 +513,8 @@ impl<'de> Deserialize<'de> for ActionIntent {
             wire.target,
             wire.scope,
             wire.parameters,
-            wire.effect,
-            wire.idempotency,
-            wire.retry,
-        )
-        .map_err(de::Error::custom)?;
+            semantics,
+        );
         if let Some(principal) = wire.principal {
             value = value.with_principal(principal).map_err(de::Error::custom)?;
         }

@@ -26,7 +26,7 @@ pub mod time;
 pub mod version;
 
 pub use action::{
-    ActionIntent, ActionParameterRef, ActionParametersRef, ActionRef, EffectProfile,
+    ActionIntent, ActionParameterRef, ActionParametersRef, ActionRef, ActionSemantics, EffectProfile,
     IdempotencyClass, IdempotencySpec, MutationDomain, RetryClass, Reversibility,
 };
 pub use actor::{Actor, ActorKind};

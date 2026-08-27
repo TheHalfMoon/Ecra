@@ -1,11 +1,11 @@
 use std::any::TypeId;
 
 use ecra_core::{
-    ActionId, ActionIntent, ActionParametersRef, ActorId, DomainError, EffectProfile, EpochMillis,
-    ErrorCode, I_JSON_MAX_SAFE_INTEGER, I_JSON_MIN_SAFE_INTEGER, IdempotencyClass, IdempotencySpec,
-    InformationClass, InformationClassification, MutationDomain, OperationRef, PrincipalId,
-    ResourceId, ResourceKind, ResourceRef, RetryClass, Reversibility, SchemaVersion, Scope,
-    SecurityDigest, TemporalValidity, Versioned,
+    ActionId, ActionIntent, ActionParametersRef, ActionSemantics, ActorId, DomainError,
+    EffectProfile, EpochMillis, ErrorCode, I_JSON_MAX_SAFE_INTEGER, I_JSON_MIN_SAFE_INTEGER,
+    IdempotencyClass, IdempotencySpec, InformationClass, InformationClassification, MutationDomain,
+    OperationRef, PrincipalId, ResourceId, ResourceKind, ResourceRef, RetryClass, Reversibility,
+    SchemaVersion, Scope, SecurityDigest, TemporalValidity, Versioned,
 };
 use proptest::prelude::*;
 use uuid::Uuid;
@@ -109,7 +109,8 @@ fn action_with(
     idempotency: IdempotencySpec,
     retry: RetryClass,
 ) -> Result<ActionIntent, DomainError> {
-    ActionIntent::new(
+    let semantics = ActionSemantics::new(effect, idempotency, retry)?;
+    Ok(ActionIntent::new(
         ActionId::parse_str("00000000-0000-0000-0000-000000000101").expect("action id"),
         ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
         OperationRef::new("test", "operation").expect("operation"),
@@ -122,10 +123,8 @@ fn action_with(
         .expect("resource"),
         Scope::not_applicable(),
         ActionParametersRef::None,
-        effect,
-        idempotency,
-        retry,
-    )
+        semantics,
+    ))
 }
 
 #[test]
