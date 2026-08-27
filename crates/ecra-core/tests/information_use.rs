@@ -6,11 +6,15 @@ use ecra_core::{CapabilityGrant, InformationUse, InformationUseKind};
 fn all_phase6_use_kinds_parse_as_declarations() {
     let fixtures = [
         (
-            include_str!("../../../contracts/ecra-domain-v1/valid/information-use-local-compute.json"),
+            include_str!(
+                "../../../contracts/ecra-domain-v1/valid/information-use-local-compute.json"
+            ),
             InformationUseKind::LocalCompute,
         ),
         (
-            include_str!("../../../contracts/ecra-domain-v1/valid/information-use-model-context.json"),
+            include_str!(
+                "../../../contracts/ecra-domain-v1/valid/information-use-model-context.json"
+            ),
             InformationUseKind::ModelContext,
         ),
         (
@@ -18,15 +22,21 @@ fn all_phase6_use_kinds_parse_as_declarations() {
             InformationUseKind::Persist,
         ),
         (
-            include_str!("../../../contracts/ecra-domain-v1/valid/information-use-log-diagnostic.json"),
+            include_str!(
+                "../../../contracts/ecra-domain-v1/valid/information-use-log-diagnostic.json"
+            ),
             InformationUseKind::LogOrDiagnostic,
         ),
         (
-            include_str!("../../../contracts/ecra-domain-v1/valid/information-use-external-disclosure.json"),
+            include_str!(
+                "../../../contracts/ecra-domain-v1/valid/information-use-external-disclosure.json"
+            ),
             InformationUseKind::ExternalDisclosure,
         ),
         (
-            include_str!("../../../contracts/ecra-domain-v1/valid/information-use-remote-provider.json"),
+            include_str!(
+                "../../../contracts/ecra-domain-v1/valid/information-use-remote-provider.json"
+            ),
             InformationUseKind::RemoteProvider,
         ),
     ];
@@ -56,7 +66,10 @@ fn invalid_information_use_fixtures_fail_closed() {
 
 #[test]
 fn declaration_is_not_authorization_or_capability_grant() {
-    assert_ne!(TypeId::of::<InformationUse>(), TypeId::of::<CapabilityGrant>());
+    assert_ne!(
+        TypeId::of::<InformationUse>(),
+        TypeId::of::<CapabilityGrant>()
+    );
 
     let declared_use: InformationUse = serde_json::from_str(include_str!(
         "../../../contracts/ecra-domain-v1/valid/information-use-external-disclosure.json"
