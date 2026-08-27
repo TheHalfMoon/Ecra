@@ -179,7 +179,10 @@ fn validate_retry(
                 && effect.mutation() != MutationDomain::Unknown
         }
         RetryClass::RequiresExternalReconciliation => {
-            matches!(effect.mutation(), MutationDomain::External | MutationDomain::Unknown)
+            matches!(
+                effect.mutation(),
+                MutationDomain::External | MutationDomain::Unknown
+            )
         }
         RetryClass::NeverBlindRetry => true,
     };
@@ -393,7 +396,10 @@ impl ActionIntent {
         self
     }
 
-    pub fn with_correlation_id(mut self, correlation_id: impl Into<String>) -> Result<Self, DomainError> {
+    pub fn with_correlation_id(
+        mut self,
+        correlation_id: impl Into<String>,
+    ) -> Result<Self, DomainError> {
         let correlation_id = correlation_id.into();
         if correlation_id.is_empty() {
             return Err(DomainError::InvalidAction(
@@ -472,19 +478,24 @@ impl<'de> Deserialize<'de> for ActionIntent {
             wire.effect,
             wire.idempotency,
             wire.retry,
-        )?;
+        )
+        .map_err(de::Error::custom)?;
         if let Some(principal) = wire.principal {
-            value = value.with_principal(principal)?;
+            value = value.with_principal(principal).map_err(de::Error::custom)?;
         }
         if let Some(assertion) = wire.identity_assertion {
-            value = value.with_identity_assertion(assertion)?;
+            value = value
+                .with_identity_assertion(assertion)
+                .map_err(de::Error::custom)?;
         }
         value = value.with_information_use(wire.information_use);
         if let Some(created_at) = wire.created_at {
             value = value.with_created_at(created_at);
         }
         if let Some(correlation_id) = wire.correlation_id {
-            value = value.with_correlation_id(correlation_id)?;
+            value = value
+                .with_correlation_id(correlation_id)
+                .map_err(de::Error::custom)?;
         }
         Ok(value)
     }
