@@ -1,7 +1,7 @@
 # Tasks: Trusted Domain Kernel
 
 **Feature:** ECR-001  
-**Status:** READY_FOR_REVIEW_PENDING_EXACT_HEAD_LEDGER_CI  
+**Status:** REVIEW_REMEDIATION  
 **Canonical inputs:** `spec.md`, `research.md`, `data-model.md`, `contracts/domain-v1.md`, `plan.md`, `quickstart.md`, analyze/traceability artifacts  
 
 `[x]` means satisfied on the feature branch; it does not mean `CLOSED_CANONICAL`. Exact merge/post-merge closure remains governed by `AGENTS.md` and the constitution.
@@ -128,14 +128,25 @@
 
 Head `20a56b10257609426e5b66ec0c2ba2f884822039`, CI `33095158577`, runner `macbook`, Rust `1.98.0-aarch64-apple-darwin`, passed checkout, build, fmt, strict Clippy, full workspace tests, all eight dedicated contract/security targets, rustdoc, offline replay, unsafe boundary, dependency boundary and `cargo tree -p ecra-core`. The workflow checked out and logged the exact branch SHA before executing the gate.
 
-The prior GitHub-hosted runner account-state blocker is resolved for repository verification by the approved self-hosted runner. This ledger mutation is documentation-only and must itself receive exact-head CI before PR readiness.
+The ledger-finalization head `12c7029dbde30d2d860fe70447f79b6432ff2f96` also passed the full exact-head gate in CI `33095782152` before PR #1 was marked Ready.
+
+## Phase 13 — Ready-Review Remediation
+
+PR #1 review on `12c7029d…` found three actionable defects. The PR returned to Draft while these tasks are remediated.
+
+- [ ] T081 Make every public `Versioned<T>` Serde deserialization path reject unsupported major/newer minor versions while preserving typed compatibility errors from `Versioned::from_json_slice`. **FR-001, FR-047, SC-002**
+- [ ] T082 Make Fact integer and canonical-decimal construction fail closed so API-created values cannot serialize wire data that strict deserialization rejects; add construction/round-trip regression coverage. **FR-020, FR-049, SC-002, SC-014**
+- [ ] T083 Synchronize ECR-001 lifecycle truth between platform `STATUS.md`, platform `roadmap.md`, active `STATUS.md`, `EXECUTION.md`, and this ledger. **SC-020**
+- [ ] T084 Run the complete exact-head gate after remediation, re-read reviews/threads, resolve only findings actually remediated, and return PR #1 to Ready only with zero actionable review blockers. **SC-018, SC-020**
 
 ## Remaining dependency graph
 
 ```text
-exact-head CI on this final ledger head
-  ↓ PASS
-PR readiness / required review / fixes
+T081–T083 review remediation
+  ↓
+T084 exact-head gate + review-thread closure
+  ↓
+PR Ready / final review
   ↓
 merge + post-merge main verification
   ↓
