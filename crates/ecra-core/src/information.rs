@@ -1,6 +1,8 @@
 use serde::{Deserialize, Deserializer, Serialize, de};
 
-use crate::{ArtifactId, DomainError, FactId, ObservationId, ResourceRef, WebOrigin};
+use crate::{
+    ActionParameterRef, ArtifactId, DomainError, FactId, ObservationId, ResourceRef, WebOrigin,
+};
 
 /// Conservative information classification carried independently from authority.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -87,15 +89,13 @@ impl InformationClassification {
 }
 
 /// Stable reference to information used for lineage and later source-to-sink policy.
-///
-/// Phase 5 introduces the variants needed by Fact lineage. The action-parameter
-/// variant is added before ECR-001 v1 closure when ActionParametersRef exists.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "id", rename_all = "snake_case")]
 pub enum InformationRef {
     Observation(ObservationId),
     Fact(FactId),
     Artifact(ArtifactId),
+    ActionParameter(ActionParameterRef),
 }
 
 /// Declared purpose for using information. This enum has no authorization semantics.
