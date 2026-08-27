@@ -1,6 +1,6 @@
 # Ecra Execution Guide
 
-> **Operational start-here document.** Recover live work from this file, the active slice status/tasks, and exact GitHub truth; do not depend on private chat state.
+> **Operational start-here document.** Recover live work from this file, the platform roadmap/status, the relevant slice package, and exact GitHub truth; do not depend on private chat state.
 
 ## Source-of-truth order
 
@@ -10,7 +10,7 @@
 4. `specs/000-ecra-platform/STATUS.md`
 5. relevant platform architecture/threat/gap/risk/benchmark/decision artifacts
 6. `specs/README.md`
-7. active package `specs/001-trusted-domain-kernel/`, especially `STATUS.md`, spec/research/data-model/contracts/clarifications/plan/quickstart/tasks/analyze/traceability
+7. the current or next eligible bounded Spec Kit package
 8. exact live branch/head, PR, CI, reviews and changed files
 
 Stale prose must be updated to live evidence, never the reverse.
@@ -18,73 +18,65 @@ Stale prose must be updated to live evidence, never the reverse.
 ## Current execution truth
 
 ```text
-Active slice: ECR-001 — Trusted Domain Kernel
-Branch: 001-trusted-domain-kernel
-PR: #1 — OPEN / READY / mergeable at last live check
-Lifecycle: READY_FOR_MERGE_PENDING_EXACT_HEAD_LEDGER_CI
-Current blocker class: NONE_SEMANTIC; exact-head CI/review required on final ledger-finalization head
+ECR-001 — Trusted Domain Kernel: CLOSED_CANONICAL
+PR #1: MERGED
+Merge commit: d1021616eae721e0b89bd5d4114531c4b9cc8a58
+Post-merge CI: 33099033214 — SUCCESS
+Current phase: ECR-001 closure-ledger finalization on canonical main
+Next dependency-eligible candidate: ECR-002 — Durable Run, Ledger & Budgets
 ```
 
-Verified remediation evidence:
+Do not begin ECR-002 implementation merely because its ECR-001 dependency is now satisfied. First require the final ECR-001 closure-ledger head on `main` to pass the complete exact-head CI surface, then re-read the ECR-002 package and advance it through its own Spec Kit lifecycle.
+
+## ECR-001 canonical closure evidence
+
+Final feature verification:
 
 ```text
-Head:   face8d7448afc617a6c04e53237b066bf2ef5b63
-CI:     33097623599 — success
+Head:   1d3c319c3317d3572baad1784f18eea771c5ac6e
+CI:     33098892820 — SUCCESS
 Runner: macbook — self-hosted macOS
 Rust:   1.98.0-aarch64-apple-darwin
 ```
 
-PR #1 ready-review originally exposed three actionable defects. Phase 13 remediated all three, the full exact-head gate passed, all original threads are resolved/outdated, and CodeRabbit completed successfully with no new actionable thread on the remediation head.
+Merge and canonical verification:
 
-## Phase ledger
+```text
+PR:           #1 — MERGED
+Merge commit: d1021616eae721e0b89bd5d4114531c4b9cc8a58
+Main CI:      33099033214 — SUCCESS
+```
+
+The final feature head and resulting canonical merge commit both passed the complete ECR-001 gate. All actionable Qodo review threads were resolved/outdated before merge, including final Phase 13 task-path traceability, and CodeRabbit was successful.
+
+## ECR-001 phase ledger
 
 | Phase | Tasks | State |
 |---|---:|---|
-| 1–9 | T001–T062 | `VERIFIED_ON_BRANCH` |
-| 10 | T063–T069 | `VERIFIED_ON_BRANCH` |
-| 11 | T070–T076 | T070–T075 complete; T076 waits for merge/post-merge evidence |
-| 12 | T077–T080 | complete on branch |
-| 13 | T081–T084 | complete on verified remediation head |
+| 1–9 | T001–T062 | complete |
+| 10 | T063–T069 | complete |
+| 11 | T070–T076 | complete |
+| 12 | T077–T080 | complete |
+| 13 | T081–T084 | complete |
 
-## Phase 13 closure evidence
+ECR-001 is no longer the active implementation slice. Its package remains the canonical record for the trusted-domain kernel.
 
-```text
-T081 Versioned<T> strict public Deserialize
-  -> ordinary serde_json::from_* rejects unsupported major/newer minor
-  -> Versioned::from_json_slice retains typed compatibility DomainError codes
+## CI architecture
 
-T082 FactValue numeric construction
-  -> integers outside I-JSON exact range cannot be constructed
-  -> non-canonical decimal strings cannot be constructed
-  -> validated constructed values serialize and strict-round-trip
+GitHub-hosted runners were blocked because the owner account had an Actions budget of `$0` with stop-usage enabled and no payment method. The approved repository-scoped self-hosted macOS runner `macbook` preserves the full verification surface without making the repository public or enabling paid overage.
 
-T083 lifecycle synchronization
-  -> platform STATUS + roadmap agree ECR-001 is IMPLEMENTING
-  -> active STATUS + EXECUTION + tasks describe the more specific final merge gate
-
-T084 full exact-head CI + review closure
-  -> run 33097623599 PASS on face8d7448afc617a6c04e53237b066bf2ef5b63
-  -> all original Qodo threads resolved/outdated
-  -> PR returned Ready
-  -> CodeRabbit success; no new actionable thread
-```
-
-## CI recovery architecture
-
-GitHub-hosted runners were blocked because the owner account had an Actions budget of `$0` with stop-usage enabled and no payment method. The owner intentionally declined paid overage.
-
-The approved recovery path is a repository-scoped self-hosted macOS runner named `macbook`, installed as a launchd service. This avoids paid hosted-runner usage and preserves the full gate surface.
+Current trusted workflow topology:
 
 ```text
-push: 001-trusted-domain-kernel -> exact feature-head gate
-push: main                      -> post-merge canonical-main gate
+push: 001-trusted-domain-kernel -> trusted feature-head verification
+push: main                      -> canonical-main verification
 workflow_dispatch               -> explicit recovery/recheck
 concurrency                      -> cancel superseded same-ref runs
 runs-on                          -> self-hosted
-permissions                      -> contents: read
+permissions                     -> contents: read
 ```
 
-Do not restore `pull_request` execution on this persistent self-hosted machine without an explicit security design for untrusted/forked code.
+Do not restore untrusted `pull_request` execution on this persistent self-hosted machine without an explicit security design.
 
 ## Exact-head CI surface
 
@@ -108,19 +100,19 @@ bash scripts/check-core-deps.sh
 cargo tree -p ecra-core
 ```
 
-## Next eligible work
+## Next eligible work after closure-ledger CI
 
 ```text
-A. require the complete exact-head gate to PASS on the final documentation/status ledger head
-B. re-read PR #1 head, canonical main, reviews, threads, checks and mergeability
-C. require no actionable review blocker on that exact head
-D. merge with expected head SHA using a non-rebase method
-E. require post-merge canonical-main CI to PASS
-F. only then mark T076 and ECR-001 CLOSED_CANONICAL across roadmap/platform/active status/EXECUTION/tasks
-G. re-read platform roadmap/dependencies and begin the next genuinely eligible slice
+A. require exact-head main CI PASS on the final ECR-001 closure-ledger head
+B. re-read canonical roadmap/platform status and confirm ECR-002 is still the next dependency-eligible slice
+C. inspect `specs/002-durable-run-ledger/` and any active STATUS/spec/research/plan/tasks/analyze artifacts
+D. determine the exact ECR-002 lifecycle state from repository truth
+E. if planning artifacts are incomplete, continue specify/research/plan/contracts/tasks/analyze before implementation
+F. if ECR-002 is genuinely TASKS_READY with clean analyze and constitution gates, create/use its bounded feature branch and begin only its first eligible task
+G. preserve the same exact-head/review/merge/post-merge evidence discipline
 ```
 
-## Non-negotiable invariants
+## Non-negotiable inherited invariants
 
 ```text
 Actor != authenticated Principal
@@ -135,4 +127,4 @@ UNKNOWN remains UNKNOWN
 ContentDigest != ActionDigest/security proof
 ```
 
-No dependent ECR implementation is eligible before ECR-001 closes canonically.
+ECR-002 must build on ECR-001 rather than reopening or duplicating these trusted-domain semantics.
