@@ -1,9 +1,8 @@
 use std::any::TypeId;
 
 use ecra_core::{
-    ActorId, DomainError, EpochMillis, ErrorCode, I_JSON_MAX_SAFE_INTEGER,
-    I_JSON_MIN_SAFE_INTEGER, PrincipalId, SchemaVersion, SecurityDigest, TemporalValidity,
-    Versioned,
+    ActorId, DomainError, EpochMillis, ErrorCode, I_JSON_MAX_SAFE_INTEGER, I_JSON_MIN_SAFE_INTEGER,
+    PrincipalId, SchemaVersion, SecurityDigest, TemporalValidity, Versioned,
 };
 use proptest::prelude::*;
 use uuid::Uuid;
