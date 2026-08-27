@@ -12,6 +12,7 @@ on:
       - 'crates/**'
       - 'contracts/ecra-domain-v1/**'
       - 'scripts/check-core-deps.sh'
+      - 'scripts/check-core-unsafe.sh'
       - '.github/workflows/ecr-001.yml'
 
 permissions:
@@ -36,5 +37,7 @@ jobs:
         run: cargo test --doc --workspace --locked
       - name: Offline replay gate
         run: cargo test --workspace --locked --offline
+      - name: Unsafe code boundary
+        run: bash scripts/check-core-unsafe.sh
       - name: Dependency boundary
         run: bash scripts/check-core-deps.sh

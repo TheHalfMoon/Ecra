@@ -1,10 +1,14 @@
-use std::{collections::BTreeSet, fs, path::PathBuf};
+use std::{
+    collections::{BTreeSet, HashSet},
+    fs,
+    path::PathBuf,
+};
 
 use ecra_core::{
     ActionAttemptRef, ActionIntent, ActionReceipt, ActionRef, ArtifactRef, CapabilityGrant,
-    DomainError, ErrorCode, EvidenceRef, Fact, FreshnessAssessment, InformationClassification,
-    InformationRef, InformationUse, LineageRef, Origin, PrincipalRef, ResourceRef, Scope,
-    ScopeConstraint, VerificationReceipt, Versioned, WebOrigin, WorkspaceId,
+    DomainError, ErrorCategory, ErrorCode, EvidenceRef, Fact, FreshnessAssessment,
+    InformationClassification, InformationRef, InformationUse, LineageRef, Origin, PrincipalRef,
+    ResourceRef, Scope, ScopeConstraint, VerificationReceipt, Versioned, WebOrigin, WorkspaceId,
 };
 use serde::Deserialize;
 
@@ -171,4 +175,135 @@ fn every_committed_invalid_fixture_has_a_typed_machine_readable_failure() {
             "unexpected machine-readable error category for {name}"
         );
     }
+}
+
+#[test]
+fn every_domain_error_code_and_category_is_machine_readable_without_display_parsing() {
+    let cases = [
+        (
+            DomainError::UnsupportedMajorVersion {
+                supported: 1,
+                actual: 2,
+            },
+            ErrorCode::UnsupportedMajorVersion,
+            ErrorCategory::Compatibility,
+        ),
+        (
+            DomainError::UnsupportedMinorVersion {
+                supported: 0,
+                actual: 1,
+            },
+            ErrorCode::UnsupportedMinorVersion,
+            ErrorCategory::Compatibility,
+        ),
+        (
+            DomainError::InvalidIdentifier {
+                kind: "actor",
+                value: "invalid".to_owned(),
+            },
+            ErrorCode::InvalidIdentifier,
+            ErrorCategory::Identifier,
+        ),
+        (
+            DomainError::InvalidEpochMillis { value: i64::MAX },
+            ErrorCode::InvalidEpochMillis,
+            ErrorCategory::Temporal,
+        ),
+        (
+            DomainError::InvalidTemporalRange,
+            ErrorCode::InvalidTemporalRange,
+            ErrorCategory::Temporal,
+        ),
+        (
+            DomainError::InvalidOrigin("invalid".to_owned()),
+            ErrorCode::InvalidOrigin,
+            ErrorCategory::Origin,
+        ),
+        (
+            DomainError::InvalidResource("invalid".to_owned()),
+            ErrorCode::InvalidResource,
+            ErrorCategory::Resource,
+        ),
+        (
+            DomainError::InvalidScope("invalid".to_owned()),
+            ErrorCode::InvalidScope,
+            ErrorCategory::Scope,
+        ),
+        (
+            DomainError::InvalidCapability("invalid".to_owned()),
+            ErrorCode::InvalidCapability,
+            ErrorCategory::Capability,
+        ),
+        (
+            DomainError::InvalidIdentity("invalid".to_owned()),
+            ErrorCode::InvalidIdentity,
+            ErrorCategory::Identity,
+        ),
+        (
+            DomainError::InvalidInformation("invalid".to_owned()),
+            ErrorCode::InvalidInformation,
+            ErrorCategory::Information,
+        ),
+        (
+            DomainError::Canonicalization("invalid".to_owned()),
+            ErrorCode::CanonicalizationFailed,
+            ErrorCategory::Canonicalization,
+        ),
+        (
+            DomainError::InvalidContentDigest("invalid".to_owned()),
+            ErrorCode::InvalidContentDigest,
+            ErrorCategory::Digest,
+        ),
+        (
+            DomainError::InvalidSecurityDigest("invalid".to_owned()),
+            ErrorCode::InvalidSecurityDigest,
+            ErrorCategory::Digest,
+        ),
+        (
+            DomainError::InvalidAction("invalid".to_owned()),
+            ErrorCode::InvalidAction,
+            ErrorCategory::Action,
+        ),
+        (
+            DomainError::InvalidAttempt("invalid".to_owned()),
+            ErrorCode::InvalidAttempt,
+            ErrorCategory::Attempt,
+        ),
+        (
+            DomainError::InvalidReceipt("invalid".to_owned()),
+            ErrorCode::InvalidReceipt,
+            ErrorCategory::Receipt,
+        ),
+        (
+            DomainError::InvalidVerification("invalid".to_owned()),
+            ErrorCode::InvalidVerification,
+            ErrorCategory::Verification,
+        ),
+        (
+            DomainError::Serialization("invalid".to_owned()),
+            ErrorCode::SerializationFailed,
+            ErrorCategory::Serialization,
+        ),
+    ];
+
+    let mut code_names = BTreeSet::new();
+    let mut categories = HashSet::new();
+
+    for (error, expected_code, expected_category) in cases {
+        assert_eq!(error.code(), expected_code);
+        assert_eq!(error.category(), expected_category);
+        assert_eq!(expected_code.category(), expected_category);
+        assert!(
+            code_names.insert(expected_code.as_str()),
+            "duplicate ErrorCode machine-readable name"
+        );
+        categories.insert(expected_category);
+    }
+
+    assert_eq!(code_names.len(), 19, "all ErrorCode variants must be covered");
+    assert_eq!(
+        categories.len(),
+        16,
+        "all ErrorCategory variants must be covered"
+    );
 }
