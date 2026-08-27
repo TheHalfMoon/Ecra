@@ -1,7 +1,12 @@
 # ECR-001 Implementation Clarifications
 
-**Status:** NORMATIVE_FOR_ECR_001_V1  
-**Reason:** implementation review found named value objects whose wire shapes were not fully expanded in `data-model.md`, plus task-order and cross-field ambiguities. These clarifications narrow the contract; they do not widen ECR-001 scope or add runtime behavior. They MUST be folded into the primary contract/data-model/tasks during final convergence before `CLOSED_CANONICAL`.
+**Status:** FOLDED_INTO_PRIMARY_CONTRACT  
+**Folded:** 2026-08-27 during Phase 12 / T077  
+**Primary normative sources:** `data-model.md` and `contracts/domain-v1.md`
+
+This file preserves the bounded implementation resolutions C1–C12 discovered during ECR-001 implementation. They were originally `NORMATIVE_FOR_ECR_001_V1` while the planning-era primary documents lagged implementation. Phase 12 T077 folded every resolution below into the primary data model and v1 contract.
+
+If this historical record ever differs from the converged primary documents, `data-model.md` and `contracts/domain-v1.md` govern. Do not create a second wire/domain contract from this file.
 
 ## C1 — ObservationPayloadRef
 
@@ -15,11 +20,9 @@ ObservationPayloadRef
 - external_ref(non-empty string)
 ```
 
-`external_ref` is opaque, non-authoritative provider/storage metadata. It grants no access and MUST NOT be parsed for authority.
+`external_ref` is opaque, non-authoritative provider/storage metadata. It grants no access and is not parsed for authority.
 
 ## C2 — FactValue
-
-ECR-001 v1 deliberately supports a small deterministic value domain:
 
 ```text
 FactValue
@@ -31,11 +34,9 @@ FactValue
 - artifact(ArtifactId)
 ```
 
-Canonical decimal strings use optional leading `-`, one or more decimal digits, optional `.` followed by one or more digits, no exponent, no leading `+`, and no redundant leading zero except `0` / `0.x`. `-0` and negative-zero spellings are rejected. Rich structured values belong to a later version rather than silently embedding unconstrained JSON in the trusted v1 contract.
+Canonical decimal strings use optional leading `-`, one or more decimal digits, optional `.` plus one or more digits, no exponent, no leading `+`, no redundant leading zero except `0` / `0.x`, and no negative-zero spelling.
 
 ## C3 — LineageRef
-
-Artifact lineage is a stable-ID relation, not a locator or display label:
 
 ```text
 LineageRef
@@ -44,33 +45,29 @@ LineageRef
 - artifact(ArtifactId)
 ```
 
-Provider text is never lineage authority. Cycles and graph policy are downstream concerns.
+Lineage uses stable IDs, not provider locators/display labels. Cycle/graph policy is downstream.
 
 ## C4 — EvidenceRef validation
 
-`EvidenceRef.id` is the stable evidence identity. Optional typed links remain references only. When `external_ref` is present it MUST be non-empty. Evidence kind, presence of a digest, or source label proves nothing by itself.
+`EvidenceRef.id` is stable evidence identity. Optional typed links remain references only. `external_ref`, when present, is non-empty and non-authoritative. Evidence kind/digest/source labels prove nothing by themselves.
 
 ## C5 — Freshness basis pairing
 
-`basis_time` and `basis_kind` are either both absent or both present. `basis_evidence` may additionally identify supporting evidence. This is structural consistency only; source-reported times are not trusted automatically.
+`basis_time` and `basis_kind` are both absent or both present. `basis_evidence` may additionally identify support. This is structural consistency only; source-reported time is not automatically trusted.
 
 ## C6 — Artifact byte size
 
-`ArtifactRef.byte_size_decimal`, when present, is a canonical non-negative base-10 integer string (`0` or a non-zero digit followed by digits). This avoids I-JSON precision limits for large artifacts while keeping deterministic representation. Empty, signed, negative, fractional and redundant-leading-zero forms are invalid.
+`ArtifactRef.byte_size_decimal`, when present, is a canonical non-negative base-10 integer string (`0` or a non-zero digit followed by digits). Empty, signed, negative, fractional and redundant-leading-zero forms are invalid.
 
 ## C7 — Free-form metadata
 
-Optional `media_type`, `logical_name`, `storage_locator`, predicates, tag namespace/name, correlation IDs and external references MUST be non-empty when present/required. They remain non-authoritative metadata and MUST NOT be parsed into capabilities.
+Media/logical/storage metadata, predicates, tag names, correlation IDs and external references obey their primary-type non-empty rules and remain non-authoritative. `CapabilityRequest.reason` is also non-authoritative; ECR-001 v1 does not infer authorization, approval or identity from its text.
 
 ## C8 — InformationRef task ordering
 
-`Fact.derived_from` normatively depends on `InformationRef`, so the base reference type is introduced with Phase 5 evidence/fact work rather than waiting for Phase 6. Phase 6/T039 remains responsible for `InformationUseKind`, `InformationUse`, source-to-sink declarations and their tests. This is a dependency-order correction only.
+`Fact.derived_from` depends on the base `InformationRef`, so the reference type exists before construction of `InformationUse`. This was a task/dependency-order correction only and does not create a second wire version.
 
 ## C9 — Action parameter binding
-
-`ActionDigest` MUST bind the exact parameter payload semantics. A locator or ArtifactId by itself is insufficient because referenced content can change while the identifier/locator remains the same.
-
-ECR-001 v1 therefore uses:
 
 ```text
 ActionParametersRef
@@ -81,54 +78,35 @@ ActionParametersRef
 - bound_external
     - external_ref: non-empty string
     - binding_digest: SecurityDigest
-```
 
-Rules:
-- every non-empty parameter set carries a `SecurityDigest`; in v1 this is SHA-256 because SecurityDigest v1 permits only SHA-256;
-- ArtifactId/external_ref are references only and do not grant access;
-- the executor/provider that later materializes parameters MUST verify the binding digest before using the payload; that I/O behavior is outside ECR-001;
-- `ActionDigest` binds the serialized ActionParametersRef, including its security digest;
-- parameter payloads are not silently embedded as unconstrained JSON in trusted v1 objects.
-
-For source-to-sink lineage involving an action parameter, v1 additionally defines:
-
-```text
 ActionParameterRef
 - action: ActionId
 - path: non-empty opaque string
 ```
 
-`InformationRef` gains `action_parameter(ActionParameterRef)` during Phase 7. `path` is descriptive addressing metadata, not authority or provider policy syntax.
+Every non-empty parameter reference carries a v1 SHA-256 SecurityDigest. References do not grant access. ActionDigest binds the serialized parameter reference including the binding digest. Later executors must verify materialized payloads; that I/O is outside ECR-001.
 
 ## C10 — Effect / idempotency / retry compatibility
 
-The selected invariants in `data-model.md` are made executable as the following fail-closed v1 matrix.
+Effect:
+- mutation `none` requires reversibility `not_applicable`;
+- `local`/`external` reject `not_applicable`;
+- mutation `unknown` requires reversibility `unknown`.
 
-### EffectProfile
+Idempotency:
+- naturally-idempotent/non-idempotent/unknown do not carry `key_ref`;
+- idempotent-with-key requires non-empty `key_ref`.
 
-- `mutation=none` requires `reversibility=not_applicable`.
-- `mutation=local` or `external` requires reversibility other than `not_applicable`.
-- `mutation=unknown` requires `reversibility=unknown`; unknown effect state is never represented as known reversible/non-mutating behavior.
+Retry:
+- `safe` only with naturally-idempotent and mutation != unknown;
+- `requires_same_idempotency_key` only with idempotent-with-key and mutation != unknown;
+- `requires_external_reconciliation` only with external/unknown mutation;
+- `never_blind_retry` for any otherwise structurally valid combination;
+- non-idempotent/unknown never pair with `safe` or `requires_same_idempotency_key`.
 
-### IdempotencySpec
+Reversibility does not upgrade retry safety.
 
-- `naturally_idempotent` MUST NOT carry `key_ref`.
-- `idempotent_with_key` MUST carry a non-empty `key_ref`.
-- `non_idempotent` and `unknown` MUST NOT carry `key_ref`; a key string does not upgrade their semantics.
-
-### RetryClass
-
-- `safe` is permitted only with `naturally_idempotent` and a mutation domain other than `unknown`.
-- `requires_same_idempotency_key` is permitted only with `idempotent_with_key` and a mutation domain other than `unknown`.
-- `requires_external_reconciliation` is permitted only when mutation domain is `external` or `unknown`; it remains conservative and is not an authorization to retry.
-- `never_blind_retry` is permitted for any structurally valid effect/idempotency combination.
-- `non_idempotent` or `unknown` idempotency can never pair with `safe` or `requires_same_idempotency_key`.
-
-Reversibility never upgrades retry safety: an irreversible action may still be naturally idempotent (for example a delete-like operation), while a reversible action may still be non-idempotent. These axes remain independent.
-
-## C11 — Phase 8 receipt/verification bounded values
-
-The contract names `ClaimRef` and `ErrorSummary` but does not otherwise expand their v1 wire fields. ECR-001 v1 uses the smallest deterministic shapes necessary for Phase 8:
+## C11 — Receipt / verification bounded values
 
 ```text
 ClaimRef
@@ -140,20 +118,15 @@ ErrorSummary
 - message?: non-empty string
 ```
 
-Both are opaque structured metadata. Neither is policy syntax, executable content, a capability, or evidence of verification merely by existing.
+ActionReceipt enforces `completed_at >= started_at` when both exist and remains executor-known evidence only.
 
-`ActionReceipt` validates `completed_at >= started_at` when both timestamps are present. The receipt remains executor-known evidence only; `executor_observed_success` is never `verified`.
-
-Verification evidence cardinality is fail-closed:
-
-- `verified`, `rejected`, and `inconclusive` require at least one `EvidenceRef`;
-- `not_evaluated` may carry an empty evidence list because no evaluation has occurred;
-- ECR-004 later owns evidence sufficiency and independence policy.
+Verification evidence cardinality:
+- verified/rejected/inconclusive require at least one EvidenceRef;
+- not_evaluated may carry none;
+- ECR-004 owns evidence sufficiency/independence policy.
 
 ## C12 — Fixture storage and versioned wire envelopes
 
-The public persisted/wire contract remains unchanged: normative v1 wire values use `Versioned<T>` with an explicit `{ major: 1, minor: 0 }` schema envelope.
+Public persisted/interchange values remain `Versioned<T>` with explicit schema version. Repository semantic fixtures may store inner `T` bodies for readability only when the fixture runner supplies/verifies the v1 envelope and separately tests compatibility/strict-field cases.
 
-For the repository fixture corpus only, semantic files under `contracts/ecra-domain-v1/{valid,invalid}/` MAY store the inner `T` body rather than duplicating the same envelope in every file. The Phase 9 runner MUST pair every such body with its declared target type and v1 schema, construct/round-trip the corresponding `Versioned<T>` wire value, and separately exercise full-envelope compatibility fixtures for unsupported versions and unknown strict fields.
-
-This is a fixture-storage convention, not a wire exception. Adapters, persistence, external interchange, and canonical security inputs MUST NOT omit the version envelope where the v1 contract requires it.
+This is not a wire exception. Adapters, persistence, external interchange and canonical security inputs must not omit required version envelopes.
