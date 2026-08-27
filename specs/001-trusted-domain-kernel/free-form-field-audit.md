@@ -13,6 +13,7 @@ Free-form text is data or descriptive metadata only. No free-form value may be p
 | Type / field | Classification | Authoritative counterpart / rule |
 |---|---|---|
 | `Actor.label` | display metadata | `ActorId` + `ActorKind`; label cannot authenticate a `PrincipalId`. |
+| `CapabilityRequest.reason` | explanatory request metadata | A request is never authority; reason text cannot widen its explicit principal/operation/target/scope/temporal shape or manufacture a grant. |
 | `PurposeRef.{namespace,name}` | declared purpose metadata | Scope authority remains the explicit `ScopeConstraint<T>` dimensions. Purpose text grants nothing. |
 | `ResourceRef.locator` | provider/display locator | `ResourceId` is stable resource identity; locator strings may alias or change. |
 | `ArtifactRef.media_type` | descriptive format metadata | Does not identify an artifact or grant access. |
@@ -43,8 +44,8 @@ These values still do not self-authorize, but their semantics are owned by their
 
 ## Evidence
 
-Rustdoc carries the repository-wide boundary in `crates/ecra-core/src/lib.rs` and type-level warnings remain on `Actor`, `ResourceRef`, `ArtifactRef`, `PurposeRef`, `InformationPolicyTag`, `ActionParametersRef`, `ActionParameterRef`, `ErrorSummary`, and `ClaimRef`.
+Rustdoc carries the repository-wide boundary in `crates/ecra-core/src/lib.rs`; capability-request documentation defines a request as never being authority; and type-level warnings remain on `Actor`, `ResourceRef`, `ArtifactRef`, `PurposeRef`, `InformationPolicyTag`, `ActionParametersRef`, `ActionParameterRef`, `ErrorSummary`, and `ClaimRef`.
 
-`crates/ecra-core/tests/non_authoritative_metadata.rs` proves that authority-looking labels, purposes, locators, provider references, receipt external references and verification notes cannot replace stable typed identity, explicit scope, receipt binding or verification outcome.
+`crates/ecra-core/tests/non_authoritative_metadata.rs` proves that authority-looking labels, capability-request reasons, purposes, locators, provider references, receipt external references and verification notes cannot replace stable typed identity, explicit capability/scope shape, receipt binding or verification outcome.
 
 No ECR-001 parser interprets these free-form values as permission syntax. ECR-003 owns authorization and information-flow policy; ECR-031 owns trust-root identity validity.
