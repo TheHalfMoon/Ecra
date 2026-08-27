@@ -1,8 +1,8 @@
 use serde::{Deserialize, Deserializer, Serialize, de};
 
 use crate::{
-    ActionAttemptRef, ActionRef, ActorId, ArtifactId, DomainError, EpochMillis, EvidenceRef, FactId,
-    PrincipalRef, ReceiptId, VerificationId,
+    ActionAttemptRef, ActionRef, ActorId, ArtifactId, DomainError, EpochMillis, EvidenceRef,
+    FactId, PrincipalRef, ReceiptId, VerificationId,
 };
 
 /// Opaque structured claim target. Its strings are descriptive identity only;
