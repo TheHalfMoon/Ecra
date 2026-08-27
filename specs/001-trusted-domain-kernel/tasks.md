@@ -2,7 +2,7 @@
 
 **Feature:** ECR-001  
 **Input:** revised `spec.md`, `research.md`, `data-model.md`, `contracts/domain-v1.md`, `plan.md`, `quickstart.md`, `analyze.md`  
-**Status:** TASKS_READY
+**Status:** CONVERGENCE_REQUIRED
 
 ## Format
 
@@ -163,9 +163,20 @@
 - [ ] T071 Re-check constitution v1.1.0 gates G1–G15 against exact implementation; any failed gate blocks closure.
 - [ ] T072 Resolve every ECR-001-owned blocker from `specs/000-ecra-platform/pre-implementation-review-2026-08-27.md` with exact code/test evidence; do not mark downstream-only findings as implemented. **SC-019**
 - [ ] T073 Run all commands/manual cases in revised `quickstart.md` on exact feature head and record toolchain/changed files/test totals/dependency/unsafe/fixture/digest evidence. **SC-018**
-- [ ] T074 Run `/speckit.analyze`-equivalent review across spec/research/data-model/contract/plan/tasks/implementation; treat MUST-level drift as blocker. **SC-020**
-- [ ] T075 If implementation reveals unmet requirements, append a `Phase 12 — Convergence` section with new traceable tasks; complete it before closure rather than hiding/reclassifying the gap.
+- [x] T074 Run `/speckit.analyze`-equivalent review across spec/research/data-model/contract/plan/tasks/implementation; treat MUST-level drift as blocker. **SC-020** — `post-implementation-analyze-2026-08-27.md` returned `CONVERGENCE_REQUIRED`.
+- [x] T075 If implementation reveals unmet requirements, append a `Phase 12 — Convergence` section with new traceable tasks; complete it before closure rather than hiding/reclassifying the gap.
 - [ ] T076 Update `specs/000-ecra-platform/roadmap.md` to `CLOSED_CANONICAL` only after all exact-head Definition-of-Done evidence passes; otherwise use truthful intermediate status.
+
+---
+
+## Phase 12 — Convergence
+
+**Goal:** eliminate every MUST-level implementation/planning drift discovered by T074 before closure.
+
+- [ ] T077 Fold implementation clarifications C1–C12 plus actual version-envelope and machine error semantics into `specs/001-trusted-domain-kernel/data-model.md` and `specs/001-trusted-domain-kernel/contracts/domain-v1.md`; primary canonical docs must match the implemented/tested v1 contract. **FR-001, FR-020–FR-054, SC-020**
+- [ ] T078 Revise `specs/001-trusted-domain-kernel/quickstart.md`, `specs/001-trusted-domain-kernel/tasks.md`, `STATUS.md`, and `EXECUTION.md` to the current verified gate surface and truthful phase state; include dedicated fixture, portability, metadata, unsafe, dependency and offline gates. **SC-018, SC-020**
+- [ ] T079 Produce exact implementation traceability covering FR-001–FR-055, SC-001–SC-020, constitution G1–G15 and every ECR-001-owned pre-implementation-review finding in a feature traceability artifact with code/test/fixture evidence and explicit downstream deferrals. **SC-019, SC-020**
+- [ ] T080 Re-run the revised quickstart, full exact-head CI and `/speckit.analyze`-equivalent review after T077–T079; PR readiness is authorized only if zero blocking drift remains. **SC-018, SC-020**
 
 ---
 
@@ -192,7 +203,11 @@ Phase 9 Versioned Contract/Portability
              ↓
 Phase 10 Architecture/Security Gates
              ↓
-Phase 11 Traceability/Exact-Head Closure
+Phase 11 Traceability/Analyze
+             ↓
+Phase 12 Convergence
+             ↓
+Phase 11 Exact-Head Closure / T076
 ```
 
 ## Parallel Lanes
@@ -212,6 +227,6 @@ ECR-001 is a contract slice, so partial production release is not the objective.
 2. capability + information/provenance;
 3. action/digest/attempt/receipt/verification;
 4. full fixture/contract/architecture gates;
-5. exact-head analyze and closure.
+5. exact-head analyze, convergence and closure.
 
 No later ECR slice becomes implementation-eligible from a partially complete ECR-001 milestone.
