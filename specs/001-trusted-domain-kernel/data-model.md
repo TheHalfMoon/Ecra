@@ -1,13 +1,14 @@
 # Data Model: Trusted Domain Kernel
 
 **Feature:** ECR-001  
-**Status:** PLAN_READY_INPUT
+**Status:** REVISED_PLAN_READY_INPUT  
+**Constitution:** v1.1.0
 
-This is the normative conceptual data model for the first trusted-core contract. Exact Rust field names may differ only when the implementation plan records an equivalent mapping and contract fixtures remain semantically identical.
+This is the normative conceptual data model for Ecra's first trusted-core contract. Exact Rust field/module names may differ only when the implementation plan records an equivalent mapping and contract fixtures preserve the semantics below.
+
+ECR-001 defines value objects and validation only. It deliberately does not authenticate identities, authorize actions/disclosures, persist runs, execute attempts, or verify outcomes.
 
 ## 1. Version Envelope
-
-Every top-level persisted/wire fixture uses:
 
 ```text
 Versioned<T>
@@ -15,40 +16,53 @@ Versioned<T>
 - value: T
 ```
 
-`SchemaVersion`
-- `major: u16`
-- `minor: u16`
+```text
+SchemaVersion
+- major: u16
+- minor: u16
+```
 
 Rules:
-- ECR-001 supports major `1` only.
-- unsupported major or unsupported newer minor fails with typed compatibility error;
-- parsing never silently upgrades authority/security semantics.
+- v1 supports major `1` only;
+- unsupported major/newer unsupported minor fails typed compatibility handling;
+- security-sensitive objects reject undocumented fields;
+- parsing never silently upgrades authority or information-flow semantics.
 
-## 2. Identifiers
+## 2. Strong Identifiers
 
-Strong opaque IDs:
+Normative JSON representation: UUID string. Each is a different Rust newtype.
 
 ```text
 ActorId
+PrincipalId
+IdentityAssertionId
 RunId
-CapabilityId
+ResourceId
+WorkspaceId
+BrowserSpaceId
+ContainerId
+TabId
+SessionId
+TaskId
+CapabilityRequestId
+CapabilityGrantId
 ObservationId
 FactId
 EvidenceId
 ArtifactId
 ActionId
+ActionAttemptId
 ReceiptId
 VerificationId
 ```
 
-Normative JSON: UUID string.
-
 Rules:
-- ID newtypes are not mutually convertible without explicit code;
-- display metadata is never identity;
-- ID form does not encode permission, actor kind, or trust.
+- no implicit conversion among ID categories;
+- same UUID bytes across categories do not make the types equivalent;
+- ID form/name/prefix does not encode permission/trust;
+- generation is caller-owned and requires no core randomness/clock.
 
-## 3. Actor
+## 3. Actor vs Principal / Identity Assertion Reference
 
 ```text
 Actor
@@ -57,15 +71,28 @@ Actor
 - label?: string
 ```
 
-`ActorKind`
+`ActorKind`:
 - `human`
 - `agent`
 - `system`
 
+```text
+PrincipalRef
+- id: PrincipalId
+```
+
+```text
+IdentityAssertionRef
+- id: IdentityAssertionId
+- principal: PrincipalId
+```
+
 Rules:
-- `label` is non-authoritative metadata;
-- actor kind survives serialization;
-- future identity/authentication material belongs to later slices.
+- Actor is attribution/runtime participation, not proof of authentication;
+- Actor label is non-authoritative;
+- a PrincipalRef does not claim its assertion is valid/current;
+- ECR-031 validates identity assertions/trust roots/on-behalf-of relationships;
+- downstream stores/runs must reject conflicting ActorKind definitions for the same ActorId.
 
 ## 4. Origin
 
@@ -75,7 +102,7 @@ Origin
 - detail: OriginDetail
 ```
 
-`OriginKind`
+`OriginKind`:
 - `user_input`
 - `web`
 - `local`
@@ -85,25 +112,27 @@ Origin
 - `memory`
 - `system_policy`
 
-`WebOrigin`
-- `scheme`
-- `host`
-- `port?`
-- `opaque: bool`
-
-Additional detail records MAY contain a provider/tool/model/memory identifier but MUST NOT imply authority.
+```text
+WebOrigin
+- scheme: string
+- host: string
+- port?: u16
+- opaque: bool
+```
 
 Rules:
-- full resource URL/path is separate from origin;
+- full URL/path is not origin;
 - origin is provenance/security context, not instruction class;
-- web/tool/model/memory origin never self-authorizes.
+- origin never grants authority;
+- opaque origins must not be normalized into a fake web tuple.
 
-## 5. Resource and Scope
+## 5. Resource Identity
 
 ```text
 ResourceRef
+- id: ResourceId
 - kind: ResourceKind
-- locator: string
+- locator?: string
 - origin?: WebOrigin
 ```
 
@@ -115,31 +144,65 @@ Initial `ResourceKind`:
 - `artifact`
 - `abstract`
 
+Rules:
+- `id` is the Ecra stable reference used for joins;
+- `locator` is descriptive/provider addressing metadata and non-authoritative;
+- provider-specific canonical identity/alias resolution is later work;
+- policy must not infer equivalence/authority from locator string text alone.
+
+## 6. Explicit Scope Algebra
+
+Every security-relevant dimension uses an explicit constraint:
+
 ```text
-Scope
-- workspace_id?: string
-- browser_space_id?: string
-- container_id?: string
-- tab_id?: string
-- session_id?: string
-- allowed_origins: list<WebOrigin>
-- resource_constraints: list<ResourceConstraint>
-- task_id?: string
-- purpose?: string
+ScopeConstraint<T>
+- not_applicable
+- exact(T)
+- one_of(list<T>)
+- any_explicit
 ```
 
-ECR-001 validates structure only. Subset/narrowing semantics belong to ECR-003.
+Rules:
+- `one_of` must be non-empty and deduplicated/canonicalized as specified by implementation contract;
+- missing/empty never means ANY;
+- `any_explicit` is the only unrestricted representation for that dimension;
+- `not_applicable` means the dimension does not apply, not unrestricted authority.
 
-## 6. Time Values
+```text
+Scope
+- workspace: ScopeConstraint<WorkspaceId>
+- browser_space: ScopeConstraint<BrowserSpaceId>
+- container: ScopeConstraint<ContainerId>
+- tab: ScopeConstraint<TabId>
+- session: ScopeConstraint<SessionId>
+- task: ScopeConstraint<TaskId>
+- origins: ScopeConstraint<WebOrigin>
+- resources: ScopeConstraint<ResourceId>
+- purpose?: PurposeRef
+```
+
+```text
+PurposeRef
+- namespace: string
+- name: string
+```
+
+`PurposeRef` is structured metadata used by later policy; it grants nothing by itself.
+
+ECR-003 owns subset/intersection/narrowing semantics.
+
+## 7. Time Values
 
 ```text
 EpochMillis(i64)
 ```
 
-Rules:
-- must fit I-JSON exact integer range;
-- core never reads system time;
-- evaluation uses caller-supplied `EvaluationContext { now }`.
+Must remain in I-JSON exact integer range.
+
+```text
+EvaluationContext
+- now: EpochMillis
+```
 
 ```text
 TemporalValidity
@@ -147,46 +210,80 @@ TemporalValidity
 - expires_at?: EpochMillis
 ```
 
-Validation:
-- if both exist, `not_before <= expires_at`.
+Rule: when both exist, `not_before <= expires_at`. The core never reads the system clock.
 
-## 7. Capability Request and Grant
+## 8. Capability Request and Grant
+
+```text
+OperationRef
+- namespace: string
+- name: string
+```
+
+Example: `browser/read`; no Cedar/protocol/provider expression syntax.
 
 ```text
 CapabilityRequest
-- id: CapabilityId
-- principal: ActorId
+- id: CapabilityRequestId
+- principal: PrincipalRef
 - operation: OperationRef
 - target: ResourceRef
 - scope: Scope
 - temporal?: TemporalValidity
 - requested_by: ActorId
+- identity_assertion?: IdentityAssertionRef
 - reason?: string
 ```
 
 ```text
 CapabilityGrant
-- id: CapabilityId
-- principal: ActorId
+- id: CapabilityGrantId
+- principal: PrincipalRef
 - operation: OperationRef
 - target: ResourceRef
 - scope: Scope
 - temporal?: TemporalValidity
 - issued_by: ActorId
-- parent_grant?: CapabilityId
+- parent_grant?: CapabilityGrantId
 - delegation_depth?: u16
 ```
 
-`OperationRef`
-- stable namespace/name string pair, e.g. `browser/read`, without policy-engine syntax.
+Rules:
+- request and grant are non-interchangeable types/IDs;
+- no implicit request→grant conversion;
+- structural validation does not imply authorization;
+- parent existence/subset/revocation is ECR-003/ECR-031.
+
+## 9. Information Classification
+
+```text
+InformationClass
+- public
+- private
+- sensitive
+- secret
+- unknown
+```
+
+```text
+InformationClassification
+- class: InformationClass
+- policy_tags: list<InformationPolicyTag>
+```
+
+```text
+InformationPolicyTag
+- namespace: string
+- name: string
+```
 
 Rules:
-- request and grant are distinct types;
-- grant construction requires explicit API;
-- temporal validity and structural scope are validated;
-- parent grant existence/narrowing is verified later by ECR-003.
+- classification grants no authority;
+- unknown is conservative, not public;
+- tags are data, not executable policy expressions;
+- later policy owns joins/inheritance/declassification.
 
-## 8. Observation
+## 10. Observation
 
 ```text
 Observation
@@ -196,14 +293,13 @@ Observation
 - observed_at?: EpochMillis
 - subject: ResourceRef
 - payload: ObservationPayloadRef
+- classification: InformationClassification
 - evidence: list<EvidenceRef>
 ```
 
-Observation is what Ecra or an actor observed/retrieved, not a claim of universal truth.
+An Observation records what was seen/retrieved, not universal truth or permission.
 
-`ObservationPayloadRef` points to structured inline small data or an artifact reference. Large content is never required inside the core domain object.
-
-## 9. Fact
+## 11. Fact
 
 ```text
 Fact
@@ -212,13 +308,14 @@ Fact
 - predicate: string
 - value: FactValue
 - provenance: Provenance
-- trust_state: TrustState
-- freshness: Freshness
+- classification: InformationClassification
+- freshness: FreshnessAssessment
+- dispute: DisputeState
 - evidence: list<EvidenceRef>
-- derived_from: list<FactId>
+- derived_from: list<InformationRef>
 ```
 
-`Provenance`
+`Provenance`:
 - `user_provided`
 - `observed_web`
 - `observed_local`
@@ -227,24 +324,85 @@ Fact
 - `model_inferred`
 - `system_derived`
 
-`TrustState`
-- `unverified`
-- `verified`
+`DisputeState`:
+- `undisputed`
 - `contradicted`
 - `disputed`
 - `inconclusive`
-
-`Freshness`
-- `current`
-- `stale`
 - `unknown`
 
-Rules:
-- verification never changes original provenance;
-- staleness does not imply falsehood;
-- contradiction can exist without choosing a winner.
+**There is no `Fact.verified` truth flag.** Verification truth is represented by VerificationReceipt records that target the Fact/claim.
 
-## 10. Evidence
+## 12. Freshness Assessment
+
+```text
+FreshnessState
+- current
+- stale
+- unknown
+```
+
+```text
+FreshnessBasisKind
+- observed_at
+- retrieved_at
+- published_at
+- effective_at
+- source_reported
+- other
+```
+
+```text
+FreshnessAssessment
+- state: FreshnessState
+- assessed_at?: EpochMillis
+- basis_kind?: FreshnessBasisKind
+- basis_time?: EpochMillis
+- basis_evidence?: EvidenceId
+```
+
+Rules:
+- freshness does not change provenance or verification;
+- source-reported timestamps are not automatically trusted;
+- current/stale must be explainable when basis is known.
+
+## 13. Information References and Use / Disclosure Intent
+
+```text
+InformationRef
+- observation(ObservationId)
+- fact(FactId)
+- artifact(ArtifactId)
+- action_parameter(ActionParameterRef)
+```
+
+```text
+InformationUseKind
+- local_compute
+- model_context
+- persist
+- log_or_diagnostic
+- external_disclosure
+- remote_provider
+- other
+```
+
+```text
+InformationUse
+- sources: non-empty list<InformationRef>
+- kind: InformationUseKind
+- destination?: ResourceRef
+- destination_origin?: WebOrigin
+- declared_output_classification?: InformationClassification
+```
+
+Rules:
+- use declaration is not authorization;
+- remote/external use can name destination/origin;
+- read authority over a source plus write authority at destination does not imply allowed flow;
+- ECR-003 owns source-to-sink policy and declassification.
+
+## 14. Evidence
 
 ```text
 EvidenceRef
@@ -254,9 +412,11 @@ EvidenceRef
 - observation?: ObservationId
 - receipt?: ReceiptId
 - external_ref?: string
+- content_digest?: ContentDigest
+- as_of?: EpochMillis
 ```
 
-`EvidenceKind`
+`EvidenceKind`:
 - `observation`
 - `artifact`
 - `structured_tool_result`
@@ -268,10 +428,10 @@ EvidenceRef
 
 Rules:
 - references, not arbitrary evidence blobs;
-- evidence kind does not itself guarantee trust;
-- later verifier contracts decide evidentiary weight.
+- evidence kind alone proves nothing;
+- immutable capture/digest/as-of is supported for later decision-grade verifier policy.
 
-## 11. Artifact
+## 15. Artifact
 
 ```text
 ArtifactRef
@@ -279,13 +439,14 @@ ArtifactRef
 - kind: ArtifactKind
 - media_type?: string
 - logical_name?: string
+- classification: InformationClassification
 - content_digest?: ContentDigest
 - byte_size_decimal?: string
 - storage_locator?: string
 - lineage: list<LineageRef>
 ```
 
-`ArtifactKind`
+`ArtifactKind`:
 - `file`
 - `document`
 - `image`
@@ -295,63 +456,151 @@ ArtifactRef
 - `network_capture`
 - `other`
 
-`ContentDigest`
-- `algorithm`
-- `hex`
+`storage_locator` is non-authoritative opaque metadata to storage layers.
 
-ECR-001 does not dictate storage. `storage_locator` is opaque to trust logic.
+## 16. Digest Types
 
-## 12. Action Intent
+Generic metadata:
+
+```text
+ContentDigest
+- algorithm: string
+- hex: string
+```
+
+A ContentDigest is not automatically an authenticity/security digest.
+
+Security action binding:
+
+```text
+SecurityDigest
+- algorithm: SecurityDigestAlgorithm
+- hex: string
+
+SecurityDigestAlgorithm
+- sha256
+```
+
+```text
+ActionDigest(SecurityDigest)
+```
+
+`ActionDigest` v1 is SHA-256 over:
+
+```text
+UTF8("ecra/action-intent/v1\0") || JCS(Versioned<ActionIntent>)
+```
+
+where the canonical ActionIntent excludes any derived digest field itself. Exact fixtures define the byte domain.
+
+## 17. Action Intent
 
 ```text
 ActionIntent
 - id: ActionId
 - actor: ActorId
-- capability: OperationRef
+- principal?: PrincipalRef
+- identity_assertion?: IdentityAssertionRef
+- operation: OperationRef
 - target: ResourceRef
 - scope: Scope
 - parameters: ActionParametersRef
-- side_effect: SideEffectClass
+- information_use: list<InformationUse>
+- effect: EffectProfile
 - idempotency: IdempotencySpec
 - retry: RetryClass
 - created_at?: EpochMillis
 - correlation_id?: string
 ```
 
-`SideEffectClass`
-- `read_only`
-- `local_mutation`
-- `reversible_external_mutation`
-- `irreversible_external_mutation`
-- `unknown`
+`operation` is **not** a CapabilityGrant. Authorization occurs later.
 
-`IdempotencyClass`
-- `naturally_idempotent`
-- `idempotent_with_key`
-- `non_idempotent`
-- `unknown`
+## 18. Effect / Idempotency / Retry
 
-`IdempotencySpec`
-- `class`
-- `key_ref?`
+```text
+MutationDomain
+- none
+- local
+- external
+- unknown
+```
 
-`RetryClass`
-- `safe`
-- `requires_same_idempotency_key`
-- `requires_external_reconciliation`
-- `never_blind_retry`
+```text
+Reversibility
+- not_applicable
+- reversible
+- conditional
+- irreversible
+- unknown
+```
+
+```text
+EffectProfile
+- mutation: MutationDomain
+- reversibility: Reversibility
+```
 
 Selected invariants:
-- `idempotent_with_key` requires `key_ref`;
-- `non_idempotent` or `unknown` MUST NOT pair with an implicitly permissive retry policy;
-- `unknown` side effect is treated conservatively by downstream policy.
+- `mutation=none` requires `reversibility=not_applicable`;
+- mutating actions cannot use `not_applicable` reversibility;
+- unknown never normalizes to non-mutating/reversible.
 
-## 13. Action Receipt
+```text
+IdempotencyClass
+- naturally_idempotent
+- idempotent_with_key
+- non_idempotent
+- unknown
+```
+
+```text
+IdempotencySpec
+- class: IdempotencyClass
+- key_ref?: string
+```
+
+```text
+RetryClass
+- safe
+- requires_same_idempotency_key
+- requires_external_reconciliation
+- never_blind_retry
+```
+
+Selected invariants:
+- keyed idempotency requires key_ref;
+- non-idempotent/unknown cannot pair with unconditional `safe` retry;
+- conservative combinations are required for unknown/destructive cases.
+
+## 19. Immutable Action Reference
+
+```text
+ActionRef
+- id: ActionId
+- digest: ActionDigest
+```
+
+Rules:
+- ActionRef binds ID and exact canonical ActionIntent content;
+- same ActionId with different security-relevant fields produces a digest mismatch;
+- later approvals/authorization decisions/receipts bind ActionRef, not ActionId alone.
+
+## 20. Execution Attempt Identity
+
+```text
+ActionAttemptRef
+- id: ActionAttemptId
+- action: ActionRef
+```
+
+ECR-001 validates/reference-shapes only. ECR-002 owns attempt creation/state/lifecycle/retries.
+
+## 21. Action Receipt
 
 ```text
 ActionReceipt
 - id: ReceiptId
-- action: ActionId
+- attempt: ActionAttemptRef
 - executor_actor: ActorId
 - started_at?: EpochMillis
 - completed_at?: EpochMillis
@@ -361,23 +610,24 @@ ActionReceipt
 - error?: ErrorSummary
 ```
 
-`ActionOutcome`
-- `confirmed_success`
-- `confirmed_failure`
+`ActionOutcome`:
+- `executor_observed_success`
+- `executor_observed_failure`
 - `unknown`
 
 Rules:
-- receipt is executor evidence, not independent verification;
-- `unknown` is valid and must not be coerced to failure/success;
-- completed timestamp cannot precede started timestamp;
-- receipt cannot refer to a different action by implicit parameter equivalence; it uses stable ActionId.
+- receipt is executor-known evidence, not verification;
+- exact action digest + attempt are bound;
+- completion >= start when both exist;
+- UNKNOWN remains UNKNOWN.
 
-## 14. Verification Receipt
+## 22. Verification Receipt
 
 ```text
 VerificationReceipt
 - id: VerificationId
 - verifier: ActorId
+- verifier_principal?: PrincipalRef
 - target: VerificationTarget
 - method: VerificationMethod
 - evidence: list<EvidenceRef>
@@ -386,14 +636,15 @@ VerificationReceipt
 - notes?: string
 ```
 
-`VerificationTarget`
-- action: ActionId
-- receipt: ReceiptId
-- fact: FactId
-- artifact: ArtifactId
-- abstract_claim: string/reference
+`VerificationTarget` can reference:
+- ActionRef;
+- ActionAttemptRef;
+- ReceiptId;
+- FactId;
+- ArtifactId;
+- typed/opaque ClaimRef.
 
-`VerificationMethod`
+`VerificationMethod`:
 - `structured_external_state`
 - `api_or_tool_result`
 - `network_receipt`
@@ -403,58 +654,51 @@ VerificationReceipt
 - `independent_model_judgment`
 - `other`
 
-`VerificationOutcome`
+`VerificationOutcome`:
 - `verified`
 - `rejected`
 - `inconclusive`
 - `not_evaluated`
 
 Rules:
-- target and verifier are explicit;
-- verification never mutates the underlying receipt/fact provenance;
-- `not_evaluated` is distinct from `inconclusive`.
+- VerificationReceipt is the authoritative verification record;
+- it does not mutate Fact provenance/classification/freshness;
+- `not_evaluated` differs from `inconclusive`.
 
-## 15. Errors
+## 23. Error Categories
 
-Machine-distinguishable categories:
+Machine-distinguishable categories/codes include:
 
 ```text
 CompatibilityError
 IdentifierError
+IdentityReferenceError
 OriginError
+ResourceError
 ScopeError
 CapabilityError
 TemporalError
-ActionSemanticError
-ReceiptError
+InformationFlowShapeError
 EvidenceError
+DigestError
+ActionSemanticError
+ActionReferenceError
+AttemptError
+ReceiptError
+VerificationError
 CanonicalizationError
 ```
 
-Public callers MUST NOT need to parse display strings to determine error category.
+Display text is not an API contract.
 
-## 16. Canonicalization and Digests
-
-Normative canonicalization uses RFC 8785 JCS over the versioned JSON form where digest identity is required.
-
-Rules:
-- no NaN/Infinity;
-- no duplicate JSON keys;
-- values outside exact JSON number range use documented string forms;
-- canonical bytes are test-fixture-visible;
-- ECR-001 does not define ledger chaining or signatures.
-
-## 17. State Transition Ownership
-
-ECR-001 defines value objects and validation only. It does not define a persistent run state machine. ECR-002 will compose these entities into lifecycle transitions.
-
-The following ownership boundary is normative:
+## 24. State / Enforcement Ownership
 
 ```text
-ECR-001: What an Actor/Action/Receipt/Fact/Capability IS.
-ECR-002: How a Run changes over time and persists events.
-ECR-003: Whether a Capability is authorized.
-ECR-004: Whether a result/claim is verified and how retry/reconciliation proceeds.
+ECR-001: canonical zero-I/O value objects, references and structural invariants.
+ECR-002: RunState, ActionAttempt lifecycle, budgets/cancellation, append-only persistence/integrity chain.
+ECR-031: authentication assertions, trust roots, key lifecycle/revocation, protected sensitive-storage envelope.
+ECR-003: capability narrowing, source-to-sink disclosure/declassification, approvals, secrets, immutable AuthorizationDecision/lease.
+ECR-004: independent verification orchestration, evidence sufficiency, reconciliation/UNKNOWN resolution.
 ```
 
-This boundary prevents the core type model from becoming an accidental orchestrator.
+This boundary is normative: ECR-001 must not become an orchestrator or policy engine.
