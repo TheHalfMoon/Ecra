@@ -10,6 +10,7 @@
 
 pub mod actor;
 pub mod canonical;
+pub mod capability;
 pub mod digest;
 pub mod error;
 pub mod id;
@@ -22,6 +23,9 @@ pub mod version;
 
 pub use actor::{Actor, ActorKind};
 pub use canonical::to_jcs_vec;
+pub use capability::{
+    CapabilityGrant, CapabilityRequest, DelegationRef, OperationRef,
+};
 pub use digest::{ContentDigest, SecurityDigest, SecurityDigestAlgorithm};
 pub use error::{DomainError, ErrorCategory, ErrorCode};
 pub use id::*;
