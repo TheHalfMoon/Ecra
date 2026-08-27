@@ -4,7 +4,7 @@
 **Lifecycle:** IMPLEMENTING  
 **Branch:** `001-trusted-domain-kernel`  
 **PR:** `#1` (draft until full slice closure)  
-**Last fully verified implementation head before Phase 5:** `992dd31c44104aa619b0ea59429063f69e559014`
+**Latest fully verified implementation head:** `d29f700ca314e067f5912815b2bd5a1047a63602`
 
 This file is the execution ledger for ECR-001. It summarizes progress; normative semantics remain in `spec.md`, `data-model.md`, `contracts/`, and approved implementation clarifications.
 
@@ -15,8 +15,9 @@ Phase 1  VERIFIED_ON_BRANCH
 Phase 2  VERIFIED_ON_BRANCH
 Phase 3  VERIFIED_ON_BRANCH
 Phase 4  VERIFIED_ON_BRANCH
-Phase 5  NEXT_ACTIVE_PHASE
-Phase 6+ BLOCKED_BY_ORDERING
+Phase 5  VERIFIED_ON_BRANCH
+Phase 6  NEXT_ACTIVE_PHASE
+Phase 7+ BLOCKED_BY_ORDERING
 ```
 
 ## Verified phase evidence
@@ -25,43 +26,19 @@ Phase 6+ BLOCKED_BY_ORDERING
 
 Outcome: `VERIFIED_ON_BRANCH`
 
-Established:
-
-- one production crate: `crates/ecra-core`;
-- Rust 1.98.x / Edition 2024 baseline;
-- `#![forbid(unsafe_code)]` and workspace lint policy;
-- bounded dependency set;
-- normative fixture directories;
-- CI gates for locked build, fmt, Clippy, tests, rustdoc, offline replay, and dependency boundary.
+Established one production crate, Rust 1.98.x / Edition 2024, `#![forbid(unsafe_code)]`, bounded dependencies, normative fixture directories, and locked CI gates.
 
 ### Phase 2 — T007–T014
 
 Outcome: `VERIFIED_ON_BRANCH`
 
-Established deterministic zero-I/O primitives:
-
-- schema/version dispatch;
-- machine-readable errors;
-- strong ID types;
-- caller-supplied time values;
-- RFC 8785 JCS canonicalization;
-- ContentDigest vs SecurityDigest separation;
-- property/canonicalization tests.
+Established schema/version dispatch, machine-readable errors, strong IDs, caller-supplied time, RFC 8785 JCS canonicalization, ContentDigest/SecurityDigest separation, and property/canonicalization tests.
 
 ### Phase 3 — T015–T023
 
 Outcome: `VERIFIED_ON_BRANCH`
 
-Exact-head evidence was green after adding normative valid/invalid fixtures and compile/runtime type-confusion coverage.
-
-Key invariants:
-
-- Actor attribution != Principal authentication;
-- tuple/opaque origins are explicit;
-- resource locator metadata grants nothing;
-- missing/empty scope is not wildcard;
-- `any_explicit` is the only unrestricted scope representation;
-- ActorId cannot implicitly become PrincipalId.
+Established Actor/Principal separation, tuple/opaque origins, stable resource identity, explicit scope algebra, normative fixtures, and compile/runtime type-confusion coverage.
 
 ### Phase 4 — T024–T028
 
@@ -69,7 +46,15 @@ Outcome: `VERIFIED_ON_BRANCH`
 
 Verified head: `992dd31c44104aa619b0ea59429063f69e559014`.
 
-Exact-head CI passed:
+Established distinct `CapabilityRequest`/`CapabilityGrant`, structural delegation provenance, caller-supplied temporal evaluation, and no request→grant shortcut.
+
+### Phase 5 — T029–T038
+
+Outcome: `VERIFIED_ON_BRANCH`
+
+Verified head: `d29f700ca314e067f5912815b2bd5a1047a63602`.
+
+Exact-head CI run `33074624203` passed:
 
 ```text
 Build locked workspace       PASS
@@ -81,55 +66,46 @@ Offline replay gate          PASS
 Dependency boundary          PASS
 ```
 
-Key invariants:
+Established:
 
-- `CapabilityRequest` and `CapabilityGrant` have distinct types and IDs;
-- no request→grant implicit conversion;
-- delegation records provenance only, not subset validity;
-- temporal evaluation uses caller-supplied `EvaluationContext` only;
-- capability types remain provider/policy-syntax neutral.
+- explicit public/private/sensitive/secret/unknown information classification;
+- typed information references used by Fact lineage;
+- Observation payload references rather than arbitrary embedded blobs;
+- EvidenceRef and freshness metadata;
+- Fact provenance/classification/freshness/dispute as independent axes;
+- no canonical `Fact.verified` truth flag;
+- deterministic FactValue v1 values and I-JSON integer bounds;
+- classified ArtifactRef, stable lineage, canonical byte-size text, and non-authoritative storage locator;
+- valid/invalid normative fixtures and round-trip/property coverage.
 
-## Next active phase — Phase 5 / T029–T038
+The bounded clarifications in `implementation-clarifications.md` remain normative for this PR and MUST converge into the primary contract/data model/tasks before ECR-001 closure.
 
-Goal: information trust/disclosure metadata survives derivation without becoming permission.
+## Next active phase — Phase 6 / T039–T042
+
+Goal: represent information use/source-to-sink intent without turning it into authorization.
 
 Required work:
 
-- T029 `InformationClass`, `InformationPolicyTag`, `InformationClassification`.
-- T030 `Observation` and payload reference.
-- T031 `ArtifactRef`, `ArtifactKind`, content/size/storage metadata, lineage.
-- T032 `FreshnessAssessment`, `FreshnessState`, `FreshnessBasisKind`.
-- T033 `Fact`, `FactValue`, `Provenance`, `DisputeState`, derived `InformationRef` lineage.
-- T034 `EvidenceRef`, `EvidenceKind`, immutable capture/as-of metadata.
-- T035 valid normative fixtures.
-- T036 invalid normative fixtures.
-- T037 orthogonality tests and proof that Fact has no canonical VERIFIED flag.
-- T038 lineage/classification round-trip properties.
+- keep the base `InformationRef` introduced in Phase 5 because Fact lineage depends on it;
+- implement `InformationUseKind` and `InformationUse` in `crates/ecra-core/src/information.rs`;
+- require a non-empty source set;
+- allow explicit optional destination ResourceRef and WebOrigin plus declared output classification;
+- add valid local-compute/model-context/persist/log/external-disclosure/remote-provider fixtures;
+- add invalid empty-source/malformed-destination fixtures;
+- prove InformationUse cannot become CapabilityGrant/authorization and separate read/write capabilities do not imply A→B disclosure.
 
-### Phase 5 implementation clarification
-
-Implementation review found two planning underspecifications that must be made explicit before relying on them:
-
-1. `ObservationPayloadRef`, `FactValue`, and `LineageRef` were named but their exact v1 wire shapes were not fully specified.
-2. Fact lineage needs the base `InformationRef` in Phase 5 even though `InformationUse` remains Phase 6.
-
-Record the bounded resolution in `implementation-clarifications.md`, keep it provider-neutral, and converge it into the canonical contract/package before ECR-001 closure.
-
-Required safety properties:
+Required safety property:
 
 ```text
-Provenance != Classification != Freshness != Verification
-unknown classification != public
-Fact has no verified: bool
-ContentDigest != authenticity proof
-storage locator != authority
+information-use declaration != information-flow authorization
+read(A) + write(B) != disclose(A → B)
 ```
 
-## Phase ordering after Phase 5
+ECR-003 owns actual source-to-sink policy, declassification, and authorization decisions.
+
+## Phase ordering after Phase 6
 
 ```text
-Phase 5  Information / evidence / fact / artifact
-  ↓
 Phase 6  InformationUse / source-to-sink declaration
   ↓
 Phase 7  Effects / idempotency / retry / ActionIntent / ActionDigest
@@ -140,8 +116,6 @@ Phase 9  strict v1 fixture runner / portability / public contract convergence
   ↓
 Phase 10 cross-cutting security / dependency / architecture / closure gates
 ```
-
-Do not begin Phase 6 merely because some Phase 6 type is useful. If a dependency such as base `InformationRef` is required earlier, document the ordering clarification while keeping the later behavior (for example InformationUse authorization semantics) in its owning phase.
 
 ## Per-batch verification gate
 
