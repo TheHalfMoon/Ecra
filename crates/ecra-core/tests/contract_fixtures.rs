@@ -127,7 +127,9 @@ fn phase8_two_attempts_bind_one_exact_action_ref() {
 
     assert_ne!(first.id(), second.id());
     assert_eq!(first.action(), second.action());
-    first.validate_for(&intent).expect("first exact action binding");
+    first
+        .validate_for(&intent)
+        .expect("first exact action binding");
     second
         .validate_for(&intent)
         .expect("second exact action binding");
@@ -152,16 +154,23 @@ fn phase8_receipts_bind_attempt_and_preserve_unknown() {
     ))
     .expect("executor failure receipt");
 
-    unknown.validate_for(&intent).expect("unknown exact binding");
-    success.validate_for(&intent).expect("success exact binding");
-    failure.validate_for(&intent).expect("failure exact binding");
+    unknown
+        .validate_for(&intent)
+        .expect("unknown exact binding");
+    success
+        .validate_for(&intent)
+        .expect("success exact binding");
+    failure
+        .validate_for(&intent)
+        .expect("failure exact binding");
     assert_eq!(unknown.outcome(), ActionOutcome::Unknown);
     assert_eq!(success.outcome(), ActionOutcome::ExecutorObservedSuccess);
     assert_eq!(failure.outcome(), ActionOutcome::ExecutorObservedFailure);
     assert_ne!(success.attempt().id(), failure.attempt().id());
 
     let serialized = serde_json::to_string(&unknown).expect("serialize unknown receipt");
-    let round_trip = serde_json::from_str::<ActionReceipt>(&serialized).expect("round-trip receipt");
+    let round_trip =
+        serde_json::from_str::<ActionReceipt>(&serialized).expect("round-trip receipt");
     assert_eq!(round_trip, unknown);
     assert_eq!(round_trip.outcome(), ActionOutcome::Unknown);
 }
@@ -198,7 +207,8 @@ fn phase8_executor_success_is_not_verification() {
     let receipt_fixture = include_str!(
         "../../../contracts/ecra-domain-v1/invalid/action-receipt-type-confusion.json"
     );
-    let receipt = serde_json::from_str::<ActionReceipt>(receipt_fixture).expect("valid receipt shape");
+    let receipt =
+        serde_json::from_str::<ActionReceipt>(receipt_fixture).expect("valid receipt shape");
     assert_eq!(receipt.outcome(), ActionOutcome::ExecutorObservedSuccess);
     assert!(serde_json::from_str::<VerificationReceipt>(receipt_fixture).is_err());
 
@@ -232,9 +242,7 @@ fn phase8_invalid_contracts_fail_closed() {
     );
 
     for fixture in [
-        include_str!(
-            "../../../contracts/ecra-domain-v1/invalid/verification-missing-target.json"
-        ),
+        include_str!("../../../contracts/ecra-domain-v1/invalid/verification-missing-target.json"),
         include_str!(
             "../../../contracts/ecra-domain-v1/invalid/verification-missing-verifier.json"
         ),
