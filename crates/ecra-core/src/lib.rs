@@ -26,8 +26,8 @@ pub mod time;
 pub mod version;
 
 pub use action::{
-    ActionIntent, ActionParameterRef, ActionParametersRef, ActionRef, ActionSemantics, EffectProfile,
-    IdempotencyClass, IdempotencySpec, MutationDomain, RetryClass, Reversibility,
+    ActionIntent, ActionParameterRef, ActionParametersRef, ActionRef, ActionSemantics,
+    EffectProfile, IdempotencyClass, IdempotencySpec, MutationDomain, RetryClass, Reversibility,
 };
 pub use actor::{Actor, ActorKind};
 pub use artifact::{ArtifactKind, ArtifactRef, LineageRef};
