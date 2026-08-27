@@ -8,17 +8,17 @@
 
 | ID | Slice | Lifecycle | Notes |
 |---|---|---|---|
-| ECR-001 | Trusted Domain Kernel | `CLOSED_CANONICAL` | PR #1 merged as `d1021616…`; post-merge main CI `33099033214` passed the complete gate |
+| ECR-001 | Trusted Domain Kernel | `CLOSED_CANONICAL` | PR #1 merged as `d1021616…`; post-merge and closure-ledger main gates passed |
 
-ECR-001 is now a satisfied roadmap dependency. Closure is backed by final feature-head CI `33098892820`, merge commit `d1021616eae721e0b89bd5d4114531c4b9cc8a58`, and post-merge canonical-main CI `33099033214`.
+ECR-001 is a satisfied roadmap dependency. Final closure-ledger head `85e4bf657b6c33e3f88d83e92e7a35279d177349` passed CI `33099434232`.
 
-## Next dependency-eligible candidate
+## Active dependency-eligible slice
 
-| ID | Slice | Lifecycle | Depends on | Eligibility note |
+| ID | Slice | Lifecycle | Depends on | Evidence |
 |---|---|---|---|---|
-| ECR-002 | Durable Run, Ledger & Budgets | `PLANNED` | ECR-001 | dependency satisfied; must still pass its own Spec Kit specify/plan/tasks/analyze gates before implementation |
+| ECR-002 | Durable Run, Ledger & Budgets | `TASKS_READY` | ECR-001 | complete Spec Kit package on main; analyze reports zero blocking planning drift and T001–T073 are ordered/path-traceable |
 
-Do not treat dependency eligibility as implementation authorization. `EXECUTION.md` must first recover or create the bounded ECR-002 Spec Kit package and advance it through the repository lifecycle.
+ECR-002 is now implementation-authorized only within its bounded feature branch/PR and its explicit synthetic/non-sensitive scope. Dependency eligibility does not authorize ECR-031/ECR-004/ECR-003 or real sensitive persistence.
 
 ## Planned critical path
 
@@ -63,7 +63,7 @@ Follow exact dependencies in `roadmap.md` for ECR-022 through ECR-030:
 
 ```text
 A. Trusted substrate
-   ECR-001 [CLOSED] → ECR-002 → ECR-031/ECR-004 → ECR-003 → ECR-005
+   ECR-001 [CLOSED] → ECR-002 [TASKS_READY] → ECR-031/ECR-004 → ECR-003 → ECR-005
 
 B. Browser wedge
    ECR-006 → ECR-007 → ECR-008
@@ -83,4 +83,4 @@ F. Cross-cutting product maturity
 
 ## Update rule
 
-When a slice lifecycle changes, update this file, `../../EXECUTION.md`, and the status field in `roadmap.md` in the same convergence/closure work. This file is intentionally compact; it never overrides dependency semantics in `roadmap.md`.
+When a slice lifecycle changes, update this file, `../../EXECUTION.md`, and the status field in `roadmap.md` in the same convergence/closure work. This file never overrides dependency semantics in `roadmap.md`.
