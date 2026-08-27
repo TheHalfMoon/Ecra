@@ -18,10 +18,11 @@ Before any material implementation or architecture change, read in this order:
    - `plan.md`
    - `quickstart.md`
    - `tasks.md`
+   - `analyze.md` when present
    - checklists
 6. implementation truth on the exact current branch/head.
 
-Root `README.md`, `VISION.md`, `CONSTITUTION.md`, and `ROADMAP.md` are product-readable strategic documents. The Spec Kit constitution and active feature package govern implementation details when wording differs.
+Root `README.md`, `VISION.md`, `CONSTITUTION.md`, and `ROADMAP.md` are product-readable strategic documents. The Spec Kit constitution, canonical platform roadmap, and active feature package govern implementation details when wording differs.
 
 ## Spec Kit Lifecycle
 
@@ -60,13 +61,14 @@ A slice is implementation-eligible only when:
 - its roadmap dependencies are `CLOSED_CANONICAL`, or
 - its own spec explicitly authorizes bounded fixture-only/research work that cannot counterfeit a missing dependency;
 - it has `SPEC_READY`, then `PLAN_READY`, then `TASKS_READY` artifacts as required;
+- the latest required analyze pass has no critical planning defect;
 - mandatory constitution gates pass.
 
 Do not skip to a visually exciting later phase (Firefox fork, Search, Terminal, plugins, local models) while an earlier trust/dependency slice is incomplete.
 
 ## Current First Slice
 
-At the time this file was created, the intended first implementation slice is:
+At the time of constitution v1.1.0 planning convergence, the first implementation slice is:
 
 ```text
 ECR-001 — Trusted Domain Kernel
@@ -83,6 +85,7 @@ Re-read `specs/000-ecra-platform/roadmap.md` before acting because status may ch
 - Exact file paths in tasks are authoritative unless implementation proves the planned structure impossible; amend plan/tasks before creating a different architecture.
 - Do not silently broaden scope to adjacent roadmap slices.
 - Do not add speculative abstractions/crates/providers “for later”.
+- If implementation discovers a MUST-level planning defect, stop the affected task, record the defect and amend/converge the active Spec Kit package rather than silently weakening the requirement.
 
 ## Technical Content Language
 
@@ -93,21 +96,32 @@ Repository content, code, comments, commit messages, PR bodies, reports, task te
 Never implement a shortcut that violates the constitution. In particular:
 
 - no ambient agent authority;
-- no treating external/web/model content as permission;
+- Actor attribution is not authenticated Principal identity;
+- no treating external/web/model/tool/memory content as permission, identity, or approval;
+- no absent/empty security scope interpreted as unrestricted; `ANY` must be explicit;
+- no treating read authority as disclosure authority; remote model/search/tool/protocol use is an information-flow boundary;
+- no using human-readable resource locators as canonical security identity where a stable ResourceId/provider identity exists;
+- no CapabilityRequest-as-CapabilityGrant shortcut;
+- no approval/receipt binding that ignores exact ActionDigest/ActionRef semantics;
+- ActionIntent is distinct from ActionAttempt;
 - no ActionReceipt-as-Verification shortcut;
+- executor-observed success is not `VERIFIED`;
+- no independent mutable `Fact.verified` truth flag outside VerificationReceipt-derived assessment;
 - no coercing UNKNOWN external outcome into success/failure;
 - no blind retry of non-idempotent consequential actions;
+- no generic ContentDigest treated as authenticity/security proof without its owning security contract;
 - no raw secret propagation into generic model/log/memory paths when mediated use is possible;
 - no hidden telemetry;
 - no external protocol as the internal trusted domain model;
+- no unbounded recursive/model/tool/process loops once runtime slices exist; resource budgets are mandatory where applicable;
 - no copied donor source without provenance/license record;
-- no browser/security superlatives without reproducible benchmarks.
+- no browser/security/privacy/performance superlatives without reproducible benchmarks.
 
 ## Repository / Git Discipline
 
 - Live repository truth overrides stale handoffs or remembered SHAs.
 - Inspect the current branch/head and relevant specs before mutation.
-- Prefer bounded feature branches/PRs once implementation begins.
+- Use bounded feature branches/PRs once implementation begins.
 - No force-push, rebase, or destructive history rewriting unless repository governance is explicitly amended to permit it.
 - Do not claim PASS, MERGED, or CLOSED_CANONICAL without exact-head/post-merge evidence as applicable.
 - A docs-only planning state is not implementation completion.
@@ -120,7 +134,7 @@ Before a slice closes:
 2. run every required unit/contract/integration/security/migration/benchmark gate;
 3. record exact head SHA and results;
 4. re-check constitution gates;
-5. check spec → plan → tasks → implementation traceability;
+5. check spec → research/data-model/contracts → plan → tasks → implementation traceability;
 6. append convergence tasks for remaining gaps instead of hiding them;
 7. update donor/license records;
 8. update the master roadmap status truthfully.
@@ -134,7 +148,7 @@ When a new requirement or idea appears:
 1. determine whether it belongs to an existing slice;
 2. if not, update the spec-of-specs with a new immutable `ECR-###` entry;
 3. name dependencies and owning acceptance evidence;
-4. update gap audit/risk register if it creates a new persistent data class, privileged capability, external protocol, public claim, browser patch, or security boundary;
+4. update gap audit/risk register if it creates a new persistent data class, privileged capability, identity/trust-root concern, information-flow/remote-egress path, external protocol, public claim, browser patch, or security boundary;
 5. create a bounded Spec Kit package before implementation.
 
 ## Donor / Research Use
