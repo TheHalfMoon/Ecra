@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de};
 
 use crate::error::DomainError;
 
@@ -52,9 +52,15 @@ impl SchemaVersion {
 }
 
 /// Explicit version envelope used by normative ECR-001 values.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct Versioned<T> {
+    schema_version: SchemaVersion,
+    value: T,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct VersionedWire<T> {
     schema_version: SchemaVersion,
     value: T,
 }
@@ -93,14 +99,30 @@ impl<T> Versioned<T> {
     }
 }
 
+impl<'de, T> Deserialize<'de> for Versioned<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let wire = VersionedWire::<T>::deserialize(deserializer)?;
+        wire.schema_version
+            .validate_supported()
+            .map_err(de::Error::custom)?;
+        Ok(Self::new(wire.schema_version, wire.value))
+    }
+}
+
 impl<T> Versioned<T>
 where
     T: serde::de::DeserializeOwned,
 {
     pub fn from_json_slice(input: &[u8]) -> Result<Self, DomainError> {
-        let value: Self = serde_json::from_slice(input)
+        let wire: VersionedWire<T> = serde_json::from_slice(input)
             .map_err(|error| DomainError::Serialization(error.to_string()))?;
-        value.validate_schema()?;
-        Ok(value)
+        wire.schema_version.validate_supported()?;
+        Ok(Self::new(wire.schema_version, wire.value))
     }
 }
