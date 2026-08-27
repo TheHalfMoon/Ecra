@@ -31,7 +31,7 @@ Build the default trusted gateway between human/model intent and digital informa
 | ID | Slice | Primary outcome | Depends on | Status | Sub-spec |
 |---|---|---|---|---|---|
 | ECR-001 | Trusted Domain Kernel | Versioned zero-I/O domain types/invariants for actor/principal refs, origin/resource/scope, information labels, capability request/grant, provenance, action/action-attempt refs, receipts and verification | — | CLOSED_CANONICAL | `specs/001-trusted-domain-kernel/` |
-| ECR-002 | Durable Run, Ledger & Budgets | Serializable run machine, unique execution attempts, append-only integrity-chained local ledger, portable `.ecra` fixture/run artifact, cancellation/resource budgets | ECR-001 | PLANNED | `specs/002-durable-run-ledger/` |
+| ECR-002 | Durable Run, Ledger & Budgets | Serializable run machine, unique execution attempts, append-only integrity-chained local ledger, portable `.ecra` fixture/run artifact, cancellation/resource budgets | ECR-001 | TASKS_READY | `specs/002-durable-run-ledger/` |
 | ECR-003 | Authority, Information Flow, Policy & Secrets | Fail-closed capability and source-to-sink disclosure evaluation, immutable authorization decision/lease, approval binding, origin authority, secret handles, policy adapter | ECR-001, ECR-002, ECR-031 | PLANNED | `specs/003-authority-policy-secrets/` |
 | ECR-004 | Verification & Reconciliation | Independent verifier framework, executor-observed vs verified outcomes, UNKNOWN handling, reconciliation, critical-point verification, immutable decision-grade evidence | ECR-001, ECR-002 | PLANNED | `specs/004-verification-receipts/` |
 | ECR-005 | Evaluation & Threat Harness | Golden fixtures plus security/information-flow/durability/resource-bound/verification benchmark harness used by later slices | ECR-001, ECR-002, ECR-003, ECR-004, ECR-031 | PLANNED | `specs/005-evaluation-threat-harness/` |
@@ -67,7 +67,7 @@ Build the default trusted gateway between human/model intent and digital informa
 ```text
 ECR-001 Trusted Domain Kernel [CLOSED_CANONICAL]
   ↓
-ECR-002 Durable Run, Ledger & Budgets
+ECR-002 Durable Run, Ledger & Budgets [TASKS_READY]
   ├──────────────────────┐
   ↓                      ↓
 ECR-031 Identity /       ECR-004 Verification
@@ -128,7 +128,7 @@ MCP/ACP/A2A are adapters. Their authentication/token semantics are mapped into E
 
 ## Sensitive-Data Progression Rule
 
-ECR-002 may initially persist synthetic/non-sensitive fixtures and local test runs. Persistence of real authenticated browser secrets, sensitive workspace content, or equivalent high-value state is blocked until the relevant ECR-031/ECR-003/ECR-025 protection contracts exist.
+ECR-002 may persist only synthetic/non-sensitive fixtures and local test runs in its v1 acceptance/product authorization. Persistence of real authenticated browser secrets, sensitive workspace content, or equivalent high-value state is blocked until the relevant ECR-031/ECR-003/ECR-025 protection contracts exist.
 
 A hash/integrity chain may detect accidental/local corruption under its stated assumptions. Do not claim hostile tamper resistance unless a protected trust anchor, MAC/signature or external anchor supports the claim.
 
@@ -164,4 +164,4 @@ Every affected slice MUST add/update as part of Definition of Done:
 
 ## Current First Slice
 
-`ECR-001 Trusted Domain Kernel` is `CLOSED_CANONICAL`. PR #1 merged as `d1021616eae721e0b89bd5d4114531c4b9cc8a58`, and post-merge canonical-main CI `33099033214` passed the complete ECR-001 gate. ECR-002 is now the next dependency-eligible candidate, but it remains `PLANNED` until its own Spec Kit package satisfies specify/plan/tasks/analyze and constitution gates.
+`ECR-001 Trusted Domain Kernel` is `CLOSED_CANONICAL`. `ECR-002 Durable Run, Ledger & Budgets` is now `TASKS_READY`: its canonical package contains specification, primary-source research, state/data model, normative run-ledger contract, slice threat model, plan, exact-path tasks T001–T073, quickstart, requirements checklist and analyze result `ZERO_BLOCKING_PLANNING_DRIFT_FOUND`. The next authorized action is a bounded ECR-002 implementation branch/PR; real sensitive persistence and downstream slices remain gated.
