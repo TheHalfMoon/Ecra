@@ -1,7 +1,7 @@
 # Tasks: Trusted Domain Kernel
 
 **Feature:** ECR-001  
-**Status:** FINAL_CONVERGENCE_GATE  
+**Status:** READY_FOR_REVIEW_PENDING_EXACT_HEAD_LEDGER_CI  
 **Canonical inputs:** `spec.md`, `research.md`, `data-model.md`, `contracts/domain-v1.md`, `plan.md`, `quickstart.md`, analyze/traceability artifacts  
 
 `[x]` means satisfied on the feature branch; it does not mean `CLOSED_CANONICAL`. Exact merge/post-merge closure remains governed by `AGENTS.md` and the constitution.
@@ -112,7 +112,7 @@
 - [x] T070 Map FR-001–FR-055 and SC-001–SC-020 to implementation/test/contract evidence in `traceability-closure-2026-08-27.md`. **SC-020**
 - [x] T071 Re-check constitution v1.1.0 G1–G15 in the traceability artifact; downstream/N/A ownership remains explicit.
 - [x] T072 Map all P-001–P-035 pre-implementation findings to exact ECR-001 remediation or named downstream owner. **SC-019**
-- [ ] T073 Record revised quickstart/full exact-head final results after the last repository convergence mutation. **SC-018**
+- [x] T073 Record revised quickstart/full exact-head final results after the last repository convergence mutation. **SC-018**
 - [x] T074 Run post-implementation analyze; `post-implementation-analyze-2026-08-27.md` returned `CONVERGENCE_REQUIRED`. **SC-020**
 - [x] T075 Activate Phase 12 rather than hiding MUST-level drift.
 - [ ] T076 Mark roadmap `CLOSED_CANONICAL` only after PR merge + required post-merge evidence; before then keep truthful intermediate status.
@@ -122,19 +122,19 @@
 - [x] T077 Fold C1–C12 plus actual version-envelope/machine-error semantics into primary `data-model.md` and `contracts/domain-v1.md`. **FR-001, FR-020–FR-054, SC-020**
 - [x] T078 Converge `quickstart.md`, this task ledger, active `STATUS.md`, and `EXECUTION.md` to current gate/phase truth. **SC-018, SC-020**
 - [x] T079 Produce `traceability-closure-2026-08-27.md` covering FRs, SCs, G1–G15 and pre-review findings with downstream deferrals. **SC-019, SC-020**
-- [ ] T080 Run final analyze-equivalent review and the revised quickstart/CI on the exact converged feature head; zero blocking drift is required before PR readiness. **SC-018, SC-020**
+- [x] T080 Run final analyze-equivalent review and the revised quickstart/CI on the exact converged feature head; zero blocking drift is required before PR readiness. **SC-018, SC-020**
 
-### T080 intermediate executable-gate evidence
+### T073/T080 final branch-gate evidence
 
-Head `a7f1ea27e55fe7d41d70a6101dd3f44502e260f0`, CI `33087744071` passed build, fmt, Clippy, full workspace tests, all eight dedicated contract/security targets, rustdoc, offline replay, unsafe boundary, dependency boundary and `cargo tree -p ecra-core`. This is not final evidence because the final analyze/ledger documents are still being committed after that head.
+Head `20a56b10257609426e5b66ec0c2ba2f884822039`, CI `33095158577`, runner `macbook`, Rust `1.98.0-aarch64-apple-darwin`, passed checkout, build, fmt, strict Clippy, full workspace tests, all eight dedicated contract/security targets, rustdoc, offline replay, unsafe boundary, dependency boundary and `cargo tree -p ecra-core`. The workflow checked out and logged the exact branch SHA before executing the gate.
+
+The prior GitHub-hosted runner account-state blocker is resolved for repository verification by the approved self-hosted runner. This ledger mutation is documentation-only and must itself receive exact-head CI before PR readiness.
 
 ## Remaining dependency graph
 
 ```text
-T080 final analyze + exact-head gate
-  ↓ zero blocking drift
-T073 final evidence record
-  ↓
+exact-head CI on this final ledger head
+  ↓ PASS
 PR readiness / required review / fixes
   ↓
 merge + post-merge main verification
