@@ -1,6 +1,6 @@
 use ecra_core::{
-    Actor, IdentityAssertionRef, PrincipalRef, ResourceRef, Scope, ScopeConstraint, WebOrigin,
-    WorkspaceId,
+    ActionIntent, Actor, IdentityAssertionRef, PrincipalRef, ResourceRef, Scope, ScopeConstraint,
+    WebOrigin, WorkspaceId,
 };
 
 #[test]
@@ -71,4 +71,42 @@ fn phase3_invalid_contract_fixtures_fail_closed() {
         ))
         .is_err()
     );
+}
+
+#[test]
+fn phase7_valid_action_fixtures_parse() {
+    for fixture in [
+        include_str!("../../../contracts/ecra-domain-v1/valid/action-read-only.json"),
+        include_str!("../../../contracts/ecra-domain-v1/valid/action-irreversible-local.json"),
+        include_str!("../../../contracts/ecra-domain-v1/valid/action-reversible-external.json"),
+        include_str!("../../../contracts/ecra-domain-v1/valid/action-keyed-idempotent.json"),
+        include_str!("../../../contracts/ecra-domain-v1/valid/action-unknown-conservative.json"),
+        include_str!("../../../contracts/ecra-domain-v1/valid/action-digest-golden.json"),
+    ] {
+        serde_json::from_str::<ActionIntent>(fixture).expect("valid phase 7 action fixture");
+    }
+}
+
+#[test]
+fn phase7_invalid_action_fixtures_fail_closed() {
+    for fixture in [
+        include_str!(
+            "../../../contracts/ecra-domain-v1/invalid/action-invalid-none-reversible.json"
+        ),
+        include_str!(
+            "../../../contracts/ecra-domain-v1/invalid/action-invalid-local-not-applicable.json"
+        ),
+        include_str!(
+            "../../../contracts/ecra-domain-v1/invalid/action-invalid-key-missing.json"
+        ),
+        include_str!(
+            "../../../contracts/ecra-domain-v1/invalid/action-invalid-non-idempotent-safe.json"
+        ),
+        include_str!("../../../contracts/ecra-domain-v1/invalid/action-invalid-unknown-safe.json"),
+    ] {
+        assert!(
+            serde_json::from_str::<ActionIntent>(fixture).is_err(),
+            "invalid phase 7 action fixture must fail closed"
+        );
+    }
 }
