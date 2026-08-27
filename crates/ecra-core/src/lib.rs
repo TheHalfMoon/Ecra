@@ -6,3 +6,20 @@
 //! validation, serialization and canonical security-binding helpers.
 //! Runtime execution, authorization, persistence, browser/model integration,
 //! protocols, secrets and telemetry belong to downstream slices.
+
+pub mod canonical;
+pub mod digest;
+pub mod error;
+pub mod id;
+pub mod time;
+pub mod version;
+
+pub use canonical::to_jcs_vec;
+pub use digest::{ContentDigest, SecurityDigest, SecurityDigestAlgorithm};
+pub use error::{DomainError, ErrorCategory, ErrorCode};
+pub use id::*;
+pub use time::{
+    EpochMillis, EvaluationContext, I_JSON_MAX_SAFE_INTEGER, I_JSON_MIN_SAFE_INTEGER,
+    TemporalValidity,
+};
+pub use version::{DOMAIN_SCHEMA_MAJOR, DOMAIN_SCHEMA_MINOR, SchemaVersion, Versioned};
