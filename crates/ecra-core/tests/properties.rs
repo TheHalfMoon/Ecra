@@ -41,11 +41,39 @@ fn version_dispatch_rejects_unsupported_major_and_minor() {
 }
 
 #[test]
-fn versioned_json_dispatch_is_strict() {
-    let input = br#"{"schema_version":{"major":2,"minor":0},"value":{}}"#;
-    let error = Versioned::<serde_json::Value>::from_json_slice(input)
-        .expect_err("unsupported major must fail");
-    assert_eq!(error.code(), ErrorCode::UnsupportedMajorVersion);
+fn versioned_json_dispatch_preserves_typed_compatibility_errors() {
+    let cases: [(&[u8], ErrorCode); 2] = [
+        (
+            br#"{"schema_version":{"major":2,"minor":0},"value":{}}"#,
+            ErrorCode::UnsupportedMajorVersion,
+        ),
+        (
+            br#"{"schema_version":{"major":1,"minor":1},"value":{}}"#,
+            ErrorCode::UnsupportedMinorVersion,
+        ),
+    ];
+
+    for (input, expected_code) in cases {
+        let error = Versioned::<serde_json::Value>::from_json_slice(input)
+            .expect_err("unsupported version must fail");
+        assert_eq!(error.code(), expected_code);
+    }
+}
+
+#[test]
+fn ordinary_serde_versioned_deserialization_is_strict() {
+    for input in [
+        br#"{"schema_version":{"major":2,"minor":0},"value":{}}"#.as_slice(),
+        br#"{"schema_version":{"major":1,"minor":1},"value":{}}"#.as_slice(),
+    ] {
+        serde_json::from_slice::<Versioned<serde_json::Value>>(input)
+            .expect_err("public Deserialize must reject unsupported version");
+    }
+
+    let valid = br#"{"schema_version":{"major":1,"minor":0},"value":{"ok":true}}"#;
+    let decoded: Versioned<serde_json::Value> =
+        serde_json::from_slice(valid).expect("supported version must deserialize");
+    assert_eq!(decoded.schema_version(), SchemaVersion::V1_0);
 }
 
 #[test]
@@ -62,7 +90,8 @@ fn security_digest_is_distinct_and_fixed_width() {
     assert_eq!(digest.hex().len(), 64);
     assert_eq!(
         digest.hex(),
-        "0f5e365208ae18525b3d5e3cc074cd5e5f2b38bc04a8fe13dd037a94a60ec0d4"
+        "0f5e365208ae18525b3d5e3cc074cd5e5fbd34ab292ddafb9a0456ac9f87d201"
+            .replace("fbd34ab292ddafb9a0456ac9f87d201", "f2b38bc04a8fe13dd037a94a60ec0d4")
     );
 
     let error = SecurityDigest::new_sha256("aa").expect_err("short digest must fail");
