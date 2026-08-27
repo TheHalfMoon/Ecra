@@ -21,7 +21,7 @@ Normative fixtures: `../../contracts/ecra-domain-v1/`
 | `origin` | typed provenance/origin context and `WebOrigin` | FR-008, FR-009 |
 | `resource` | stable `ResourceRef` identity plus non-authoritative locator | FR-010, FR-054 |
 | `scope` | explicit `ScopeConstraint<T>`, `Scope`, `PurposeRef` | FR-011–FR-013, FR-054 |
-| `capability` | distinct request/grant/delegation representation | FR-014–FR-019, FR-055 |
+| `capability` | distinct request/grant/delegation representation and non-authoritative request reason | FR-014–FR-019, FR-054, FR-055 |
 | `information` | classification, tags, `InformationRef`, source-to-sink `InformationUse` | FR-027–FR-029, FR-034, FR-035, FR-054 |
 | `evidence` | observation, fact, provenance, freshness, dispute, evidence references | FR-020–FR-029, FR-046, FR-054 |
 | `artifact` | artifact identity, classification, digest, lineage and locator metadata | FR-029–FR-031, FR-054 |
@@ -56,7 +56,7 @@ The committed golden fixture and expected canonical bytes/hex are security-sensi
 
 ## Free-form metadata boundary
 
-Labels, purpose text, notes, locators, external/provider references, diagnostic messages and similar free-form metadata are non-authoritative. They must never be parsed to manufacture authentication, authorization, approval, resource identity or verification. See `../../specs/001-trusted-domain-kernel/free-form-field-audit.md` and `tests/non_authoritative_metadata.rs`.
+Labels, capability-request reasons, purpose text, notes, locators, external/provider references, diagnostic messages and similar free-form metadata are non-authoritative. They must never be parsed to manufacture authentication, authorization, approval, resource identity or verification. See `../../specs/001-trusted-domain-kernel/free-form-field-audit.md` and `tests/non_authoritative_metadata.rs`.
 
 ## Runtime boundary
 
