@@ -1,7 +1,7 @@
 # Tasks: Trusted Domain Kernel
 
 **Feature:** ECR-001  
-**Status:** REVIEW_REMEDIATION  
+**Status:** READY_FOR_MERGE_PENDING_EXACT_HEAD_LEDGER_CI  
 **Canonical inputs:** `spec.md`, `research.md`, `data-model.md`, `contracts/domain-v1.md`, `plan.md`, `quickstart.md`, analyze/traceability artifacts  
 
 `[x]` means satisfied on the feature branch; it does not mean `CLOSED_CANONICAL`. Exact merge/post-merge closure remains governed by `AGENTS.md` and the constitution.
@@ -124,31 +124,42 @@
 - [x] T079 Produce `traceability-closure-2026-08-27.md` covering FRs, SCs, G1–G15 and pre-review findings with downstream deferrals. **SC-019, SC-020**
 - [x] T080 Run final analyze-equivalent review and the revised quickstart/CI on the exact converged feature head; zero blocking drift is required before PR readiness. **SC-018, SC-020**
 
-### T073/T080 final branch-gate evidence
+### T073/T080 branch-gate evidence
 
-Head `20a56b10257609426e5b66ec0c2ba2f884822039`, CI `33095158577`, runner `macbook`, Rust `1.98.0-aarch64-apple-darwin`, passed checkout, build, fmt, strict Clippy, full workspace tests, all eight dedicated contract/security targets, rustdoc, offline replay, unsafe boundary, dependency boundary and `cargo tree -p ecra-core`. The workflow checked out and logged the exact branch SHA before executing the gate.
+Head `20a56b10257609426e5b66ec0c2ba2f884822039`, CI `33095158577`, runner `macbook`, Rust `1.98.0-aarch64-apple-darwin`, passed checkout, build, fmt, strict Clippy, full workspace tests, all eight dedicated contract/security targets, rustdoc, offline replay, unsafe boundary, dependency boundary and `cargo tree -p ecra-core`.
 
-The ledger-finalization head `12c7029dbde30d2d860fe70447f79b6432ff2f96` also passed the full exact-head gate in CI `33095782152` before PR #1 was marked Ready.
+The ledger-finalization head `12c7029dbde30d2d860fe70447f79b6432ff2f96` also passed the full exact-head gate in CI `33095782152` before PR #1 was first marked Ready.
 
 ## Phase 13 — Ready-Review Remediation
 
-PR #1 review on `12c7029d…` found three actionable defects. The PR returned to Draft while these tasks are remediated.
+PR #1 review on `12c7029d…` found three actionable defects. The PR returned to Draft, all findings were remediated, the remediation head passed the complete exact-head gate, the original threads became resolved/outdated, and PR #1 returned to Ready with CodeRabbit success and no new actionable thread.
 
-- [ ] T081 Make every public `Versioned<T>` Serde deserialization path reject unsupported major/newer minor versions while preserving typed compatibility errors from `Versioned::from_json_slice`. **FR-001, FR-047, SC-002**
-- [ ] T082 Make Fact integer and canonical-decimal construction fail closed so API-created values cannot serialize wire data that strict deserialization rejects; add construction/round-trip regression coverage. **FR-020, FR-049, SC-002, SC-014**
-- [ ] T083 Synchronize ECR-001 lifecycle truth between platform `STATUS.md`, platform `roadmap.md`, active `STATUS.md`, `EXECUTION.md`, and this ledger. **SC-020**
-- [ ] T084 Run the complete exact-head gate after remediation, re-read reviews/threads, resolve only findings actually remediated, and return PR #1 to Ready only with zero actionable review blockers. **SC-018, SC-020**
+- [x] T081 Make every public `Versioned<T>` Serde deserialization path reject unsupported major/newer minor versions while preserving typed compatibility errors from `Versioned::from_json_slice`. **FR-001, FR-047, SC-002**
+- [x] T082 Make Fact integer and canonical-decimal construction fail closed so API-created values cannot serialize wire data that strict deserialization rejects; add construction/round-trip regression coverage. **FR-020, FR-049, SC-002, SC-014**
+- [x] T083 Synchronize ECR-001 lifecycle truth between platform `STATUS.md`, platform `roadmap.md`, active `STATUS.md`, `EXECUTION.md`, and this ledger. **SC-020**
+- [x] T084 Run the complete exact-head gate after remediation, re-read reviews/threads, resolve only findings actually remediated, and return PR #1 to Ready only with zero actionable review blockers. **SC-018, SC-020**
+
+### Phase 13 exact-head evidence
+
+```text
+Head:   face8d7448afc617a6c04e53237b066bf2ef5b63
+Run:    33097623599 — SUCCESS
+Runner: macbook
+Rust:   1.98.0-aarch64-apple-darwin
+```
+
+All required quickstart/CI gates passed. Regression tests `ordinary_serde_versioned_deserialization_is_strict`, `versioned_json_dispatch_preserves_typed_compatibility_errors`, and `fact_numeric_construction_is_wire_safe` passed. All three original Qodo review threads are resolved/outdated. CodeRabbit completed with success on the remediation head and no new actionable review thread was present.
+
+This task-ledger mutation is documentation-only and must itself receive exact-head CI and final live review/check inspection before merge.
 
 ## Remaining dependency graph
 
 ```text
-T081–T083 review remediation
+exact-head CI + final live review/check audit on this ledger-finalization head
+  ↓ PASS / zero actionable blocker
+merge with exact expected head
   ↓
-T084 exact-head gate + review-thread closure
-  ↓
-PR Ready / final review
-  ↓
-merge + post-merge main verification
+post-merge canonical-main verification
   ↓
 T076 roadmap/status canonical closure
   ↓
