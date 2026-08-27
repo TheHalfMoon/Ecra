@@ -21,26 +21,19 @@ Stale prose must be updated to live evidence, never the reverse.
 Active slice: ECR-001 — Trusted Domain Kernel
 Branch: 001-trusted-domain-kernel
 PR: #1 — OPEN / DRAFT / mergeable at last live check
-Lifecycle: READY_FOR_REVIEW_PENDING_EXACT_HEAD_LEDGER_CI
-Current blocker class: NONE_SEMANTIC; final documentation-only ledger head requires exact-head CI
+Lifecycle: REVIEW_REMEDIATION
+Current blocker class: ACTIONABLE_REVIEW_FINDINGS; exact-head verification required after fixes
 ```
 
-Evidence anchors:
+Pre-review evidence anchor:
 
 ```text
-Implementation baseline: 5dfe4c09b2abceeec14bc94b8e13d2dccddfd37c
-CI:                      33086490495 — success
-
-Final semantic analyze:   ZERO_BLOCKING_DRIFT_FOUND
-
-Latest full exact-head branch gate:
-20a56b10257609426e5b66ec0c2ba2f884822039
-CI 33095158577 — success
-Runner macbook — self-hosted macOS
-Rust 1.98.0-aarch64-apple-darwin
+Head:   12c7029dbde30d2d860fe70447f79b6432ff2f96
+CI:     33095782152 — success
+Runner: macbook — self-hosted macOS
 ```
 
-Always re-read the current branch after this file; these SHAs are evidence anchors, not permanent pointers.
+PR #1 was made Ready only after that exact-head success. Qodo then produced three actionable review threads, including two High correctness findings. The PR was immediately returned to Draft and Phase 13 was activated. Do not merge based on the pre-review head.
 
 ## Phase ledger
 
@@ -49,24 +42,36 @@ Always re-read the current branch after this file; these SHAs are evidence ancho
 | 1–9 | T001–T062 | `VERIFIED_ON_BRANCH` |
 | 10 | T063–T069 | `VERIFIED_ON_BRANCH` |
 | 11 | T070–T076 | T070–T075 complete; T076 waits for merge/post-merge evidence |
-| 12 | T077–T080 | complete on branch |
+| 12 | T077–T080 | complete on branch before ready-review |
+| 13 | T081–T084 | `REVIEW_REMEDIATION` |
 
-## Convergence truth
+## Phase 13 findings and required proof
 
-- Primary `data-model.md` and `contracts/domain-v1.md` are synchronized with implemented v1 semantics.
-- `implementation-clarifications.md` is folded historical rationale, not a competing wire contract.
-- `quickstart.md` and CI define the full security/contract gate surface.
-- `traceability-closure-2026-08-27.md` maps FR-001–FR-055, SC-001–SC-020, constitution G1–G15 and P-001–P-035.
-- `final-convergence-analyze-2026-08-27.md` reports zero blocking semantic drift and zero unowned requirement/review blockers.
-- T073 and T080 are complete on the feature branch with exact-head evidence `20a56b10…` / run `33095158577`.
+```text
+T081 Versioned<T> strict public Deserialize
+  -> ordinary serde_json::from_* must reject unsupported major/newer minor
+  -> Versioned::from_json_slice must retain typed compatibility DomainError codes
+
+T082 FactValue numeric construction
+  -> API-created integer must be impossible outside I-JSON exact range
+  -> canonical decimal construction must be equally fail-closed
+  -> serialized constructed values must strict-round-trip
+
+T083 lifecycle synchronization
+  -> platform STATUS + roadmap + active STATUS + EXECUTION + tasks agree ECR-001 is IMPLEMENTING/REVIEW_REMEDIATION, not TASKS_READY or CLOSED_CANONICAL
+
+T084 full exact-head CI + review-thread closure
+  -> every quickstart gate PASS
+  -> re-read all review threads
+  -> resolve only proven-remediated threads
+  -> return PR to Ready only with zero actionable blocker
+```
 
 ## CI recovery architecture
 
-GitHub-hosted runners were blocked before execution because the owner account had an Actions budget of `$0` with `Stop usage: Yes` and no payment method. The owner intentionally declined paid overage.
+GitHub-hosted runners were blocked because the owner account had an Actions budget of `$0` with stop-usage enabled and no payment method. The owner intentionally declined paid overage.
 
 The approved recovery path is a repository-scoped self-hosted macOS runner named `macbook`, installed as a launchd service. This avoids paid hosted-runner usage and preserves the full gate surface.
-
-The trusted workflow topology is:
 
 ```text
 push: 001-trusted-domain-kernel -> exact feature-head gate
@@ -77,7 +82,7 @@ runs-on                          -> self-hosted
 permissions                      -> contents: read
 ```
 
-Do not restore `pull_request` execution on this persistent self-hosted machine without an explicit security design for untrusted/forked code. Do not make the repository public merely to bypass billing.
+Do not restore `pull_request` execution on this persistent self-hosted machine without an explicit security design for untrusted/forked code.
 
 ## Exact-head CI surface
 
@@ -101,20 +106,19 @@ bash scripts/check-core-deps.sh
 cargo tree -p ecra-core
 ```
 
-The latest successful run `33095158577` executed this full surface after checking out exact head `20a56b10257609426e5b66ec0c2ba2f884822039`.
-
 ## Next eligible work
 
 ```text
-A. observe the workflow on the current final ledger head
-B. require the entire exact-head gate to PASS
-C. re-read PR #1 head, canonical main, reviews, threads, checks and mergeability
-D. make PR ready only if pre-merge governance remains satisfied
-E. address actionable review findings; any head mutation requires another exact-head gate
-F. merge without force-push/rebase/destructive history rewriting
-G. require post-merge canonical-main CI to PASS
-H. only then mark T076 and ECR-001 CLOSED_CANONICAL
-I. re-read platform roadmap/dependencies and begin the next genuinely eligible ECR slice
+A. finish Phase 13 source/test/lifecycle remediation
+B. require full exact-head CI PASS on the final remediation head
+C. re-read reviews/threads and resolve only findings proven fixed
+D. mark T081–T084 complete and re-run exact-head CI if that ledger mutation moves the head
+E. return PR #1 to Ready
+F. observe final bot/human review/check state
+G. merge without force-push/rebase/destructive history rewriting only with clean exact-head evidence
+H. require post-merge canonical-main CI PASS
+I. only then T076 and ECR-001 CLOSED_CANONICAL
+J. re-read platform roadmap/dependencies and begin the next genuinely eligible slice
 ```
 
 ## Non-negotiable invariants
