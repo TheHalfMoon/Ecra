@@ -102,12 +102,24 @@ fn separate_capabilities_do_not_encode_source_to_sink_authorization() {
     let write_json = serde_json::to_value(&write_grant).expect("serialize write grant");
     let use_json = serde_json::to_value(&declared_use).expect("serialize information use");
 
-    assert!(!read_json.as_object().expect("grant object").contains_key("sources"));
-    assert!(!write_json
-        .as_object()
-        .expect("grant object")
-        .contains_key("sources"));
-    assert!(use_json.as_object().expect("use object").contains_key("sources"));
+    assert!(
+        !read_json
+            .as_object()
+            .expect("grant object")
+            .contains_key("sources")
+    );
+    assert!(
+        !write_json
+            .as_object()
+            .expect("grant object")
+            .contains_key("sources")
+    );
+    assert!(
+        use_json
+            .as_object()
+            .expect("use object")
+            .contains_key("sources")
+    );
     assert_eq!(
         use_json.get("kind").and_then(serde_json::Value::as_str),
         Some("remote_provider")
