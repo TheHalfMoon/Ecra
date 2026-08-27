@@ -3,11 +3,11 @@ use ecra_core::{
 };
 use serde::{Deserialize, Deserializer, Serialize, de};
 
+use crate::digest::canonical_event_material;
 use crate::{
     BudgetAmount, BudgetDimension, LedgerDigest, RunBudget, RunError, RunErrorCategory,
     RunErrorCode, RunErrorSummary, SuspensionReason,
 };
-use crate::digest::canonical_event_material;
 
 pub const MAX_EVENT_SEQUENCE: u64 = 9_007_199_254_740_991;
 pub const MAX_INTERVENTION_NOTE_BYTES: usize = 4_096;
@@ -17,7 +17,7 @@ pub const MAX_INTERVENTION_NOTE_BYTES: usize = 4_096;
 pub struct EventSequence(u64);
 
 impl EventSequence {
-    pub const fn new(value: u64) -> Result<Self, RunError> {
+    pub fn new(value: u64) -> Result<Self, RunError> {
         if value == 0 || value > MAX_EVENT_SEQUENCE {
             return Err(RunError::new(
                 RunErrorCategory::Event,
@@ -426,8 +426,8 @@ impl RunEventEnvelope {
     }
 
     pub fn from_json_slice(input: &[u8]) -> Result<Self, RunError> {
-        let raw: serde_json::Value =
-            serde_json::from_slice(input).map_err(|error| RunError::serialization(error.to_string()))?;
+        let raw: serde_json::Value = serde_json::from_slice(input)
+            .map_err(|error| RunError::serialization(error.to_string()))?;
         preflight_version_and_sequence(&raw)?;
         let wire: RunEventEnvelopeWire = serde_json::from_value(raw)
             .map_err(|error| RunError::serialization(error.to_string()))?;
@@ -487,8 +487,7 @@ impl<'de> Deserialize<'de> for RunEventEnvelope {
     where
         D: Deserializer<'de>,
     {
-        Self::from_wire(RunEventEnvelopeWire::deserialize(deserializer)?)
-            .map_err(de::Error::custom)
+        Self::from_wire(RunEventEnvelopeWire::deserialize(deserializer)?).map_err(de::Error::custom)
     }
 }
 
@@ -511,9 +510,9 @@ fn validate_schema_version(version: SchemaVersion) -> Result<(), RunError> {
 }
 
 fn preflight_version_and_sequence(raw: &serde_json::Value) -> Result<(), RunError> {
-    let object = raw.as_object().ok_or_else(|| {
-        RunError::serialization("run event envelope must be a JSON object")
-    })?;
+    let object = raw
+        .as_object()
+        .ok_or_else(|| RunError::serialization("run event envelope must be a JSON object"))?;
     let version = object
         .get("schema_version")
         .and_then(serde_json::Value::as_object)
