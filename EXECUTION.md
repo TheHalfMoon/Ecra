@@ -22,9 +22,9 @@ Active slice: **ECR-001 — Trusted Domain Kernel**
 Package: `specs/001-trusted-domain-kernel/`  
 Implementation branch: `001-trusted-domain-kernel`  
 PR: `#1` — draft until the entire ECR-001 slice satisfies closure gates.  
-Latest fully verified implementation head: `d29f700ca314e067f5912815b2bd5a1047a63602`.
+Latest fully verified implementation head: `ea17736310f661149026153a90a202e36396ba45`.
 
-At that head ECR-001 CI run `33074624203` passed:
+At that head ECR-001 CI run `33078470973` passed:
 
 ```text
 cargo build --workspace --locked
@@ -45,42 +45,44 @@ Do not treat this SHA as permanent. Always re-read the branch before mutation.
 | 1 — Reproducible Rust Workspace | T001–T006 | `VERIFIED_ON_BRANCH` | workspace/toolchain/lints/CI/dependency boundary established |
 | 2 — Version, Errors, IDs, Time, Canonicalization, Digests | T007–T014 | `VERIFIED_ON_BRANCH` | deterministic zero-I/O primitives and tests |
 | 3 — Actors, Principals, Origins, Resources, Scope | T015–T023 | `VERIFIED_ON_BRANCH` | normative fixtures and Actor→Principal compile-fail coverage |
-| 4 — Capability Request/Grant, Delegation, Time | T024–T028 | `VERIFIED_ON_BRANCH` | exact-head `992dd31c…` green including request→grant compile-fail and offline gate |
-| 5 — Information, Observation, Fact, Freshness, Evidence, Artifact | T029–T038 | `VERIFIED_ON_BRANCH` | exact-head `d29f700c…` green across all required CI gates |
-| 6 — Information Use / Source-to-Sink Intent | T039–T042 | `NEXT_ACTIVE_PHASE` | implement declaration-only source→sink value objects and fixtures |
-| 7 — Effects, Idempotency, Retry, Action Digest | T043–T051 | `BLOCKED_BY_PHASE_6` | do not start before Phase 6 exact-head verification |
-| 8 — Attempts, Receipts, Independent Verification | T052–T057 | `BLOCKED` | depends on ActionRef/attempt contracts |
-| 9 — Strict v1 Contract / Fixture Runner / Portability | T058–T062 | `BLOCKED` | convergence after domain types exist |
+| 4 — Capability Request/Grant, Delegation, Time | T024–T028 | `VERIFIED_ON_BRANCH` | exact-head `992dd31c…` green |
+| 5 — Information, Observation, Fact, Freshness, Evidence, Artifact | T029–T038 | `VERIFIED_ON_BRANCH` | exact-head `d29f700c…` green |
+| 6 — Information Use / Source-to-Sink Intent | T039–T042 | `VERIFIED_ON_BRANCH` | exact-head `b0f4ae4c…`; CI `33075545972` green |
+| 7 — Effects, Idempotency, Retry, Action Digest | T043–T051 | `VERIFIED_ON_BRANCH` | exact-head `ea177363…`; CI `33078470973` green |
+| 8 — Attempts, Receipts, Independent Verification | T052–T057 | `NEXT_ACTIVE_PHASE` | bounded pre-code clarification recorded; implementation next |
+| 9 — Strict v1 Contract / Fixture Runner / Portability | T058–T062 | `BLOCKED_BY_PHASE_8` | convergence after domain types exist |
 | 10 — Cross-cutting Security / Architecture Gates | T063+ | `BLOCKED` | final ECR-001 convergence and closure |
 
 `VERIFIED_ON_BRANCH` is not `CLOSED_CANONICAL`. The slice becomes `CLOSED_CANONICAL` only after all ECR-001 tasks, convergence/analyze, exact-head gates, PR merge, and required post-merge evidence are complete.
 
 ## Immediate next work
 
-Continue ECR-001 from Phase 6 in `tasks.md`:
+Continue ECR-001 from Phase 8 in `tasks.md`:
 
 ```text
-T039 InformationUseKind / InformationUse
-     (base InformationRef already exists from Phase 5 dependency clarification)
-T040 valid local-compute/model-context/persist/log/external-disclosure/remote-provider fixtures
-T041 invalid empty-source / malformed-destination fixtures
-T042 tests proving declaration != authorization and read(A)+write(B) != disclose(A→B)
+T052 ActionAttemptRef with distinct ActionAttemptId + exact ActionRef
+T053 ActionReceipt and executor-observed ActionOutcome
+T054 independent VerificationReceipt target/method/outcome
+T055 valid two-attempt / receipt / verification fixtures
+T056 invalid binding / timing / type-confusion / verification fixtures
+T057 type and round-trip tests
 ```
 
-The bounded ordering clarification is recorded in `specs/001-trusted-domain-kernel/implementation-clarifications.md`: Fact lineage required base `InformationRef` in Phase 5; Phase 6 still exclusively owns InformationUse/source-to-sink declaration semantics.
-
-Required invariant:
+Required invariants:
 
 ```text
-InformationUse describes intended use/disclosure.
-It grants no authority.
+ActionIntent
+!= ActionAttemptRef
+!= ActionReceipt
+!= VerificationReceipt
 
-read(A) + write(B)
-        !=
-authorize disclosure(A → B)
+executor_observed_success != verified
+UNKNOWN remains UNKNOWN
 ```
 
-ECR-003 later owns actual information-flow authorization/declassification.
+Two attempts for the same ActionRef remain distinct. Every receipt binds the exact ActionRef through its ActionAttemptRef. Verification is represented independently and never inferred from executor terminology.
+
+`implementation-clarifications.md` contains the bounded wire-shape resolution for `ClaimRef`, `ErrorSummary`, and verification evidence cardinality discovered immediately before Phase 8 implementation. Fold it into the canonical contract/data model/tasks during final convergence.
 
 After every bounded implementation batch:
 
@@ -200,7 +202,8 @@ Never cross these boundaries merely to make progress faster:
 - Read authority does not imply disclosure authority.
 - Information classification/provenance/freshness do not grant permission.
 - Fact has no mutable `verified` truth flag.
-- ActionIntent is not ActionAttempt.
+- ActionIntent is not ActionAttemptRef.
+- ActionReceipt is not VerificationReceipt.
 - Executor-observed success is not independent verification.
 - UNKNOWN external outcomes are never silently coerced to success or failure.
 - Generic ContentDigest is not an authenticity/security proof.

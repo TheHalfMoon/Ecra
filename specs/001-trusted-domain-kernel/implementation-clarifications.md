@@ -125,3 +125,32 @@ The selected invariants in `data-model.md` are made executable as the following 
 - `non_idempotent` or `unknown` idempotency can never pair with `safe` or `requires_same_idempotency_key`.
 
 Reversibility never upgrades retry safety: an irreversible action may still be naturally idempotent (for example a delete-like operation), while a reversible action may still be non-idempotent. These axes remain independent.
+
+## C11 — Phase 8 receipt / verification reference shapes
+
+Phase 8 names two supporting value objects whose wire shapes were not expanded by the primary data model: `ClaimRef` and `ErrorSummary`. ECR-001 v1 uses deliberately small opaque structures rather than arbitrary JSON.
+
+```text
+ClaimRef
+- namespace: non-empty string
+- reference: non-empty string
+```
+
+`ClaimRef` identifies a verification target only. `namespace` and `reference` are opaque structured metadata; neither grants authority, establishes truth, or embeds provider policy syntax.
+
+```text
+ErrorSummary
+- code: non-empty string
+- message?: non-empty string
+```
+
+`ErrorSummary` is executor-observed diagnostic metadata on an `ActionReceipt`. Its code/message do not imply independent verification, authorization, retry safety, or a canonical Ecra `DomainError`. The runtime may map provider/executor errors into this bounded form without making provider text authoritative.
+
+Verification evidence cardinality is fail-closed:
+
+- `verified`, `rejected`, and `inconclusive` MUST contain at least one `EvidenceRef`;
+- `not_evaluated` MAY contain an empty evidence list because no evaluation may have occurred;
+- evidence presence never upgrades `not_evaluated` into another outcome;
+- ECR-004, not ECR-001, decides evidentiary sufficiency or whether a particular evidence class is decision-grade.
+
+Receipt timing remains structural only: when both `started_at` and `completed_at` are present, `completed_at >= started_at`. `UNKNOWN` is a first-class ActionOutcome and MUST NOT be normalized or retried by ECR-001.
