@@ -1,9 +1,9 @@
 use serde::{Deserialize, Deserializer, Serialize, de};
 
 use crate::{
-    ActionDigest, ActionId, ActorId, ArtifactId, DomainError, EpochMillis, IdentityAssertionRef,
-    InformationUse, OperationRef, PrincipalRef, ResourceRef, Scope, SecurityDigest, Versioned,
-    to_jcs_vec,
+    ActionAttemptId, ActionDigest, ActionId, ActorId, ArtifactId, DomainError, EpochMillis,
+    IdentityAssertionRef, InformationUse, OperationRef, PrincipalRef, ResourceRef, Scope,
+    SecurityDigest, Versioned, to_jcs_vec,
 };
 
 const ACTION_INTENT_V1_DOMAIN: &[u8] = b"ecra/action-intent/v1\0";
@@ -567,5 +567,39 @@ impl ActionRef {
             ));
         }
         Ok(())
+    }
+}
+
+/// One execution attempt for an immutable action intent. Lifecycle and retry
+/// orchestration belong to ECR-002; ECR-001 only binds identity and content.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ActionAttemptRef {
+    id: ActionAttemptId,
+    action: ActionRef,
+}
+
+impl ActionAttemptRef {
+    #[must_use]
+    pub const fn new(id: ActionAttemptId, action: ActionRef) -> Self {
+        Self { id, action }
+    }
+
+    #[must_use]
+    pub const fn id(&self) -> ActionAttemptId {
+        self.id
+    }
+
+    #[must_use]
+    pub const fn action(&self) -> &ActionRef {
+        &self.action
+    }
+
+    pub fn validate_for(&self, intent: &ActionIntent) -> Result<(), DomainError> {
+        self.action.validate_for(intent).map_err(|_| {
+            DomainError::InvalidAttempt(
+                "action attempt does not bind the exact action intent".to_owned(),
+            )
+        })
     }
 }
