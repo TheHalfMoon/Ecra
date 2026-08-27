@@ -1,7 +1,7 @@
 # Requirements Quality Checklist — ECR-001
 
 **Purpose:** validate revised planning quality before first implementation. This is not an implementation test checklist.  
-**Review basis:** constitution v1.1.0 + `pre-implementation-review-2026-08-27.md`.
+**Review basis:** constitution v1.1.0 + `pre-implementation-review-2026-08-27.md` + `analyze.md`.
 
 ## Scope and Independence
 
@@ -81,6 +81,7 @@
 - [x] revised `plan.md` maps constitution v1.1.0 and exact project structure.
 - [x] revised `tasks.md` maps FR/SC groups to executable paths/tasks.
 - [x] revised `quickstart.md` verifies the new identity/scope/egress/action-digest/attempt/verification invariants.
+- [x] final `analyze.md` finds no critical planning defect.
 - [x] no `[NEEDS CLARIFICATION]` marker is accepted as unresolved blocking work.
 
 ## Pre-Implementation Review Status
@@ -97,6 +98,6 @@
 
 ## Result
 
-**REQUIREMENTS_CHECKLIST_PASS — pending final analyze-style consistency review.**
+**REQUIREMENTS_CHECKLIST_PASS — FINAL_ANALYZE_PASS — ECR-001 TASKS_READY.**
 
-This checklist means the revised planning package is internally specified enough to analyze. It does **not** yet change the roadmap from `PLANNING_REWORK` or authorize implementation. `TASKS_READY` requires the final post-remediation analyze result to find no critical planning defect.
+The revised planning package is implementation-eligible for ECR-001 only. This does not claim implementation success or unlock dependent slices. Exact-head implementation evidence and closure analysis remain mandatory before `CLOSED_CANONICAL`.
