@@ -2,299 +2,306 @@
 
 **Feature:** ECR-001  
 **Date:** 2026-08-27  
-**Status:** COMPLETE_FOR_PLAN
+**Status:** COMPLETE_FOR_REVISED_PLAN  
+**Inputs:** `spec.md`, constitution v1.1.0, `pre-implementation-review-2026-08-27.md`
 
-This document resolves technical choices required to plan ECR-001. It intentionally avoids choices owned by later slices (SQLite ledger, Cedar policy, Firefox, MCP, model providers, cryptographic signatures, sandboxing).
+This document resolves choices required to plan the revised ECR-001 contract. It deliberately does not implement authentication, policy evaluation, persistence, browser control, protocol authentication, cryptographic trust roots, or sandboxing. Those responsibilities remain in later slices.
 
-## Decision R1 — Rust toolchain
+## R1 — Rust toolchain
 
-**Decision:** Rust `1.98.x`, Edition 2024, stable toolchain only for ECR-001.
+**Decision:** Rust `1.98.x`, Edition 2024, stable; `#![forbid(unsafe_code)]` for `ecra-core`.
 
-**Rationale:** Rust 1.98.0 was released on 2026-08-20 and is current stable at planning time. Starting greenfield on current stable avoids unnecessary legacy constraints. The repository will pin the exact patch toolchain in `rust-toolchain.toml`; `rust-version` will express the MSRV for the first release.
+Current stable avoids legacy constraints in a greenfield trusted core. No nightly feature is authorized. The exact patch is pinned at implementation.
 
-**Constraints:**
+Reference: https://blog.rust-lang.org/releases/
 
-- No nightly-only language features.
-- `#![forbid(unsafe_code)]` in trusted-core crates for this slice.
-- MSRV changes after first public release require an explicit compatibility decision.
+## R2 — Workspace shape
 
-**Alternatives rejected:**
+**Decision:** One production crate only: `crates/ecra-core`.
 
-- Older MSRV solely because donors use it: donor MSRV is not an Ecra requirement.
-- Nightly: unjustified trusted-core/toolchain risk.
+Later run/policy/browser/search responsibilities earn separate crates when their I/O/responsibility boundaries exist. ECR-001 does not pre-create the future workspace architecture.
 
-**Primary reference:** Rust release announcements: `https://blog.rust-lang.org/releases/`.
+## R3 — Normative representation
 
-## Decision R2 — Workspace shape
+**Decision:** Versioned strict JSON + Serde is the normative v1 fixture/wire representation.
 
-**Decision:** Start with one production crate: `crates/ecra-core`, plus repository-level contract fixtures/tests. Do not create the eight future crates from ROADMAP.md during ECR-001.
+Rules:
+- mandatory schema envelope;
+- explicit stable enum names;
+- security-sensitive v1 objects reject unknown fields unless a specific extension point is defined;
+- unsupported major/newer unsupported minor fails typed compatibility handling;
+- large integer quantities outside I-JSON exact range use validated decimal-string forms.
 
-**Rationale:** The constitution requires the trusted core to remain small and rejects speculative abstractions. ECR-001 owns only zero-I/O domain semantics. Later slices earn new crates when I/O or responsibility boundaries become real.
+JSON is not declared the permanent high-volume runtime transport.
 
-**Initial shape:**
+## R4 — Canonicalization
+
+**Decision:** RFC 8785 JCS is used for deterministic canonical JSON. Ecra exposes a wrapper rather than leaking a specific crate API.
+
+Candidate: `serde_jcs` after exact version/security/license verification.
+
+Reference: https://www.rfc-editor.org/rfc/rfc8785.html
+
+## R5 — Strong identifiers
+
+**Decision:** Every identifier used in security/audit joins is a distinct Rust newtype serialized as a UUID string.
+
+This includes ActorId, PrincipalId, IdentityAssertionId, ResourceId, workspace/browser scope IDs, request/grant IDs, ActionId, ActionAttemptId, ReceiptId, VerificationId and the remaining IDs named by `spec.md`.
+
+No automatic cross-ID conversion. Generation remains caller/runtime-owned so the zero-I/O core requires no randomness/clock.
+
+## R6 — Time model
+
+**Decision:** `EpochMillis` is a validated value; validation never calls the OS clock. `EvaluationContext { now }` is caller supplied.
+
+Source timestamps are evidence metadata, not trusted evaluation time merely because they exist.
+
+## R7 — Origin model
+
+**Decision:** `WebOrigin` is standards-aware scheme/host/port plus explicit opaque-origin representation where needed. Full URL/path remains a resource locator, not origin authority.
+
+Candidate: `url` crate wrapped behind Ecra-owned types.
+
+## R8 — Actor vs authenticated principal
+
+**Decision:** `Actor` and `PrincipalRef` are separate domain concepts.
+
+- Actor: runtime/audit participant (Human/Agent/System).
+- PrincipalRef: opaque security subject reference.
+- IdentityAssertionRef: reference to evidence/credential assertion that may bind a principal to an actor/on-behalf-of relationship later.
+
+ECR-001 does **not** validate authentication. ECR-031 owns trust roots, assertion validity, key lifecycle, revocation and on-behalf-of proof. ECR-003 consumes validated identity context for authorization.
+
+**Rationale:** An ActorId is not proof of identity. Keeping the references distinct prevents an agent/run object from self-authenticating by choosing an ActorId.
+
+## R9 — Explicit scope algebra
+
+**Decision:** Security-relevant scope dimensions use explicit constraints rather than `Option<T>`/empty-list wildcard conventions.
+
+Conceptual shape:
 
 ```text
-Cargo.toml
-rust-toolchain.toml
-crates/
-  ecra-core/
-    Cargo.toml
-    src/
-      lib.rs
-      actor.rs
-      origin.rs
-      capability.rs
-      evidence.rs
-      artifact.rs
-      action.rs
-      receipt.rs
-      verification.rs
-      version.rs
-      error.rs
-      canonical.rs
-    tests/
-      contract_fixtures.rs
-      invalid_fixtures.rs
-contracts/
-  ecra-domain-v1/
-    valid/
-    invalid/
+ScopeConstraint<T>
+- not_applicable
+- exact(T)
+- one_of(non-empty list<T>)
+- any_explicit
 ```
 
-## Decision R3 — Serialization format
+No missing/empty encoding means `ANY`. `one_of([])` is invalid. ECR-003 owns intersection/subset/narrowing semantics.
 
-**Decision:** JSON is the normative human-inspectable v1 domain fixture/wire representation; Rust types use Serde. Security-sensitive/public objects use explicit version envelopes and strict parsing.
+**Rationale:** Fail-closed authorization cannot rely on undocumented serializer/caller conventions for wildcard behavior.
 
-**Rationale:** JSON maximizes inspectability and cross-language compatibility for future MCP/ACP/A2A/browser/storage adapters. ECR-001 does not claim JSON is the final high-volume runtime transport.
+## R10 — Resource identity vs locator
 
-**Rules:**
+**Decision:** `ResourceRef` contains a strong `ResourceId`, kind, and optional locator/origin metadata. Locator strings are explicitly non-authoritative.
 
-- `schema_version` is mandatory at contract envelopes.
-- Unknown/unsupported schema versions fail with typed compatibility errors.
-- Security-sensitive canonical objects do not silently ignore unknown fields.
-- Enum values use stable explicit string names.
-- Large integer quantities that could exceed the I-JSON exact integer range are encoded as validated decimal strings in the normative JSON contract.
-- Time values used by the domain kernel are epoch milliseconds and MUST remain inside the I-JSON safe integer range; time-dependent validation uses caller-supplied evaluation context.
+Providers later resolve canonical/native resource identity and constraints. ECR-001 does not pretend URL/path normalization solves every filesystem/tool/provider alias.
 
-## Decision R4 — Canonicalization
+## R11 — Capability representation
 
-**Decision:** Use RFC 8785 JSON Canonicalization Scheme (JCS) for deterministic fixture/digest bytes; evaluate `serde_jcs` as the minimal Rust implementation.
+**Decision:** `CapabilityRequest` and `CapabilityGrant` have distinct Rust types **and distinct typed IDs**.
 
-**Rationale:** RFC 8785 exists specifically to create invariant JSON bytes for cryptographic/digest use across implementations. It avoids inventing an Ecra-specific canonical JSON format. `serde_jcs` is MIT/Apache-2.0 dual licensed and directly targets RFC 8785.
+They carry PrincipalRef/PrincipalId, OperationRef, ResourceRef, explicit Scope, temporal validity and delegation references. Requesting Actor/IdentityAssertion refs may be recorded separately.
 
-**Scope in ECR-001:**
+No Cedar expressions, MCP schema, browser selectors or model prompts live in the canonical capability representation. Subset/narrowing/authorization is ECR-003.
 
-- deterministic canonical bytes;
-- canonical fixture conformance;
-- content/action reference digests may use canonical bytes where the contract requires a stable digest input.
+## R12 — Information classification and source-to-sink representation
 
-**Out of scope:** ledger hash chains and signatures; ECR-002 owns them.
+**Decision:** ECR-001 introduces policy-neutral information-flow value objects so later policy can distinguish read/use/disclosure.
 
-**Primary references:**
+Initial classification:
 
-- RFC 8785: `https://www.rfc-editor.org/rfc/rfc8785.html`
-- Rust implementation candidate: `https://github.com/l1h3r/serde_jcs`
+```text
+InformationClass
+- public
+- private
+- sensitive
+- secret
+- unknown
+```
 
-## Decision R5 — Identifiers
+`InformationClassification` may include opaque policy tags. Observation, Fact and ArtifactRef can carry classification and lineage. `InformationUse` on ActionIntent names source InformationRef(s), use kind, and destination where relevant.
 
-**Decision:** Public identifiers are strongly typed Rust newtypes serialized as UUID strings. Core types parse/validate IDs but do not require ambient randomness or clocks to create them.
+Initial use kinds:
+- local_compute;
+- model_context;
+- persist;
+- log_or_diagnostic;
+- external_disclosure / remote_provider.
 
-**Rationale:** Strong newtypes prevent accidental mixing of ActorId/ActionId/FactId/etc. UUID text is interoperable and inspectable. Generation can be provided by caller/runtime layers; deterministic fixtures use fixed IDs.
+Classification/use does not authorize anything. ECR-003 owns conservative inheritance, declassification and source-to-sink policy.
 
-**Rules:**
+**Rationale:** Capability to read A plus capability to write B must never imply permission to disclose A→B.
 
-- No authorization semantics from UUID version, prefix, or display name.
-- No generic `String` IDs in security-sensitive public APIs.
-- Conversion between ID kinds is explicit and not automatically implemented.
+## R13 — Provenance, verification and dispute state
 
-**Implementation candidate:** `uuid` crate with Serde support. Generation features are not required by `ecra-core` itself.
+**Decision:** Original provenance and independent verification are separate records. `Fact` does not carry an independently mutable `verified` truth flag.
 
-## Decision R6 — Time model
+Provenance v1:
+- user_provided;
+- observed_web;
+- observed_local;
+- retrieved;
+- tool_provided;
+- model_inferred;
+- system_derived.
 
-**Decision:** `EpochMillis` is a validated value object; core validation never calls the system clock.
+Facts may carry conflict/dispute relationships/state and freshness assessment. Verification truth is represented only by `VerificationReceipt` records targeting the Fact/claim/action/etc.
 
-**Rationale:** Zero-I/O determinism requires caller-supplied time. Expiry validation accepts `EvaluationContext { now }` from the policy/runtime layer.
+**Rationale:** Two independent verification state stores eventually diverge. A model-inferred Fact remains model-inferred even after a verifier validates it.
 
-**Rules:**
+## R14 — Freshness assessment
 
-- External/source timestamps can be represented as evidence metadata but do not automatically become trusted evaluation time.
-- Expiry range `not_before <= expires_at` is validated structurally.
-- “Is valid now?” requires explicit `EvaluationContext`.
+**Decision:** Freshness is not a naked current/stale flag. The core supports an assessment with state plus `assessed_at` and optional temporal basis (`observed_at`, `retrieved_at`, `published_at`, `effective_at`, or other explicit basis) where known.
 
-## Decision R7 — Web origins
+A source timestamp remains provenance/evidence and may itself be untrusted. ECR-009 decides ranking/refresh policy.
 
-**Decision:** `WebOrigin` is structured as scheme + canonical host + effective port/optional explicit port, with an explicit opaque-origin variant where browser semantics require it. Use a standards-aware URL parser rather than hand-written string splitting.
+## R15 — Artifact/evidence references and digest policy
 
-**Rationale:** Origin mistakes are security mistakes. Later Firefox/WebDriver work must not reinterpret an ad-hoc origin string differently from core policy semantics.
+**Decision:** Core stores references, not large bytes.
 
-**Implementation candidate:** `url` crate for parsing/normalization, wrapped behind Ecra-owned `WebOrigin` types.
+`ArtifactRef` supports type/media metadata, information classification, byte size, lineage, opaque storage locator and optional `ContentDigest`.
 
-**Boundary:** Full URL/location is not authority. Origin and resource URL/path remain distinct concepts.
+`ContentDigest` is metadata and must not automatically imply authenticity. Decision-grade evidence can include immutable capture/digest/as-of metadata; ECR-004 decides when it is mandatory.
 
-## Decision R8 — Capability representation
+## R16 — Action effect semantics are orthogonal
 
-**Decision:** ECR-001 defines capability data, not policy language.
+**Decision:** Replace the old single SideEffectClass with `EffectProfile`:
 
-`CapabilityRequest` and `CapabilityGrant` are separate. A grant contains explicit structured scope constraints and optional delegation provenance. It does not contain Cedar expressions, MCP tool schemas, browser selectors, or model instructions.
+```text
+MutationDomain
+- none
+- local
+- external
+- unknown
 
-**Rationale:** This preserves provider/policy-engine independence and makes it impossible to treat a model request as authorization by type confusion.
+Reversibility
+- not_applicable
+- reversible
+- conditional
+- irreversible
+- unknown
+```
 
-**Deferred:**
+Idempotency remains separate:
+- naturally_idempotent;
+- idempotent_with_key;
+- non_idempotent;
+- unknown.
 
-- subset/narrowing evaluator implementation beyond structural validation → ECR-003;
-- Cedar adapter → ECR-003;
-- browser-origin policy enforcement → ECR-003/ECR-006.
+Retry remains separate:
+- safe;
+- requires_same_idempotency_key;
+- requires_external_reconciliation;
+- never_blind_retry.
 
-## Decision R9 — Side-effect semantics
+**Rationale:** A destructive local delete is not inherently safer than a reversible external update. Mutation location and reversibility are different properties.
 
-**Decision:** Every `ActionIntent` declares a conservative side-effect class, idempotency class, and retry class before execution.
+## R17 — Immutable action binding
 
-**Side-effect classes v1:**
+**Decision:** A security-relevant action has both `ActionId` and deterministic `ActionDigest`; consumers bind through `ActionRef { id, digest }`.
 
-- `read_only`
-- `local_mutation`
-- `reversible_external_mutation`
-- `irreversible_external_mutation`
-- `unknown`
+The digest input is a domain-separated, versioned RFC-8785 canonical representation of the entire security-relevant ActionIntent body. Reusing an ActionId with changed parameters/scope/information-use/effect semantics must create a digest mismatch.
 
-**Idempotency classes v1:**
+**Algorithm for v1:** SHA-256. Security binding uses a dedicated `SecurityDigest` type rather than arbitrary ContentDigest algorithms.
 
-- `naturally_idempotent`
-- `idempotent_with_key`
-- `non_idempotent`
-- `unknown`
+A minimal pure Rust SHA-256 dependency (e.g. `sha2`) is permitted as a candidate after exact license/security review.
 
-**Retry classes v1:**
+## R18 — Intent vs execution attempt
 
-- `safe`
-- `requires_same_idempotency_key`
-- `requires_external_reconciliation`
-- `never_blind_retry`
+**Decision:** `ActionAttemptId` is distinct from ActionId. ECR-001 defines the identity/reference; ECR-002 owns attempt lifecycle.
 
-**Rationale:** Retry safety must be known before ECR-002 adds crash/resume and before browser/terminal/data executors exist.
+Every execution receipt for side-effect-capable work binds exact ActionRef + ActionAttemptId. This makes retries/reconciliation/duplicate-effect analysis possible without changing the action intent.
 
-**Validation principle:** uncertain or unspecified semantics become the more conservative representation, never the more permissive one.
+## R19 — Receipt vs verification terminology
 
-## Decision R10 — Receipt versus verification
+**Decision:** Keep separate ActionReceipt and VerificationReceipt types and remove the ambiguous `confirmed_success/confirmed_failure` executor terminology.
 
-**Decision:** `ActionReceipt` and `VerificationReceipt` are different domain types.
+ActionReceipt outcomes:
+- `executor_observed_success`;
+- `executor_observed_failure`;
+- `unknown`.
 
-- `ActionReceipt` records what the executor knows about execution.
-- `VerificationReceipt` records an independent evaluation of a claim/action/fact using evidence.
+Verification outcomes:
+- `verified`;
+- `rejected`;
+- `inconclusive`;
+- `not_evaluated`.
 
-**Action outcomes:** `confirmed_success`, `confirmed_failure`, `unknown`.
+**Rationale:** “confirmed success” is too easy for UI/caller code to mistake for independent verification.
 
-**Verification outcomes:** `verified`, `rejected`, `inconclusive`, `not_evaluated`.
+## R20 — Security digest domain separation
 
-**Rationale:** This prevents executor self-report from becoming success evidence and makes ECR-004 possible without changing core semantics.
+**Decision:** Security hashes do not reuse arbitrary content-checksum semantics.
 
-## Decision R11 — Provenance and trust state
+Conceptual digest input:
 
-**Decision:** Preserve original provenance and derived trust/verification state as orthogonal fields/records.
+```text
+"ecra/action-intent/v1\0" || JCS(Versioned<ActionIntent>)
+```
 
-**Provenance classes v1:**
+Exact byte fixture is normative in `contracts/domain-v1.md`. Ledger chaining/signatures/MACs are later work; action digest proves identity of canonical content, not who authorized/signed it.
 
-- `user_provided`
-- `observed_web`
-- `observed_local`
-- `retrieved`
-- `tool_provided`
-- `model_inferred`
-- `system_derived`
+## R21 — Errors and validation
 
-**Trust/evidence state v1:**
+**Decision:** Typed machine-readable error categories/codes; callers never parse display strings.
 
-- `unverified`
-- `verified`
-- `contradicted`
-- `disputed`
-- `inconclusive`
+Add categories for identity/principal mismatch, explicit-scope violations, information-flow shape, action-reference digest mismatch and attempt/receipt mismatch in addition to the existing compatibility/origin/time/evidence/action/receipt errors.
 
-**Freshness state:** current/unknown/stale is represented independently with observation/effective timestamps where available.
+Candidate: `thiserror` for display/source plumbing only.
 
-**Rationale:** Verification must not erase that a claim originated as model inference, and staleness must not be confused with falsity.
+## R22 — Testing strategy
 
-## Decision R12 — Artifact references
+Mandatory layers:
+1. constructor/invariant unit tests;
+2. valid and invalid normative JSON fixtures;
+3. strict schema/unknown-field tests;
+4. canonicalization + fixed ActionDigest fixtures;
+5. property tests for scope algebra, temporal values, effect/idempotency/retry matrix, classification/lineage and typed IDs;
+6. type-confusion compile/runtime tests (Actor/Principal, request/grant, receipt/verification);
+7. dependency boundary check;
+8. fmt/strict Clippy/rustdoc;
+9. exact-head Spec Kit traceability/analyze.
 
-**Decision:** Core stores `ArtifactRef`, not artifact bytes.
+Potential dev dependency: `proptest`.
 
-An artifact reference contains:
+## R23 — Dependency policy
 
-- typed artifact ID;
-- kind/media metadata;
-- content digest when known;
-- byte size as safe decimal-string value when known;
-- optional logical name;
-- lineage references;
-- opaque storage locator owned/interpreted by storage layers, not authority logic.
+Initial runtime candidates remain intentionally small:
+- `serde`;
+- `serde_json`;
+- `thiserror`;
+- `uuid`;
+- `url`;
+- `serde_jcs` or equivalent reviewed RFC 8785 implementation;
+- `sha2` or equivalent reviewed SHA-256 implementation for ActionDigest.
 
-**Rationale:** Large blobs and persistence belong to ECR-002. Core still needs stable lineage/evidence references.
+No Tokio/async runtime, HTTP, database, browser, model SDK, Cedar, MCP/ACP/A2A, filesystem/process abstraction or telemetry exporter belongs in ECR-001.
 
-## Decision R13 — Error model
+## R24 — Deferred responsibilities are named, not implicit
 
-**Decision:** Use typed error enums with machine-readable variants/codes. Human-readable messages are not API contracts.
+- identity assertion validation / trust root / key lifecycle / sensitive storage → ECR-031;
+- capability narrowing, authorization decision/lease, source-to-sink policy/declassification, approvals, secrets → ECR-003;
+- ActionAttempt lifecycle, run budgets/cancellation, persistence/integrity chain → ECR-002;
+- independent verification orchestration/evidence sufficiency/reconciliation → ECR-004;
+- browser origin/permission/IPC execution → ECR-006–ECR-008;
+- source ranking/freshness/source independence → ECR-009;
+- persistent memory classification/deletion propagation → ECR-010.
 
-**Initial categories:**
+## Donor / Reference Boundary
 
-- compatibility/version;
-- invalid identifier;
-- invalid origin;
-- invalid scope/capability;
-- invalid temporal range;
-- invalid side-effect/idempotency/retry combination;
-- invalid receipt/outcome;
-- invalid evidence/provenance;
-- canonicalization failure.
-
-**Candidate:** `thiserror` for display/source plumbing while preserving Ecra-owned variants.
-
-## Decision R14 — Testing strategy
-
-**Decision:** Tests are mandatory for ECR-001 even though generic Spec Kit templates allow optional tests.
-
-**Layers:**
-
-1. unit tests for constructors/invariants;
-2. normative valid JSON fixtures;
-3. normative invalid JSON fixtures;
-4. serialization/canonicalization contract tests;
-5. property tests for invariants where input space is broad;
-6. dependency/architecture test asserting prohibited dependency categories are absent;
-7. `cargo fmt`, strict Clippy, rustdoc tests.
-
-**Potential dev dependency:** `proptest` for invariant/property tests; no runtime dependency requirement.
-
-## Decision R15 — Dependency policy
-
-**Decision:** Every runtime dependency added to `ecra-core` requires a donor/license entry and justification in the implementation PR. Initial candidate set is intentionally small:
-
-- `serde`
-- `serde_json`
-- `thiserror`
-- `uuid`
-- `url`
-- `serde_jcs` (or equivalent RFC 8785 implementation after implementation-time license/maintenance verification)
-
-No Tokio, async runtime, reqwest, database, browser, model SDK, policy engine, tracing exporter, filesystem abstraction, or protocol SDK belongs in ECR-001.
-
-## Open Questions Resolved by Defaults
-
-No blocking clarification remains for PLAN_READY. The following choices are intentionally conservative defaults and can evolve through versioned contracts:
-
-- JSON is the v1 normative contract format.
-- strict unsupported-version behavior is preferred over silent forward parsing.
-- capability narrowing enforcement is deferred to ECR-003; structural representation is ECR-001.
-- ledger/signature cryptography is deferred to ECR-002.
-- user-facing display/localization is not part of core domain strings.
-
-## Donor/Reference Boundary
-
-ECR-001 may learn conceptually from:
-
-- Block Buzz: explicit actors/events/audit discipline;
-- Rig: serializable agent/run semantics;
+Conceptual references remain:
+- Block Buzz: explicit identity/event/audit discipline;
+- Rig: serializable run/state discipline;
 - AgentFS: portable audit/state concepts;
-- Graphify: extracted/inferred provenance distinction;
-- RFC 8785: canonical JSON.
+- Graphify: provenance distinction;
+- RFC 8785: canonical JSON;
+- NIST agent identity/authorization work: explicit authentication, delegation, on-behalf-of and revocation concepts;
+- OWASP agent security guidance: privilege/tool abuse, data exfiltration and bounded consumption concerns.
 
-No donor source code is authorized for copying by this research document. Any copied or adapted source requires a separate donor/license ledger entry before implementation.
+This research authorizes no donor source copying. Source reuse requires exact provenance/license approval in the canonical ledger.
+
+## Planning Conclusion
+
+All blocking **ECR-001-owned** design questions found by the pre-implementation review now have a conservative planned answer. Their exact wire model is normative in `data-model.md` and `contracts/domain-v1.md`. Downstream enforcement remains intentionally owned by ECR-002/ECR-003/ECR-004/ECR-031 rather than smuggled into this zero-I/O crate.
