@@ -20,69 +20,53 @@ Stale prose must be updated to live evidence, never the reverse.
 ```text
 Active slice: ECR-001 — Trusted Domain Kernel
 Branch: 001-trusted-domain-kernel
-PR: #1 — OPEN / DRAFT; mergeable at last live check
+PR: #1 — OPEN / DRAFT / mergeable at last live check
 Lifecycle: FINAL_CONVERGENCE_VERIFICATION
 ```
 
-Latest fully verified implementation baseline:
+Evidence anchors:
 
 ```text
-5dfe4c09b2abceeec14bc94b8e13d2dccddfd37c
-CI 33086490495 — success
+Implementation baseline: 5dfe4c09b2abceeec14bc94b8e13d2dccddfd37c
+CI:                      33086490495 — success
+
+Converged executable gate: a7f1ea27e55fe7d41d70a6101dd3f44502e260f0
+CI:                        33087744071 — success
+
+Final semantic analyze head before this ledger update:
+3a6b2c8794d322aee06771a36dd46ed891a95c62
 ```
 
-Latest executable convergence gate before final analyze/ledger output:
+Always re-read the current branch after this file; these SHAs are evidence anchors, not permanent pointers.
 
-```text
-a7f1ea27e55fe7d41d70a6101dd3f44502e260f0
-CI 33087744071 — success
-```
-
-That convergence CI mirrors the revised quickstart and passed build, format, strict Clippy, full workspace tests, eight dedicated contract/security targets, rustdoc, offline replay, unsafe boundary, dependency boundary and `cargo tree -p ecra-core`.
-
-Always re-read the current head before mutation; the SHAs above are evidence anchors, not permanent branch pointers.
-
-## ECR-001 phase ledger
+## Phase ledger
 
 | Phase | Tasks | State |
 |---|---:|---|
 | 1–9 | T001–T062 | `VERIFIED_ON_BRANCH` |
-| 10 — Cross-cutting gates | T063–T069 | `VERIFIED_ON_BRANCH` at `5dfe4c09…` / CI `33086490495` |
-| 11 — Closure / traceability | T070–T076 | T070–T072 + T074–T075 complete; T073/T076 remain |
-| 12 — Convergence | T077–T080 | T077–T079 complete; T080 `ACTIVE_FINAL_GATE` |
+| 10 | T063–T069 | `VERIFIED_ON_BRANCH` |
+| 11 | T070–T076 | T070–T072 + T074–T075 complete; T073/T076 remain |
+| 12 | T077–T080 | T077–T079 complete; T080 `BLOCKED_BY_EXACT_HEAD_ACTIONS_STARTUP` |
 
-## Completed convergence
+## Convergence truth
 
-### T077
+- Primary `data-model.md` and `contracts/domain-v1.md` are synchronized with implemented v1 semantics.
+- `implementation-clarifications.md` is folded historical rationale, not a competing wire contract.
+- `quickstart.md` and CI run the current full security/contract gate surface.
+- `traceability-closure-2026-08-27.md` maps FR-001–FR-055, SC-001–SC-020, constitution G1–G15 and P-001–P-035.
+- `final-convergence-analyze-2026-08-27.md` reports zero blocking semantic drift and zero unowned requirement/review blockers.
 
-Primary `data-model.md` and `contracts/domain-v1.md` are synchronized with implemented v1 semantics: strict envelope/error behavior, exact error API, C1–C12, bound parameters, full retry matrix, bounded receipt/verification semantics and fixture/wire convention.
+## Current blocker — Actions starts no runner
 
-### T078
+Final head `3a6b2c8794d322aee06771a36dd46ed891a95c62` has no executable failure evidence. Run `33088269829` was attempted four times; every attempt terminated before checkout/build/test with zero executable steps and no allocated runner/log.
 
-`quickstart.md`, `tasks.md`, active `STATUS.md`, and `EXECUTION.md` reflect live implementation/gate truth. The active status path is `specs/001-trusted-domain-kernel/STATUS.md`; no root `STATUS.md` exists.
+Control experiment: re-running the previously successful `33087744071` job at known-good head `a7f1ea27…` now fails in the same pre-runner/zero-step state. Therefore the current blocker is not specific to the final documentation head or an ECR-001 code/test delta.
 
-### T079
+The delta from last successful converged gate `a7f1ea27…` to final semantic head `3a6b2c87…` is docs-only: `EXECUTION.md`, active `STATUS.md`, `tasks.md`, `implementation-clarifications.md`, and final analyze. No production source, test, fixture, Cargo graph, workflow, or security script changed.
 
-`specs/001-trusted-domain-kernel/traceability-closure-2026-08-27.md` maps FR-001–FR-055, SC-001–SC-020, constitution G1–G15 and P-001–P-035 to code/tests/contracts or named downstream enforcement owners.
+GitHub Status records recent Actions runner-start/assignment incidents; those Actions incidents are marked resolved, while a separate Billing incident remains active. The repository API exposes no specific billing/account annotation for these zero-step jobs, so do not claim a narrower cause without new evidence.
 
-No downstream runtime control is falsely claimed as implemented by ECR-001 value types.
-
-## Immediate next work — T080
-
-Perform in order:
-
-```text
-A. Run final analyze-equivalent review against converged spec/research/data-model/contract/plan/tasks/implementation/traceability.
-B. Record zero-blocker or blocker result in the active package.
-C. Trigger/observe the full revised CI on the exact report-containing head.
-D. If green and zero blocker, finalize T073/T080 ledgers with exact run/head evidence.
-E. Run one final exact-head CI because ledger finalization itself changes the branch head.
-F. Inspect PR #1 exact state, reviews, required checks and readiness.
-```
-
-Do not mark PR ready, merge, or advance the roadmap while any of A–F is unresolved.
-
-## Required final CI surface
+## Required exact-head CI surface
 
 ```bash
 cargo build --workspace --locked
@@ -104,7 +88,21 @@ bash scripts/check-core-deps.sh
 cargo tree -p ecra-core
 ```
 
-## Non-negotiable ECR-001 invariants
+## Next eligible work
+
+Do not mutate implementation simply to manufacture a new CI result. The next executor must:
+
+```text
+A. observe the fresh workflow run created by the latest ledger-only commit
+B. if a runner starts, require the entire gate above to PASS
+C. if it fails before runner again, keep PR Draft and record the external blocker without claiming PASS
+D. after exact-head green, finalize T073/T080 evidence
+E. re-run exact-head CI if evidence-ledger commits move the head
+F. inspect reviews/threads/checks and make PR ready only when all pre-merge requirements are met
+G. merge, verify canonical main, then and only then mark T076/CLOSED_CANONICAL
+```
+
+## Non-negotiable invariants
 
 ```text
 Actor != authenticated Principal
@@ -119,51 +117,4 @@ UNKNOWN remains UNKNOWN
 ContentDigest != ActionDigest/security proof
 ```
 
-Additional v1 convergence truth:
-- malformed/missing strict version envelope -> `serialization_failed`;
-- unsupported major/minor -> dedicated compatibility codes;
-- exact machine API = 16 ErrorCategory / 19 ErrorCode variants;
-- every non-empty ActionParametersRef binds payload semantics with SecurityDigest;
-- `ActionSemantics` is a Rust construction helper only; wire fields stay flat;
-- verified/rejected/inconclusive verification requires evidence; not_evaluated may have none;
-- repository semantic inner-body fixtures do not weaken the public `Versioned<T>` contract.
-
-## Closure sequence
-
-```text
-T080 zero-blocking-drift + exact-head green
-  ↓
-T073 exact final evidence record
-  ↓
-PR readiness + required review/fixes
-  ↓
-merge without force-push/rebase/destructive history rewriting
-  ↓
-post-merge exact-main verification
-  ↓
-T076 roadmap/platform/active status advancement
-  ↓
-CLOSED_CANONICAL
-  ↓
-select next dependency-eligible ECR slice
-```
-
-No dependent ECR implementation is eligible before that sequence completes.
-
-## Platform direction
-
-The canonical dependency graph remains `specs/000-ecra-platform/roadmap.md`. ECR-001 is the trust substrate; ECR-002/ECR-031/ECR-003/ECR-004 own durable execution, identity/trust, authorization/information-flow enforcement, and verification orchestration respectively. Browser/search/workspace/skills/protocol/runtime work remains blocked by roadmap dependencies.
-
-## Handoff rule
-
-A future executor should need only:
-
-```text
-EXECUTION.md
-specs/001-trusted-domain-kernel/STATUS.md
-tasks.md + converged contract/data-model/quickstart
-post-implementation analyze + traceability + final convergence analyze
-live PR #1 head/CI/reviews
-```
-
-Update these ledgers whenever execution materially advances.
+No dependent ECR implementation is eligible before ECR-001 closes canonically.
