@@ -149,3 +149,28 @@ impl<'de> Deserialize<'de> for SecurityDigest {
         .map_err(de::Error::custom)
     }
 }
+
+/// Security binding for one canonical ECR-001 ActionIntent.
+///
+/// This wrapper prevents generic content checksums from being substituted for
+/// the domain-separated action binding required by the v1 contract.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct ActionDigest(SecurityDigest);
+
+impl ActionDigest {
+    #[must_use]
+    pub const fn new(digest: SecurityDigest) -> Self {
+        Self(digest)
+    }
+
+    #[must_use]
+    pub const fn security_digest(&self) -> &SecurityDigest {
+        &self.0
+    }
+
+    #[must_use]
+    pub fn hex(&self) -> &str {
+        self.0.hex()
+    }
+}
