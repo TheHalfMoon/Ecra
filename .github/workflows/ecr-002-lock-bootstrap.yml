@@ -34,10 +34,13 @@ jobs:
         run: |
           set -euo pipefail
           cargo generate-lockfile
-          echo 'ECRA_CARGO_LOCK_BASE64_BEGIN'
-          base64 < Cargo.lock | tr -d '\n'
-          echo
-          echo 'ECRA_CARGO_LOCK_BASE64_END'
+      - name: Upload proposed lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecr-002-cargo-lock
+          path: Cargo.lock
+          if-no-files-found: error
+          retention-days: 1
       - name: Bootstrap compile check
         run: |
           cargo build --workspace
