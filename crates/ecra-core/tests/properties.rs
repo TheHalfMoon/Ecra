@@ -90,8 +90,7 @@ fn security_digest_is_distinct_and_fixed_width() {
     assert_eq!(digest.hex().len(), 64);
     assert_eq!(
         digest.hex(),
-        "0f5e365208ae18525b3d5e3cc074cd5e5fbd34ab292ddafb9a0456ac9f87d201"
-            .replace("fbd34ab292ddafb9a0456ac9f87d201", "f2b38bc04a8fe13dd037a94a60ec0d4")
+        "0f5e365208ae18525b3d5e3cc074cd5e5f2b38bc04a8fe13dd037a94a60ec0d4"
     );
 
     let error = SecurityDigest::new_sha256("aa").expect_err("short digest must fail");
