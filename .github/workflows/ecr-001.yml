@@ -1,0 +1,43 @@
+name: ECR-001 CI
+
+on:
+  push:
+    branches:
+      - 001-trusted-domain-kernel
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'crates/**'
+      - 'contracts/ecra-domain-v1/**'
+      - 'scripts/check-core-deps.sh'
+      - '.github/workflows/ecr-001.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.98.0 --profile minimal --component rustfmt,clippy
+      - name: Generate lockfile for bootstrap
+        run: cargo generate-lockfile
+      - name: Emit bootstrap Cargo.lock
+        run: |
+          echo '=== ECRA_CARGO_LOCK_BEGIN ==='
+          cat Cargo.lock
+          echo '=== ECRA_CARGO_LOCK_END ==='
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: Test
+        run: cargo test --workspace
+      - name: Rustdoc tests
+        run: cargo test --doc --workspace
+      - name: Dependency boundary
+        run: bash scripts/check-core-deps.sh
