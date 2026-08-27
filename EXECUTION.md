@@ -20,20 +20,21 @@ Stale prose must be updated to live evidence, never the reverse.
 ```text
 Active slice: ECR-001 — Trusted Domain Kernel
 Branch: 001-trusted-domain-kernel
-PR: #1 — OPEN / DRAFT / mergeable at last live check
-Lifecycle: REVIEW_REMEDIATION
-Current blocker class: ACTIONABLE_REVIEW_FINDINGS; exact-head verification required after fixes
+PR: #1 — OPEN / READY / mergeable at last live check
+Lifecycle: READY_FOR_MERGE_PENDING_EXACT_HEAD_LEDGER_CI
+Current blocker class: NONE_SEMANTIC; exact-head CI/review required on final ledger-finalization head
 ```
 
-Pre-review evidence anchor:
+Verified remediation evidence:
 
 ```text
-Head:   12c7029dbde30d2d860fe70447f79b6432ff2f96
-CI:     33095782152 — success
+Head:   face8d7448afc617a6c04e53237b066bf2ef5b63
+CI:     33097623599 — success
 Runner: macbook — self-hosted macOS
+Rust:   1.98.0-aarch64-apple-darwin
 ```
 
-PR #1 was made Ready only after that exact-head success. Qodo then produced three actionable review threads, including two High correctness findings. The PR was immediately returned to Draft and Phase 13 was activated. Do not merge based on the pre-review head.
+PR #1 ready-review originally exposed three actionable defects. Phase 13 remediated all three, the full exact-head gate passed, all original threads are resolved/outdated, and CodeRabbit completed successfully with no new actionable thread on the remediation head.
 
 ## Phase ledger
 
@@ -42,29 +43,30 @@ PR #1 was made Ready only after that exact-head success. Qodo then produced thre
 | 1–9 | T001–T062 | `VERIFIED_ON_BRANCH` |
 | 10 | T063–T069 | `VERIFIED_ON_BRANCH` |
 | 11 | T070–T076 | T070–T075 complete; T076 waits for merge/post-merge evidence |
-| 12 | T077–T080 | complete on branch before ready-review |
-| 13 | T081–T084 | `REVIEW_REMEDIATION` |
+| 12 | T077–T080 | complete on branch |
+| 13 | T081–T084 | complete on verified remediation head |
 
-## Phase 13 findings and required proof
+## Phase 13 closure evidence
 
 ```text
 T081 Versioned<T> strict public Deserialize
-  -> ordinary serde_json::from_* must reject unsupported major/newer minor
-  -> Versioned::from_json_slice must retain typed compatibility DomainError codes
+  -> ordinary serde_json::from_* rejects unsupported major/newer minor
+  -> Versioned::from_json_slice retains typed compatibility DomainError codes
 
 T082 FactValue numeric construction
-  -> API-created integer must be impossible outside I-JSON exact range
-  -> canonical decimal construction must be equally fail-closed
-  -> serialized constructed values must strict-round-trip
+  -> integers outside I-JSON exact range cannot be constructed
+  -> non-canonical decimal strings cannot be constructed
+  -> validated constructed values serialize and strict-round-trip
 
 T083 lifecycle synchronization
-  -> platform STATUS + roadmap + active STATUS + EXECUTION + tasks agree ECR-001 is IMPLEMENTING/REVIEW_REMEDIATION, not TASKS_READY or CLOSED_CANONICAL
+  -> platform STATUS + roadmap agree ECR-001 is IMPLEMENTING
+  -> active STATUS + EXECUTION + tasks describe the more specific final merge gate
 
-T084 full exact-head CI + review-thread closure
-  -> every quickstart gate PASS
-  -> re-read all review threads
-  -> resolve only proven-remediated threads
-  -> return PR to Ready only with zero actionable blocker
+T084 full exact-head CI + review closure
+  -> run 33097623599 PASS on face8d7448afc617a6c04e53237b066bf2ef5b63
+  -> all original Qodo threads resolved/outdated
+  -> PR returned Ready
+  -> CodeRabbit success; no new actionable thread
 ```
 
 ## CI recovery architecture
@@ -109,16 +111,13 @@ cargo tree -p ecra-core
 ## Next eligible work
 
 ```text
-A. finish Phase 13 source/test/lifecycle remediation
-B. require full exact-head CI PASS on the final remediation head
-C. re-read reviews/threads and resolve only findings proven fixed
-D. mark T081–T084 complete and re-run exact-head CI if that ledger mutation moves the head
-E. return PR #1 to Ready
-F. observe final bot/human review/check state
-G. merge without force-push/rebase/destructive history rewriting only with clean exact-head evidence
-H. require post-merge canonical-main CI PASS
-I. only then T076 and ECR-001 CLOSED_CANONICAL
-J. re-read platform roadmap/dependencies and begin the next genuinely eligible slice
+A. require the complete exact-head gate to PASS on the final documentation/status ledger head
+B. re-read PR #1 head, canonical main, reviews, threads, checks and mergeability
+C. require no actionable review blocker on that exact head
+D. merge with expected head SHA using a non-rebase method
+E. require post-merge canonical-main CI to PASS
+F. only then mark T076 and ECR-001 CLOSED_CANONICAL across roadmap/platform/active status/EXECUTION/tasks
+G. re-read platform roadmap/dependencies and begin the next genuinely eligible slice
 ```
 
 ## Non-negotiable invariants
