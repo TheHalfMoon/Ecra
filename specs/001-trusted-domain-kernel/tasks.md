@@ -1,10 +1,10 @@
 # Tasks: Trusted Domain Kernel
 
 **Feature:** ECR-001  
-**Status:** READY_FOR_MERGE_PENDING_EXACT_HEAD_LEDGER_CI  
+**Status:** CLOSED_CANONICAL  
 **Canonical inputs:** `spec.md`, `research.md`, `data-model.md`, `contracts/domain-v1.md`, `plan.md`, `quickstart.md`, analyze/traceability artifacts  
 
-`[x]` means satisfied on the feature branch; it does not mean `CLOSED_CANONICAL`. Exact merge/post-merge closure remains governed by `AGENTS.md` and the constitution.
+`[x]` means satisfied with repository evidence. ECR-001 is `CLOSED_CANONICAL` only because the exact final feature head, merge, and post-merge canonical-main evidence are all recorded below.
 
 ## Phase 1 — Reproducible Rust Workspace
 
@@ -115,7 +115,7 @@
 - [x] T073 Record revised quickstart/full exact-head final results after the last repository convergence mutation. **SC-018**
 - [x] T074 Run post-implementation analyze; `post-implementation-analyze-2026-08-27.md` returned `CONVERGENCE_REQUIRED`. **SC-020**
 - [x] T075 Activate Phase 12 rather than hiding MUST-level drift.
-- [ ] T076 Mark roadmap `CLOSED_CANONICAL` only after PR merge + required post-merge evidence; before then keep truthful intermediate status.
+- [x] T076 Mark roadmap `CLOSED_CANONICAL` only after PR merge + required post-merge evidence; before then keep truthful intermediate status.
 
 ## Phase 12 — Convergence
 
@@ -124,46 +124,32 @@
 - [x] T079 Produce `traceability-closure-2026-08-27.md` covering FRs, SCs, G1–G15 and pre-review findings with downstream deferrals. **SC-019, SC-020**
 - [x] T080 Run final analyze-equivalent review and the revised quickstart/CI on the exact converged feature head; zero blocking drift is required before PR readiness. **SC-018, SC-020**
 
-### T073/T080 branch-gate evidence
-
-Head `20a56b10257609426e5b66ec0c2ba2f884822039`, CI `33095158577`, runner `macbook`, Rust `1.98.0-aarch64-apple-darwin`, passed checkout, build, fmt, strict Clippy, full workspace tests, all eight dedicated contract/security targets, rustdoc, offline replay, unsafe boundary, dependency boundary and `cargo tree -p ecra-core`.
-
-The ledger-finalization head `12c7029dbde30d2d860fe70447f79b6432ff2f96` also passed the full exact-head gate in CI `33095782152` before PR #1 was first marked Ready.
-
 ## Phase 13 — Ready-Review Remediation
-
-PR #1 review on `12c7029d…` found three actionable defects. The PR returned to Draft, all findings were remediated, the remediation head passed the complete exact-head gate, the original threads became resolved/outdated, and PR #1 returned to Ready with CodeRabbit success and no new actionable thread.
 
 - [x] T081 Make every public `Versioned<T>` Serde deserialization path reject unsupported major/newer minor versions while preserving typed compatibility errors from `Versioned::from_json_slice`. **Paths:** `crates/ecra-core/src/version.rs`, `crates/ecra-core/tests/properties.rs`. **FR-001, FR-047, SC-002**
 - [x] T082 Make Fact integer and canonical-decimal construction fail closed so API-created values cannot serialize wire data that strict deserialization rejects; add construction/round-trip regression coverage. **Paths:** `crates/ecra-core/src/evidence.rs`, `crates/ecra-core/tests/information_evidence.rs`. **FR-020, FR-049, SC-002, SC-014**
 - [x] T083 Synchronize ECR-001 lifecycle truth between platform `STATUS.md`, platform `roadmap.md`, active `STATUS.md`, `EXECUTION.md`, and this ledger. **SC-020**
 - [x] T084 Run the complete exact-head gate after remediation, re-read reviews/threads, resolve only findings actually remediated, and return PR #1 to Ready only with zero actionable review blockers. **SC-018, SC-020**
 
-### Phase 13 exact-head evidence
+## Final canonical evidence
 
 ```text
-Head:   face8d7448afc617a6c04e53237b066bf2ef5b63
-Run:    33097623599 — SUCCESS
-Runner: macbook
-Rust:   1.98.0-aarch64-apple-darwin
+Final feature head:     1d3c319c3317d3572baad1784f18eea771c5ac6e
+Final feature-head CI:  33098892820 — SUCCESS
+PR:                     #1 — MERGED
+Merge commit:           d1021616eae721e0b89bd5d4114531c4b9cc8a58
+Post-merge main CI:     33099033214 — SUCCESS
+Runner:                 macbook
+Rust:                   1.98.0-aarch64-apple-darwin
 ```
 
-All required quickstart/CI gates passed. Regression tests `ordinary_serde_versioned_deserialization_is_strict`, `versioned_json_dispatch_preserves_typed_compatibility_errors`, and `fact_numeric_construction_is_wire_safe` passed. All three original Qodo review threads are resolved/outdated. CodeRabbit completed with success on the remediation head and no new actionable review thread was present.
+The exact final feature head and canonical merge commit both passed the complete quickstart/CI surface: build, fmt, strict Clippy, full workspace tests, all eight dedicated contract/security targets, rustdoc, offline replay, unsafe boundary, dependency boundary and `cargo tree -p ecra-core`. All actionable review threads were resolved/outdated before merge.
 
-The subsequent ledger-finalization head `29fe299fc8875ed94867231aac713232827f23bc` passed the complete exact-head gate in CI `33098599089`. Qodo then identified only missing path-level traceability in T081/T082; this change adds the exact implementation/test paths without changing task semantics. This new documentation-only head must receive exact-head CI and final live review/check inspection before merge.
-
-## Remaining dependency graph
+## Closure
 
 ```text
-exact-head CI + final live review/check audit on this path-traceability head
-  ↓ PASS / zero actionable blocker
-merge with exact expected head
-  ↓
-post-merge canonical-main verification
-  ↓
-T076 roadmap/status canonical closure
-  ↓
-CLOSED_CANONICAL
+T001–T084 COMPLETE
+ECR-001 CLOSED_CANONICAL
 ```
 
-No dependent ECR implementation becomes eligible before ECR-001 is `CLOSED_CANONICAL`.
+Further work must re-read the live platform roadmap/dependencies and begin only the next genuinely eligible bounded slice.
