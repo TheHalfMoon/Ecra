@@ -20,14 +20,17 @@ pub mod id;
 pub mod identity;
 pub mod information;
 pub mod origin;
+pub mod receipt;
 pub mod resource;
 pub mod scope;
 pub mod time;
+pub mod verification;
 pub mod version;
 
 pub use action::{
-    ActionIntent, ActionParameterRef, ActionParametersRef, ActionRef, ActionSemantics,
-    EffectProfile, IdempotencyClass, IdempotencySpec, MutationDomain, RetryClass, Reversibility,
+    ActionAttemptRef, ActionIntent, ActionParameterRef, ActionParametersRef, ActionRef,
+    ActionSemantics, EffectProfile, IdempotencyClass, IdempotencySpec, MutationDomain, RetryClass,
+    Reversibility,
 };
 pub use actor::{Actor, ActorKind};
 pub use artifact::{ArtifactKind, ArtifactRef, LineageRef};
@@ -46,10 +49,14 @@ pub use information::{
     InformationUse, InformationUseKind,
 };
 pub use origin::{Origin, WebOrigin};
+pub use receipt::{ActionOutcome, ActionReceipt, ErrorSummary};
 pub use resource::{ResourceKind, ResourceRef};
 pub use scope::{PurposeRef, Scope, ScopeConstraint};
 pub use time::{
     EpochMillis, EvaluationContext, I_JSON_MAX_SAFE_INTEGER, I_JSON_MIN_SAFE_INTEGER,
     TemporalValidity,
+};
+pub use verification::{
+    ClaimRef, VerificationMethod, VerificationOutcome, VerificationReceipt, VerificationTarget,
 };
 pub use version::{DOMAIN_SCHEMA_MAJOR, DOMAIN_SCHEMA_MINOR, SchemaVersion, Versioned};
