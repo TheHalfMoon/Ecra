@@ -11,6 +11,7 @@
 //! declassify information, independently verify outcomes, execute providers,
 //! protect real secrets at rest, or claim hostile-tamper resistance.
 
+pub mod archive;
 pub mod budget;
 pub mod digest;
 pub mod error;
@@ -21,6 +22,12 @@ mod sqlite;
 pub mod state;
 pub mod store;
 
+pub use archive::{
+    ArchiveBlob, EcraRunManifest, MAX_ARCHIVE_ENTRIES, MAX_BLOB_COUNT, MAX_EVENT_COUNT,
+    MAX_EVENT_ENTRY_BYTES, MAX_MANIFEST_BYTES, MAX_PATH_BYTES, MAX_SINGLE_BLOB_BYTES,
+    MAX_TOTAL_UNCOMPRESSED_BYTES, ManifestBlobEntry, ManifestEventEntry, ValidatedEcraArchive,
+    export_ecra, read_ecra,
+};
 pub use budget::{
     BudgetAmount, BudgetDimension, BudgetLimit, BudgetUsage, MAX_BUDGET_AMOUNT, RunBudget,
 };
