@@ -61,19 +61,6 @@ jobs:
               raise SystemExit('identity dependency allowlist anchor not found')
           deps.write_text(text.replace(needle, insert, 1))
 
-          workflow = Path('.github/workflows/ecr-031.yml')
-          text = workflow.read_text()
-          needle = "          grep -F 'getrandom = { version = \"=0.4.3\", default-features = false }' crates/ecra-identity/Cargo.toml\n"
-          insert = (
-              needle
-              + "          grep -F 'serde = { version = \"=1.0.229\", default-features = false, features = [\"derive\", \"std\"] }' crates/ecra-identity/Cargo.toml\n"
-              + "          grep -F 'serde_json = { version = \"=1.0.151\", default-features = false, features = [\"std\"] }' crates/ecra-identity/Cargo.toml\n"
-              + "          grep -F 'uuid = { version = \"=1.26.0\", default-features = false, features = [\"serde\"] }' crates/ecra-identity/Cargo.toml\n"
-          )
-          if needle not in text or '=1.0.229' in text:
-              raise SystemExit('ECR-031 dependency evidence workflow anchor not found or already updated')
-          workflow.write_text(text.replace(needle, insert, 1))
-
           research = Path('specs/031-identity-trust-root/research.md')
           text = research.read_text().rstrip()
           marker = '## 23. Phase 2 support dependency delta'
@@ -111,7 +98,6 @@ jobs:
           rm .github/workflows/ecr-031-phase2-deps.yml
           git add \
             .github/workflows/ecr-031-phase2-deps.yml \
-            .github/workflows/ecr-031.yml \
             Cargo.lock \
             crates/ecra-identity/Cargo.toml \
             scripts/check-identity-deps.sh \
@@ -120,7 +106,6 @@ jobs:
           changed="$(git diff --cached --name-only | sort)"
           expected="$(printf '%s\n' \
             '.github/workflows/ecr-031-phase2-deps.yml' \
-            '.github/workflows/ecr-031.yml' \
             'Cargo.lock' \
             'crates/ecra-identity/Cargo.toml' \
             'research/donor-license-ledger.md' \
