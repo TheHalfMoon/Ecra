@@ -153,6 +153,9 @@ jobs:
           grep -F 'sha2 = { version = "=0.11.0", default-features = false }' crates/ecra-identity/Cargo.toml
           grep -F 'zeroize = { version = "=1.9.0", default-features = false, features = ["alloc"] }' crates/ecra-identity/Cargo.toml
           grep -F 'getrandom = { version = "=0.4.3", default-features = false }' crates/ecra-identity/Cargo.toml
+          grep -F 'serde = { version = "=1.0.229", default-features = false, features = ["derive", "std"] }' crates/ecra-identity/Cargo.toml
+          grep -F 'serde_json = { version = "=1.0.151", default-features = false, features = ["std"] }' crates/ecra-identity/Cargo.toml
+          grep -F 'uuid = { version = "=1.26.0", default-features = false, features = ["serde"] }' crates/ecra-identity/Cargo.toml
           grep -F 'security-framework = { version = "=3.7.0", default-features = false, features = ["OSX_10_15"] }' crates/ecra-identity/Cargo.toml
           cargo tree -p ecra-identity --edges normal --depth 1 --locked
           cargo tree -p ecra-identity --edges normal --locked
