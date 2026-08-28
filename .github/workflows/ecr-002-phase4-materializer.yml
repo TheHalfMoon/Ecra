@@ -1,0 +1,211 @@
+name: ECR-002 Phase 4 one-shot
+
+on:
+  push:
+    branches:
+      - 002-durable-run-ledger
+
+permissions:
+  contents: write
+
+jobs:
+  integrate-phase4:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --fail --silent --show-error https://sh.rustup.rs \
+              | sh -s -- -y --profile minimal --default-toolchain none
+            export PATH="$HOME/.cargo/bin:$PATH"
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt,clippy
+      - name: Integrate Phase 4 budget semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if text.count(old) != 1:
+                  raise SystemExit(f'{path}: expected exactly one match for replacement, got {text.count(old)}')
+              p.write_text(text.replace(old, new, 1))
+
+          replace_once(
+              'crates/ecra-run/src/lib.rs',
+              'pub use budget::{BudgetAmount, BudgetDimension, BudgetLimit, MAX_BUDGET_AMOUNT, RunBudget};',
+              'pub use budget::{\n    BudgetAmount, BudgetDimension, BudgetLimit, BudgetUsage, MAX_BUDGET_AMOUNT, RunBudget,\n};',
+          )
+
+          state = Path('crates/ecra-run/src/state.rs')
+          text = state.read_text()
+          text = text.replace(
+              '    BudgetAmount, BudgetDimension, EventSequence, LedgerDigest, RunBudget, RunError,\n    RunErrorCategory, RunErrorCode, RunEvent, RunEventEnvelope,\n',
+              '    BudgetAmount, BudgetDimension, BudgetUsage, EventSequence, LedgerDigest, RunBudget, RunError,\n    RunErrorCategory, RunErrorCode, RunEvent, RunEventEnvelope,\n',
+              1,
+          )
+          text = text.replace(
+              '    usage: BTreeMap<BudgetDimension, BudgetAmount>,\n    prepared_attempts: BTreeMap<ActionAttemptId, PreparedAttemptState>,\n',
+              '    usage: BudgetUsage,\n    #[serde(skip)]\n    soft_limits_reached: BTreeSet<BudgetDimension>,\n    #[serde(skip)]\n    pending_soft_crossings: BTreeMap<BudgetDimension, (BudgetAmount, BudgetAmount)>,\n    prepared_attempts: BTreeMap<ActionAttemptId, PreparedAttemptState>,\n',
+              1,
+          )
+          text = text.replace(
+              '    pub fn usage(&self) -> &BTreeMap<BudgetDimension, BudgetAmount> {\n        &self.usage\n    }\n',
+              '    pub fn usage(&self) -> &BTreeMap<BudgetDimension, BudgetAmount> {\n        self.usage.amounts()\n    }\n',
+              1,
+          )
+          text = text.replace(
+              '    pub fn usage_for(&self, dimension: BudgetDimension) -> Option<BudgetAmount> {\n        self.usage.get(&dimension).copied()\n    }\n',
+              '    pub fn usage_for(&self, dimension: BudgetDimension) -> Option<BudgetAmount> {\n        self.usage.recorded(dimension)\n    }\n',
+              1,
+          )
+          text = text.replace(
+              '        self.budget.limits().iter().any(|limit| {\n            self.usage\n                .get(&limit.dimension())\n                .is_some_and(|usage| *usage >= limit.hard())\n        })\n',
+              '        self.budget\n            .limits()\n            .iter()\n            .any(|limit| self.usage.get(limit.dimension()) >= limit.hard())\n',
+              1,
+          )
+          text = text.replace(
+              '                    usage: BTreeMap::new(),\n                    prepared_attempts: BTreeMap::new(),\n',
+              '                    usage: BudgetUsage::default(),\n                    soft_limits_reached: BTreeSet::new(),\n                    pending_soft_crossings: BTreeMap::new(),\n                    prepared_attempts: BTreeMap::new(),\n',
+              1,
+          )
+          text = text.replace(
+              '            RunEvent::AttemptPrepared { attempt } => {\n                ensure_phase(state, &[RunPhase::Running], "attempt_prepared")?;\n',
+              '            RunEvent::AttemptPrepared { attempt } => {\n                ensure_phase(state, &[RunPhase::Running], "attempt_prepared")?;\n                if state.has_hard_budget_blocker() {\n                    return Err(RunError::new(\n                        RunErrorCategory::Budget,\n                        RunErrorCode::BudgetExhausted,\n                        "attempt_prepared is blocked by an exhausted hard budget",\n                    ));\n                }\n',
+              1,
+          )
+          old = '''            RunEvent::ResourceUsageRecorded { dimension, amount } => {\n                let current = state\n                    .usage\n                    .get(dimension)\n                    .copied()\n                    .unwrap_or(BudgetAmount::new(0)?);\n                state\n                    .usage\n                    .insert(*dimension, current.checked_add(*amount)?);\n            }\n            RunEvent::BudgetSoftLimitReached { .. } => {}\n            RunEvent::BudgetExhausted { dimension, .. } => {\n                ensure_phase(state, &[RunPhase::Running], "budget_exhausted")?;\n                state.phase = RunPhase::Suspended;\n                state.suspension = Some(SuspensionReason::BudgetExhausted {\n                    dimension: *dimension,\n                });\n            }\n'''
+          new = '''            RunEvent::ResourceUsageRecorded { dimension, amount } => {\n                ensure_phase(state, &[RunPhase::Running], "resource_usage_recorded")?;\n                if state.has_hard_budget_blocker() {\n                    return Err(RunError::new(\n                        RunErrorCategory::Budget,\n                        RunErrorCode::BudgetExhausted,\n                        "resource usage is blocked after hard budget exhaustion",\n                    ));\n                }\n                let (previous, cumulative) = state.usage.charge(*dimension, *amount)?;\n                if !state.soft_limits_reached.contains(dimension)\n                    && let Some(crossing) =\n                        state.budget.soft_crossing(*dimension, previous, cumulative)\n                {\n                    state\n                        .pending_soft_crossings\n                        .entry(*dimension)\n                        .or_insert(crossing);\n                }\n            }\n            RunEvent::BudgetSoftLimitReached {\n                dimension,\n                soft_limit,\n                cumulative_usage,\n            } => {\n                ensure_phase(state, &[RunPhase::Running], "budget_soft_limit_reached")?;\n                if state.soft_limits_reached.contains(dimension) {\n                    return Err(budget_error(\n                        "budget soft-limit evidence is valid only for the first crossing",\n                    ));\n                }\n                let Some(expected) = state.pending_soft_crossings.get(dimension).copied() else {\n                    return Err(budget_error(\n                        "budget soft-limit evidence has no matching first threshold crossing",\n                    ));\n                };\n                if expected != (*soft_limit, *cumulative_usage) {\n                    return Err(budget_error(\n                        "budget soft-limit evidence does not match the configured first crossing",\n                    ));\n                }\n                state.pending_soft_crossings.remove(dimension);\n                state.soft_limits_reached.insert(*dimension);\n            }\n            RunEvent::BudgetExhausted {\n                dimension,\n                hard_limit,\n                cumulative_usage,\n            } => {\n                ensure_phase(state, &[RunPhase::Running], "budget_exhausted")?;\n                let Some(limit) = state.budget.limit(*dimension) else {\n                    return Err(budget_error(\n                        "budget exhaustion evidence references an unconfigured dimension",\n                    ));\n                };\n                let current = state.usage.get(*dimension);\n                if limit.hard() != *hard_limit\n                    || current != *cumulative_usage\n                    || current < *hard_limit\n                {\n                    return Err(budget_error(\n                        "budget exhaustion evidence does not match configured hard limit and cumulative usage",\n                    ));\n                }\n                state.phase = RunPhase::Suspended;\n                state.suspension = Some(SuspensionReason::BudgetExhausted {\n                    dimension: *dimension,\n                });\n            }\n'''
+          if text.count(old) != 1:
+              raise SystemExit('state.rs: budget reducer block did not match exactly')
+          text = text.replace(old, new, 1)
+          marker = '''fn unresolved_error(message: impl Into<String>) -> RunError {\n    RunError::new(\n        RunErrorCategory::Attempt,\n        RunErrorCode::UnresolvedAttempt,\n        message,\n    )\n}\n'''
+          replacement = marker + '''\nfn budget_error(message: impl Into<String>) -> RunError {\n    RunError::new(\n        RunErrorCategory::Budget,\n        RunErrorCode::InvalidBudget,\n        message,\n    )\n}\n'''
+          if text.count(marker) != 1:
+              raise SystemExit('state.rs: unresolved_error marker did not match exactly')
+          state.write_text(text.replace(marker, replacement, 1))
+
+          budgets = Path('crates/ecra-run/tests/budgets.rs')
+          text = budgets.read_text()
+          needle = '''    for dimension in BudgetDimension::ALL {\n        let budget = RunBudget::new(vec![\n'''
+          insertion = '''    for dimension in BudgetDimension::ALL {\n        let zero_budget = RunBudget::new(vec![\n            BudgetLimit::new(dimension, None, amount(0)).expect("zero hard limit"),\n        ])\n        .expect("zero budget");\n        let zero_usage = BudgetUsage::default();\n        assert_eq!(\n            zero_budget.remaining(&zero_usage, dimension),\n            Some(BudgetAmount::ZERO)\n        );\n        assert_eq!(\n            zero_budget\n                .preflight(&zero_usage, dimension, amount(1))\n                .expect_err("zero hard limit blocks positive preflight")\n                .code(),\n            RunErrorCode::BudgetPreflightExceeded\n        );\n        assert_eq!(\n            zero_budget.hard_exhaustion(dimension, BudgetAmount::ZERO),\n            Some((BudgetAmount::ZERO, BudgetAmount::ZERO))\n        );\n\n        let budget = RunBudget::new(vec![\n'''
+          if text.count(needle) != 1:
+              raise SystemExit('budgets.rs: all-dimensions loop marker did not match')
+          text = text.replace(needle, insertion, 1)
+          extra = '''\n#[test]\nfn hard_budget_blocks_further_governed_work_before_exhaustion_evidence() {\n    let mut history = running();\n    push(&mut history, charge(BudgetDimension::ToolCalls, 100));\n    let state = RunReducer::reduce(&history).expect("hard-blocked running state");\n    assert!(state.has_hard_budget_blocker());\n\n    let mut extra_usage = history.clone();\n    push(&mut extra_usage, charge(BudgetDimension::ToolCalls, 1));\n    assert_eq!(\n        RunReducer::apply(&state, extra_usage.last().expect("extra usage"))\n            .expect_err("usage after hard exhaustion must stop")\n            .code(),\n        RunErrorCode::BudgetExhausted\n    );\n\n    let mut extra_attempt = history;\n    push(&mut extra_attempt, fixture_event("attempt_prepared"));\n    assert_eq!(\n        RunReducer::apply(&state, extra_attempt.last().expect("extra attempt"))\n            .expect_err("attempt after hard exhaustion must stop")\n            .code(),\n        RunErrorCode::BudgetExhausted\n    );\n}\n\n#[test]\nfn hard_exhaustion_evidence_must_match_limit_and_current_usage() {\n    let mut history = running();\n    push(&mut history, charge(BudgetDimension::ToolCalls, 100));\n    let state = RunReducer::reduce(&history).expect("hard-blocked state");\n    push(\n        &mut history,\n        RunEvent::BudgetExhausted {\n            dimension: BudgetDimension::ToolCalls,\n            hard_limit: amount(99),\n            cumulative_usage: amount(100),\n        },\n    );\n    assert_eq!(\n        RunReducer::apply(&state, history.last().expect("bad hard evidence"))\n            .expect_err("mismatched hard limit must fail")\n            .code(),\n        RunErrorCode::InvalidBudget\n    );\n}\n'''
+          text = text.replace('\nproptest! {', extra + '\nproptest! {', 1)
+          budgets.write_text(text)
+
+          tasks = Path('specs/002-durable-run-ledger/tasks.md')
+          text = tasks.read_text()
+          for task in range(19, 27):
+              old = f'- [ ] T{task:03d}'
+              new = f'- [x] T{task:03d}'
+              if text.count(old) != 1:
+                  raise SystemExit(f'tasks.md: expected one marker {old}')
+              text = text.replace(old, new, 1)
+          tasks.write_text(text)
+
+          status = Path('specs/002-durable-run-ledger/STATUS.md')
+          text = status.read_text()
+          phase3 = '''## Phase 3 — VERIFIED_ON_BRANCH\n\nT019–T026 are complete on the exact verified Phase 3 head:\n\n```text\nexact head  ac45fcc835674341ae6b9ad18484e6dacda36809\nCI run      33143735332 — SUCCESS\n```\n\nThe exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, ECR-002 reducer/attempt/portability targets, rustdoc, offline replay, and both boundary suites.\n\nPhase 3 establishes the pure deterministic reducer, exact v1 phase matrix, attempt/receipt binding, recovery-boundary UNKNOWN semantics, resume blockers, and 1,000x deterministic replay evidence.\n\n'''
+          marker = '## Current implementation position\n'
+          if phase3 not in text:
+              if text.count(marker) != 1:
+                  raise SystemExit('STATUS.md current-position marker missing')
+              text = text.replace(marker, phase3 + marker, 1)
+          old_block = '''Phase 1 T001–T008  VERIFIED_ON_BRANCH\nPhase 2 T009–T018  VERIFIED_ON_BRANCH\nPhase 3 T019–T026  ACTIVE\nPhase 4 T027–T034  blocked by Phase 3 exact-head verification\nPhase 5 T035–T044  blocked by Phase 3 exact-head verification\nPhase 6 T045–T051  blocked\nPhase 7 T052–T059  blocked\nPhase 8 T060–T066  blocked\nPhase 9 T067–T073  blocked\n'''
+          new_block = '''Phase 1 T001–T008  VERIFIED_ON_BRANCH\nPhase 2 T009–T018  VERIFIED_ON_BRANCH\nPhase 3 T019–T026  VERIFIED_ON_BRANCH\nPhase 4 T027–T034  ACTIVE\nPhase 5 T035–T044  blocked by Phase 4 exact-head verification\nPhase 6 T045–T051  blocked\nPhase 7 T052–T059  blocked\nPhase 8 T060–T066  blocked\nPhase 9 T067–T073  blocked\n'''
+          if text.count(old_block) != 1:
+              raise SystemExit('STATUS.md phase block missing')
+          text = text.replace(old_block, new_block, 1)
+          old_work = '''T019 derived RunState + PreparedAttemptState + ordered projections\nT020 pure RunReducer\nT021 exact transition matrix + terminal rejection\nT022 attempt uniqueness and exact receipt binding\nT023 recovery-boundary unresolved semantics\nT024 v1 resume blockers\nT025 exhaustive transition tests\nT026 deterministic 1,000x replay property evidence\n'''
+          new_work = '''T027 exact BudgetUsage/RunBudget primitives\nT028 strict budget validation\nT029 checked cumulative accounting and remaining budget\nT030 known-upper-bound preflight refusal\nT031 first soft crossing + exact hard exhaustion evidence\nT032 all-dimension boundary/property coverage\nT033 deterministic hard-budget loop stop\nT034 preserve unresolved-attempt truth across exhaustion\n'''
+          if text.count(old_work) != 1:
+              raise SystemExit('STATUS.md immediate work block missing')
+          status.write_text(text.replace(old_work, new_work, 1))
+
+          execution = Path('EXECUTION.md')
+          text = execution.read_text()
+          text = text.replace(
+              'Phase 2 verified head: 2ab8d6d80f43bf7dd07ee43659555a573c47021b\nPhase 2 CI: 33107289499 — SUCCESS\nCurrent phase: Phase 3 T019–T026\n',
+              'Phase 2 verified head: 2ab8d6d80f43bf7dd07ee43659555a573c47021b\nPhase 2 CI: 33107289499 — SUCCESS\nPhase 3 verified head: ac45fcc835674341ae6b9ad18484e6dacda36809\nPhase 3 CI: 33143735332 — SUCCESS\nCurrent phase: Phase 4 T027–T034\n',
+              1,
+          )
+          old_order = '''T019 derived RunState / PreparedAttemptState / ordered projections\nT020 pure RunReducer\nT021 exact phase transition matrix and terminal rejection\nT022 exact attempt identity and receipt binding\nT023 recovery boundary -> unresolved without fabricated outcome\nT024 resume blockers\nT025 exhaustive transition tests\nT026 1,000x deterministic replay property test\n'''
+          new_order = '''T027 exact BudgetUsage / BudgetLimit / RunBudget\nT028 malformed/duplicate/out-of-range rejection\nT029 checked accounting and remaining budget\nT030 known-upper-bound preflight refusal\nT031 first soft crossing and exact hard exhaustion semantics\nT032 all 14 dimensions boundary/property tests\nT033 deterministic recursive/tool-loop hard stop\nT034 preserve unresolved attempt/retry truth under exhaustion\n'''
+          if text.count(old_order) != 1:
+              raise SystemExit('EXECUTION.md active task order missing')
+          text = text.replace(old_order, new_order, 1)
+          text = text.replace(
+              'Phase 4 and Phase 5 become eligible only after the complete ECR-002 exact-head gate verifies Phase 3.',
+              'Phase 5 becomes eligible only after the complete ECR-002 exact-head gate verifies Phase 4.',
+              1,
+          )
+          execution.write_text(text)
+
+          workflow = Path('.github/workflows/ecr-002.yml')
+          text = workflow.read_text()
+          old = '''      - name: ECR-002 contract targets\n        run: |\n          cargo test -p ecra-run --test event_contract --locked\n          cargo test -p ecra-run --locked\n'''
+          new = '''      - name: ECR-002 contract targets\n        run: |\n          cargo test -p ecra-run --test event_contract --locked\n          cargo test -p ecra-run --test reducer --locked\n          cargo test -p ecra-run --test attempts --locked\n          cargo test -p ecra-run --test budgets --locked\n          cargo test -p ecra-run --test portability --locked\n          cargo test -p ecra-run --locked\n'''
+          if text.count(old) != 1:
+              raise SystemExit('ecr-002.yml contract target block missing')
+          workflow.write_text(text.replace(old, new, 1))
+          PY
+          cargo fmt --all
+      - name: Verify focused Phase 4 gate before commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --workspace --locked
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+          cargo test -p ecra-run --test event_contract --locked
+          cargo test -p ecra-run --test reducer --locked
+          cargo test -p ecra-run --test attempts --locked
+          cargo test -p ecra-run --test budgets --locked
+          cargo test -p ecra-run --test portability --locked
+          cargo test -p ecra-run --locked
+      - name: Commit Phase 4 integration and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf target
+          rm .github/workflows/ecr-002-phase4-materializer.yml
+          python3 - <<'PY'
+          import subprocess
+          allowed = {
+              '.github/workflows/ecr-002-phase4-materializer.yml',
+              '.github/workflows/ecr-002.yml',
+              'EXECUTION.md',
+              'crates/ecra-run/src/budget.rs',
+              'crates/ecra-run/src/lib.rs',
+              'crates/ecra-run/src/state.rs',
+              'crates/ecra-run/tests/budgets.rs',
+              'specs/002-durable-run-ledger/STATUS.md',
+              'specs/002-durable-run-ledger/tasks.md',
+          }
+          output = subprocess.check_output(['git', 'status', '--porcelain=v1'], text=True)
+          changed = {line[3:] for line in output.splitlines() if line}
+          unexpected = changed - allowed
+          if unexpected:
+              raise SystemExit(f'unexpected changed paths: {sorted(unexpected)}')
+          required = allowed - {'.github/workflows/ecr-002-phase4-materializer.yml'}
+          missing = required - changed
+          if missing:
+              raise SystemExit(f'expected Phase 4 paths not changed: {sorted(missing)}')
+          PY
+          git config user.name 'Abdulaziz M. Shehri'
+          git config user.email 'alshehriofficial@gmail.com'
+          git add -A
+          git commit -m 'feat(run): integrate budget enforcement'
+          git push origin HEAD:002-durable-run-ledger
