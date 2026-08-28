@@ -1,0 +1,132 @@
+name: ECR-031 Phase 3 closure ledger
+
+on:
+  push:
+    branches:
+      - 031-identity-trust-root
+
+permissions:
+  contents: write
+
+jobs:
+  close-phase3-ledger:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact semantic head and write closure ledger
+        shell: bash
+        env:
+          EXPECTED_PARENT: 35df7cab41c85cf9f0c9e6f6b7d20c0a57b18d15
+        run: |
+          set -euo pipefail
+          ACTUAL_PARENT="$(git rev-parse HEAD^)"
+          if [ "$ACTUAL_PARENT" != "$EXPECTED_PARENT" ]; then
+            echo "Refusing Phase 3 closure: expected helper parent $EXPECTED_PARENT, got $ACTUAL_PARENT" >&2
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          tasks_path = Path("specs/031-identity-trust-root/tasks.md")
+          tasks = tasks_path.read_text()
+          for task in range(21, 35):
+              old = f"- [ ] **T{task:03d}**"
+              new = f"- [x] **T{task:03d}**"
+              count = tasks.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one open marker for T{task:03d}; found {count}")
+              tasks = tasks.replace(old, new, 1)
+          tasks_path.write_text(tasks)
+
+          status_path = Path("specs/031-identity-trust-root/STATUS.md")
+          status = status_path.read_text()
+
+          old_frontier = """## Current execution frontier
+
+1. run permanent ECR-031 CI on the record-only Phase 1 ledger-convergence head;
+2. require terminal `completed/success` on that exact head before semantic implementation;
+3. after the closure-head gate succeeds, begin T011 and continue Phase 2 strictly in dependency order;
+4. any dependency/feature/native-backend change requires a fresh reviewed disposition and exact-head evidence.
+"""
+          new_frontier = """## Current execution frontier
+
+1. Phase 3 semantic implementation is verified on exact head `35df7cab41c85cf9f0c9e6f6b7d20c0a57b18d15` by permanent ECR-031 CI run `33165443131`, job `98829634574`, result `SUCCESS`;
+2. this record-only ledger convergence marks T021–T034 complete and synchronizes `tasks.md`, `STATUS.md`, and `EXECUTION.md`;
+3. require permanent ECR-031 CI to reach terminal `completed/success` on the exact ledger-convergence head before semantic Phase 4 work begins;
+4. after that exact-head gate succeeds, begin T035 and continue Phase 4 strictly in dependency order; any dependency/feature/native-backend change requires fresh reviewed disposition and exact-head evidence.
+"""
+          if status.count(old_frontier) != 1:
+              raise SystemExit("Expected stale current execution frontier exactly once")
+          status = status.replace(old_frontier, new_frontier, 1)
+
+          old_phase3 = """## Phase 3 execution frontier
+
+Phase 3 becomes eligible only after this record-only Phase 2 ledger-convergence head itself passes permanent ECR-031 CI. Once that exact closure head is green, continue T021–T034 strictly in dependency order. No Phase 3 API may introduce ambient issuance or caller-selected subject substitution, and validation remains identity/trust evidence rather than authorization.
+"""
+          new_phase3 = """## Phase 3 verified closure evidence
+
+Phase 3 T021–T034 is verified on exact semantic head `35df7cab41c85cf9f0c9e6f6b7d20c0a57b18d15`. Permanent ECR-031 CI run `33165443131`, job `98829634574`, completed `SUCCESS` with every required step green.
+
+```text
+VERIFIED_PHASE3_HEAD      35df7cab41c85cf9f0c9e6f6b7d20c0a57b18d15
+ECR031_CI_RUN             33165443131
+ECR031_CI_JOB             98829634574
+ECR031_CI_RESULT          SUCCESS
+T021-T023                 strict enrollment/issuer/assertion surfaces + ECR-031 assertion digest
+T024-T030                 explicit deterministic validation context + verified trust snapshot + Ed25519 issuance/validation + replay/delegation/identity-only context
+T031                      invalid wire/stateful issuance/trust-snapshot corpus
+T032                      1,000 identical validation iterations produce identical canonical context bytes/digest
+T033                      authority and free-form PrincipalId derivation architecture guards
+T034                      exact-head Phase 3 gate complete
+```
+
+Stateful issuance/validation lifecycle tests remain crate-internal where crate-private verified snapshot/session factories are required. This is intentional: integration tests do not gain a public test-support backdoor capable of fabricating trusted identity state.
+
+The successful gate covered locked workspace build, rustfmt, strict Clippy, workspace tests, ECR-001/ECR-002 regressions, explicit ECR-031 phase targets, rustdoc, offline replay, core/run/identity boundaries, and dependency/toolchain evidence. Phase 3 adds identity/trust evidence only; it does not add authorization, capability, declassification, approval, browser/model/network/provider/protocol/process behavior, or native-backend verification claims.
+
+## Phase 4 execution frontier
+
+Semantic Phase 4 T035–T042 is eligible only after the record-only Phase 3 ledger-convergence head itself passes permanent ECR-031 CI. Once that exact closure head is green, re-read the live Phase 4 requirements/contracts/data model and implement T035 first. The authenticated-envelope dependency in T041 must be reconciled with the ordered Phase 5 envelope implementation before any store behavior is claimed complete; no task-order bypass is permitted.
+"""
+          if status.count(old_phase3) != 1:
+              raise SystemExit("Expected stale Phase 3 frontier exactly once")
+          status = status.replace(old_phase3, new_phase3, 1)
+          status_path.write_text(status)
+
+          execution_path = Path("EXECUTION.md")
+          execution = execution_path.read_text()
+          old_execution = """Current phase: Phase 1 closure convergence — T001–T010 complete; Phase 2 blocked on final exact-head gate
+Phase 1 verified head: 0289596bb7cdbb81d5f03c445fd324e985294143
+Phase 1 ECR-031 CI: 33161529028 / job 98816955646 — SUCCESS
+Phase 1 Cargo.lock SHA-256: 5bd1b14d1643ff59492bafb7c6195b270cfc1424832788ad8078e62f22d907bc
+Current task frontier: final record-only Phase 1 convergence CI, then T011
+"""
+          new_execution = """Current phase: Phase 3 closure convergence — T021–T034 semantically complete; Phase 4 blocked on the final record-only exact-head gate
+Phase 1 verified head: 0289596bb7cdbb81d5f03c445fd324e985294143
+Phase 1 ECR-031 CI: 33161529028 / job 98816955646 — SUCCESS
+Phase 1 Cargo.lock SHA-256: 5bd1b14d1643ff59492bafb7c6195b270cfc1424832788ad8078e62f22d907bc
+Phase 2 verified head: 4ddb6da267ebc90647e27fde382385a9d2529452
+Phase 2 ECR-031 CI: 33163366128 / job 98822931741 — SUCCESS
+Phase 3 verified semantic head: 35df7cab41c85cf9f0c9e6f6b7d20c0a57b18d15
+Phase 3 ECR-031 CI: 33165443131 / job 98829634574 — SUCCESS
+Current task frontier: exact-head CI on the record-only Phase 3 closure ledger, then T035
+"""
+          if execution.count(old_execution) != 1:
+              raise SystemExit("Expected stale EXECUTION current-phase block exactly once")
+          execution = execution.replace(old_execution, new_execution, 1)
+          execution_path.write_text(execution)
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add specs/031-identity-trust-root/tasks.md specs/031-identity-trust-root/STATUS.md EXECUTION.md
+          git rm .github/workflows/ecr-031-phase3-close.yml
+          git diff --cached --check
+          git diff --cached --quiet && { echo "No closure changes staged" >&2; exit 1; } || true
+          git commit -m "docs(identity): close Phase 3 ledger"
+          git push origin HEAD:031-identity-trust-root
