@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-phase6:
-    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): rerun phase6 materializer') }}"
+    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): repair phase6 clippy') }}"
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -32,6 +32,16 @@ jobs:
         run: |
           set -euo pipefail
           python3 .github/ecr-002-phase6-materialize.py
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('crates/ecra-run/tests/crash_recovery.rs')
+          text = path.read_text()
+          old = 'assert_eq!(recovery.unreceipted_attempts(), [attempt.clone()]);'
+          new = 'assert_eq!(recovery.unreceipted_attempts(), std::slice::from_ref(&attempt));'
+          if text.count(old) != 1:
+              raise SystemExit(f'crash recovery clippy patch count={text.count(old)}')
+          path.write_text(text.replace(old, new, 1))
+          PY
           cargo fmt --all
       - name: Verify Phase 6 focused gate
         shell: bash
