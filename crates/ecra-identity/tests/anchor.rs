@@ -100,10 +100,12 @@ fn protected_anchor_rejects_unknown_fields_versions_purposes_algorithms_and_sign
 
 #[test]
 fn protected_anchor_payload_digest_is_strict_lowercase_sha256() {
-    assert!(ProtectedAnchorPayloadDigest::parse_str(
-        "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-    )
-    .is_ok());
+    assert!(
+        ProtectedAnchorPayloadDigest::parse_str(
+            "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        )
+        .is_ok()
+    );
     for invalid in [
         "sha256:ABCDEF6789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         "sha512:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
