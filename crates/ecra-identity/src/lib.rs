@@ -59,8 +59,7 @@ use ecra_core::SchemaVersion;
 
 pub use algorithm::{AeadAlgorithm, SignatureAlgorithm};
 pub use anchor::{
-    PROTECTED_ANCHOR_DOMAIN, canonical_protected_anchor_input,
-    protected_anchor_input_digest_bytes,
+    PROTECTED_ANCHOR_DOMAIN, canonical_protected_anchor_input, protected_anchor_input_digest_bytes,
 };
 pub use assertion::{
     IDENTITY_ASSERTION_DIGEST_DOMAIN, IDENTITY_ASSERTION_SIGNING_DOMAIN, MAX_ASSERTION_ATTRIBUTES,

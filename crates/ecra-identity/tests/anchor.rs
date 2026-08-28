@@ -18,14 +18,11 @@ struct AnchorPayload<'a> {
 fn payload() -> AnchorPayload<'static> {
     AnchorPayload {
         version: SchemaVersion::new(1, 0),
-        trust_root_id: TrustRootId::parse_str(
-            "00000000-0000-0000-0000-000000000002",
-        )
-        .expect("trust root"),
+        trust_root_id: TrustRootId::parse_str("00000000-0000-0000-0000-000000000002")
+            .expect("trust root"),
         key_id: KeyId::parse_str("00000000-0000-0000-0000-000000000021").expect("key"),
         purpose: "run_ledger_head",
-        payload_digest:
-            "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        payload_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000",
         algorithm: SignatureAlgorithm::Ed25519,
     }
 }

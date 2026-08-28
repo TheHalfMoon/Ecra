@@ -36,11 +36,7 @@ struct CountFixture {
 }
 
 fn parse_primitive(input: &[u8]) -> Result<PrimitiveFixture, IdentityError> {
-    validate_json_limits(
-        input,
-        MAX_IDENTITY_ASSERTION_WIRE_BYTES,
-        MAX_JSON_DEPTH,
-    )?;
+    validate_json_limits(input, MAX_IDENTITY_ASSERTION_WIRE_BYTES, MAX_JSON_DEPTH)?;
     let value: PrimitiveFixture = serde_json::from_slice(input).map_err(|_| {
         IdentityError::new(
             IdentityErrorCategory::InvalidInput,
@@ -134,11 +130,19 @@ fn valid_primitive_fixture_round_trips_closed_values() {
 fn invalid_primitive_fixtures_fail_closed() {
     for fixture in [
         include_bytes!("../../../contracts/ecra-identity-v1/invalid/unknown-field.json").as_slice(),
-        include_bytes!("../../../contracts/ecra-identity-v1/invalid/duplicate-field.json").as_slice(),
+        include_bytes!("../../../contracts/ecra-identity-v1/invalid/duplicate-field.json")
+            .as_slice(),
         include_bytes!("../../../contracts/ecra-identity-v1/invalid/nil-id.json").as_slice(),
-        include_bytes!("../../../contracts/ecra-identity-v1/invalid/unsupported-signature-algorithm.json").as_slice(),
-        include_bytes!("../../../contracts/ecra-identity-v1/invalid/unsupported-aead-algorithm.json").as_slice(),
-        include_bytes!("../../../contracts/ecra-identity-v1/invalid/unsupported-version.json").as_slice(),
+        include_bytes!(
+            "../../../contracts/ecra-identity-v1/invalid/unsupported-signature-algorithm.json"
+        )
+        .as_slice(),
+        include_bytes!(
+            "../../../contracts/ecra-identity-v1/invalid/unsupported-aead-algorithm.json"
+        )
+        .as_slice(),
+        include_bytes!("../../../contracts/ecra-identity-v1/invalid/unsupported-version.json")
+            .as_slice(),
     ] {
         assert!(parse_primitive(fixture).is_err());
     }
@@ -146,7 +150,8 @@ fn invalid_primitive_fixtures_fail_closed() {
 
 #[test]
 fn gross_wire_depth_and_count_limits_precede_semantic_parsing() {
-    let depth_fixture = include_bytes!("../../../contracts/ecra-identity-v1/invalid/depth-breach.json");
+    let depth_fixture =
+        include_bytes!("../../../contracts/ecra-identity-v1/invalid/depth-breach.json");
     let depth_error = validate_json_limits(
         depth_fixture,
         MAX_IDENTITY_ASSERTION_WIRE_BYTES,

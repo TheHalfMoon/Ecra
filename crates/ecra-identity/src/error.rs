@@ -171,7 +171,11 @@ impl IdentityError {
 
 impl fmt::Display for IdentityError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "identity error [{}/{}]", self.category, self.code)?;
+        write!(
+            formatter,
+            "identity error [{}/{}]",
+            self.category, self.code
+        )?;
         if let Some(context) = self.safe_context {
             write!(formatter, " ({context})")?;
         }

@@ -12,14 +12,10 @@ struct AssertionPayload {
 fn payload() -> AssertionPayload {
     AssertionPayload {
         version: SchemaVersion::new(1, 0),
-        assertion_id: IdentityAssertionId::parse_str(
-            "00000000-0000-0000-0000-000000000001",
-        )
-        .expect("assertion id"),
-        subject_principal_id: PrincipalId::parse_str(
-            "00000000-0000-0000-0000-000000000004",
-        )
-        .expect("principal id"),
+        assertion_id: IdentityAssertionId::parse_str("00000000-0000-0000-0000-000000000001")
+            .expect("assertion id"),
+        subject_principal_id: PrincipalId::parse_str("00000000-0000-0000-0000-000000000004")
+            .expect("principal id"),
     }
 }
 
@@ -45,7 +41,6 @@ fn assertion_payload_and_digest_match_fixed_goldens() {
     let digest = identity_assertion_digest_bytes(&payload).expect("assertion digest");
     assert_eq!(
         hex(&digest),
-        include_str!("../../../contracts/ecra-identity-v1/expected/assertion-digest.sha256")
-            .trim()
+        include_str!("../../../contracts/ecra-identity-v1/expected/assertion-digest.sha256").trim()
     );
 }

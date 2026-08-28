@@ -25,8 +25,8 @@ macro_rules! define_identity_id {
             }
 
             pub fn parse_str(value: &str) -> Result<Self, IdentityError> {
-                let parsed = Uuid::parse_str(value)
-                    .map_err(|_| IdentityError::invalid_identifier($kind))?;
+                let parsed =
+                    Uuid::parse_str(value).map_err(|_| IdentityError::invalid_identifier($kind))?;
                 if parsed.is_nil() || value != parsed.hyphenated().to_string() {
                     return Err(IdentityError::invalid_identifier($kind));
                 }
