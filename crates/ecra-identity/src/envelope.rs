@@ -1,7 +1,9 @@
 use std::fmt;
 
 use ecra_core::{InformationClass, SchemaVersion, to_jcs_vec};
+use hkdf::Hkdf;
 use serde::{Deserialize, Deserializer, Serialize, de};
+use sha2::{Digest, Sha256};
 use zeroize::Zeroizing;
 
 use crate::{
@@ -13,7 +15,11 @@ use crate::{
 pub const MAX_PROTECTED_ENVELOPE_WIRE_BYTES: usize = 8 * 1024 * 1024;
 pub const PROTECTED_ENVELOPE_NONCE_BYTES: usize = 12;
 pub const PROTECTED_ENVELOPE_TAG_BYTES: usize = 16;
+pub const PROTECTED_ENVELOPE_KEY_BYTES: usize = 32;
 pub const PROTECTED_ENVELOPE_AAD_DOMAIN: &[u8] = b"ecra.protected-envelope-aad.v1\n";
+pub const PROTECTED_ENVELOPE_HKDF_SALT_DOMAIN: &[u8] =
+    b"ecra.protected-envelope-hkdf-salt.v1\n";
+pub const PROTECTED_ENVELOPE_KEY_DOMAIN: &[u8] = b"ecra.protected-envelope-key.v1\n";
 
 /// Owned sensitive bytes with bounded in-process exposure semantics.
 ///
@@ -49,6 +55,21 @@ impl fmt::Debug for SensitiveBytes {
 impl fmt::Display for SensitiveBytes {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("[REDACTED]")
+    }
+}
+
+pub(crate) struct DerivedEnvelopeKey(Zeroizing<[u8; PROTECTED_ENVELOPE_KEY_BYTES]>);
+
+impl DerivedEnvelopeKey {
+    #[must_use]
+    pub(crate) fn as_bytes(&self) -> &[u8; PROTECTED_ENVELOPE_KEY_BYTES] {
+        &self.0
+    }
+}
+
+impl fmt::Debug for DerivedEnvelopeKey {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("DerivedEnvelopeKey([REDACTED])")
     }
 }
 
@@ -147,6 +168,73 @@ impl<'de> Deserialize<'de> for EnvelopeKeyRef {
         let wire = EnvelopeKeyRefWire::deserialize(deserializer)?;
         Self::new(wire.trust_root_id, wire.key_id, wire.generation).map_err(de::Error::custom)
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
+enum EnvelopeObjectDomain {
+    #[serde(rename = "protected_envelope")]
+    ProtectedEnvelope,
+}
+
+#[derive(Serialize)]
+struct DerivedEnvelopeKeyInfo {
+    purpose: ProtectedPurpose,
+    object_domain: EnvelopeObjectDomain,
+    algorithm: AeadAlgorithm,
+}
+
+pub(crate) fn derive_envelope_key(
+    master_secret: &SensitiveBytes,
+    key_ref: EnvelopeKeyRef,
+    purpose: ProtectedPurpose,
+    algorithm: AeadAlgorithm,
+) -> Result<DerivedEnvelopeKey, IdentityError> {
+    let salt = envelope_hkdf_salt(key_ref);
+    let info = envelope_hkdf_info(purpose, algorithm)?;
+    let hkdf = Hkdf::<Sha256>::new(Some(&salt), master_secret.0.as_slice());
+    let mut output = [0_u8; PROTECTED_ENVELOPE_KEY_BYTES];
+    hkdf.expand(&info, &mut output).map_err(|_| {
+        IdentityError::new(
+            IdentityErrorCategory::ProtectedStorage,
+            IdentityErrorCode::BackendInvariantViolation,
+            Some("protected_envelope_hkdf_expand"),
+        )
+    })?;
+    Ok(DerivedEnvelopeKey(Zeroizing::new(output)))
+}
+
+fn envelope_hkdf_salt(key_ref: EnvelopeKeyRef) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+    hasher.update(PROTECTED_ENVELOPE_HKDF_SALT_DOMAIN);
+    hasher.update(key_ref.trust_root_id().as_uuid().as_bytes());
+    hasher.update(key_ref.key_id().as_uuid().as_bytes());
+    hasher.update(key_ref.generation().to_be_bytes());
+    let digest = hasher.finalize();
+    let mut salt = [0_u8; 32];
+    salt.copy_from_slice(&digest);
+    salt
+}
+
+fn envelope_hkdf_info(
+    purpose: ProtectedPurpose,
+    algorithm: AeadAlgorithm,
+) -> Result<Vec<u8>, IdentityError> {
+    let context = DerivedEnvelopeKeyInfo {
+        purpose,
+        object_domain: EnvelopeObjectDomain::ProtectedEnvelope,
+        algorithm,
+    };
+    let canonical = to_jcs_vec(&context).map_err(|_| {
+        IdentityError::new(
+            IdentityErrorCategory::InvalidInput,
+            IdentityErrorCode::CanonicalizationFailed,
+            Some("protected_envelope_hkdf_info"),
+        )
+    })?;
+    let mut info = Vec::with_capacity(PROTECTED_ENVELOPE_KEY_DOMAIN.len() + canonical.len());
+    info.extend_from_slice(PROTECTED_ENVELOPE_KEY_DOMAIN);
+    info.extend_from_slice(&canonical);
+    Ok(info)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -394,4 +482,88 @@ fn base64url_decode(input: &str, context: &'static str) -> Result<Vec<u8>, Ident
         return Err(protected_envelope_error(context));
     }
     Ok(output)
+}
+
+#[cfg(test)]
+mod kdf_tests {
+    use super::{
+        AeadAlgorithm, EnvelopeKeyRef, PROTECTED_ENVELOPE_HKDF_SALT_DOMAIN,
+        PROTECTED_ENVELOPE_KEY_DOMAIN, ProtectedPurpose, SensitiveBytes, derive_envelope_key,
+        envelope_hkdf_info, envelope_hkdf_salt,
+    };
+    use crate::{KeyId, TrustRootId};
+    use sha2::{Digest, Sha256};
+
+    fn key_ref(generation: u64) -> EnvelopeKeyRef {
+        EnvelopeKeyRef::new(
+            TrustRootId::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
+            KeyId::parse_str("00000000-0000-0000-0000-000000000011").unwrap(),
+            generation,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn hkdf_info_matches_frozen_domain_and_jcs_context() {
+        let info = envelope_hkdf_info(
+            ProtectedPurpose::IdentityState,
+            AeadAlgorithm::ChaCha20Poly1305Rfc8439,
+        )
+        .unwrap();
+        let mut expected = PROTECTED_ENVELOPE_KEY_DOMAIN.to_vec();
+        expected.extend_from_slice(
+            br#"{"algorithm":"chacha20_poly1305_rfc8439","object_domain":"protected_envelope","purpose":"identity_state"}"#,
+        );
+        assert_eq!(info, expected);
+    }
+
+    #[test]
+    fn hkdf_salt_uses_fixed_id_bytes_and_big_endian_generation() {
+        let reference = key_ref(1);
+        let mut hasher = Sha256::new();
+        hasher.update(PROTECTED_ENVELOPE_HKDF_SALT_DOMAIN);
+        hasher.update(reference.trust_root_id().as_uuid().as_bytes());
+        hasher.update(reference.key_id().as_uuid().as_bytes());
+        hasher.update(1_u64.to_be_bytes());
+        let expected: [u8; 32] = hasher.finalize().into();
+        assert_eq!(envelope_hkdf_salt(reference), expected);
+    }
+
+    #[test]
+    fn derived_key_is_deterministic_redacted_and_context_separated() {
+        let master = SensitiveBytes::new(vec![0x42; 32]);
+        let first = derive_envelope_key(
+            &master,
+            key_ref(1),
+            ProtectedPurpose::IdentityState,
+            AeadAlgorithm::ChaCha20Poly1305Rfc8439,
+        )
+        .unwrap();
+        let same = derive_envelope_key(
+            &master,
+            key_ref(1),
+            ProtectedPurpose::IdentityState,
+            AeadAlgorithm::ChaCha20Poly1305Rfc8439,
+        )
+        .unwrap();
+        let other_generation = derive_envelope_key(
+            &master,
+            key_ref(2),
+            ProtectedPurpose::IdentityState,
+            AeadAlgorithm::ChaCha20Poly1305Rfc8439,
+        )
+        .unwrap();
+        let other_purpose = derive_envelope_key(
+            &master,
+            key_ref(1),
+            ProtectedPurpose::TrustState,
+            AeadAlgorithm::ChaCha20Poly1305Rfc8439,
+        )
+        .unwrap();
+
+        assert_eq!(first.as_bytes(), same.as_bytes());
+        assert_ne!(first.as_bytes(), other_generation.as_bytes());
+        assert_ne!(first.as_bytes(), other_purpose.as_bytes());
+        assert_eq!(format!("{first:?}"), "DerivedEnvelopeKey([REDACTED])");
+    }
 }
