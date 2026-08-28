@@ -23,7 +23,7 @@ ECR-001 closure-ledger head: 85e4bf657b6c33e3f88d83e92e7a35279d177349
 ECR-001 closure-ledger CI: 33099434232 — SUCCESS
 
 Active slice: ECR-002 — Durable Run, Ledger & Budgets
-Lifecycle: IMPLEMENTING / PHASE_9_PRE_MERGE_CONVERGENCE
+Lifecycle: IMPLEMENTING / PHASE_9_FINAL_READINESS
 Branch: 002-durable-run-ledger
 Canonical planning base: 5caf5dc4e7f26d07fabac3333713a44f0af22ea1
 PR: #2 OPEN / DRAFT
@@ -36,18 +36,21 @@ Phase 5 T035–T044: VERIFIED_ON_BRANCH
 Phase 6 T045–T051: VERIFIED_ON_BRANCH
 Phase 7 T052–T059: VERIFIED_ON_BRANCH
 Phase 8 T060–T066: VERIFIED_ON_BRANCH
-Phase 9 T067–T073: ACTIVE
+Phase 9 T067–T070: COMPLETE_ON_BRANCH
+Phase 9 T071: ACTIVE
+Phase 9 T072–T073: BLOCKED_BY_DEPENDENCY_ORDER
 
 Phase 8 ledger head: e86e1822e621c0563f2764fe784902e3204b0085
 Phase 8 CI: 33152251783 — SUCCESS
-Convergence baseline head: 0dd8ef6efc8a61197d6520c94a54f661b07961a4
-Convergence baseline CI: 33152748423 — SUCCESS
+Convergence verified head: 84d8cb5a8c0a28ab7adba42d2cd049e014c8f368
+Convergence CI: 33153174953 — SUCCESS
+Convergence job: 98789740534 — SUCCESS
 
 T067 traceability mapping: COMPLETE_ON_BRANCH
 T068 constitution/risk re-check: COMPLETE_ON_BRANCH
 T069 post-implementation analyze: COMPLETE_ON_BRANCH
-T070 convergence: ACTIVE
-T071 final exact-head readiness: BLOCKED_BY_T070
+T070 convergence: COMPLETE_ON_BRANCH
+T071 final exact-head readiness: ACTIVE
 T072 merge/post-merge main gate: BLOCKED_BY_T071
 T073 canonical closure: BLOCKED_BY_T072
 ```
@@ -81,7 +84,7 @@ Current post-implementation result:
 FR-001–FR-057 PASS
 SC-001–SC-014 PASS
 SC-015 PASS_BASELINE / FINAL_FEATURE_AND_POST_MERGE_MAIN_REQUIRED
-SC-016 PASS_TRACEABILITY / CONVERGENCE_ACTIVE
+SC-016 PASS_TRACEABILITY_AND_CONVERGENCE
 G1–G15 PASS / explicit PASS-N/A
 UNOWNED_FR=0
 UNOWNED_SC=0
@@ -114,20 +117,14 @@ Cargo.lock SHA-256      b720472bf40a554ab61afb74eae95dd625bc6b2604e47a632991faea
 ## Active task order
 
 ```text
-T070 finish convergence:
-  - keep C1 folded into data-model.md and contracts/run-ledger-v1.md
-  - keep implementation-clarifications.md historical/non-normative
-  - keep plan/research/quickstart at exact implementation truth
-  - converge EXECUTION.md, STATUS.md, tasks.md and post-implementation analyze state
-  - re-check spec.md and threat-model.md for semantic/security drift
-  - run complete exact-head CI on the final convergence head
-
-T071 after T070:
-  - require final feature-head full CI SUCCESS
-  - require PR head equals verified head
-  - require clean review comments/threads/checks
-  - require no actionable blocker
-  - only then move PR out of Draft if repository policy requires it
+T071 final feature-head readiness:
+  - require full ECR-002 CI SUCCESS on the exact ledger head that records T070 complete
+  - require PR head equals the verified head
+  - require mergeable state
+  - require no unresolved reviews or inline review threads
+  - classify conversation comments and require no actionable blocker
+  - move PR out of Draft only after the exact-head gate is green
+  - re-check reviews/comments/checks after Ready-for-review transition
 
 T072 after T071:
   - merge exact expected head using a non-rebase method
