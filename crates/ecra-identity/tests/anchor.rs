@@ -1,8 +1,9 @@
 use std::any::TypeId;
 
 use ecra_core::{ContentDigest, EpochMillis, SchemaVersion, VerificationReceipt};
+use ecra_identity::key::KeyRecord;
 use ecra_identity::{
-    KeyId, KeyPurpose, KeyRecord, KeyStatus, ProtectedAnchorPayloadDigest, ProtectedAnchorPurpose,
+    KeyId, KeyPurpose, KeyStatus, ProtectedAnchorPayloadDigest, ProtectedAnchorPurpose,
     ProtectedAnchorV1, SignatureAlgorithm, TrustRootId, canonical_protected_anchor_input,
     protected_anchor_input_digest_bytes,
 };
