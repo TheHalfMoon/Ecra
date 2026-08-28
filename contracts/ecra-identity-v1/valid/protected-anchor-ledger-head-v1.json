@@ -1,0 +1,10 @@
+{
+  "version":{"major":1,"minor":0},
+  "anchor_id":"00000000-0000-0000-0000-000000000020",
+  "trust_root_id":"00000000-0000-0000-0000-000000000002",
+  "key_id":"00000000-0000-0000-0000-000000000021",
+  "purpose":"run_ledger_head",
+  "payload_digest":"sha256:6fa5235b4056ac201824cc878b4ee90aa3310fe125ea02fce6fa8d76cd64516b",
+  "algorithm":"ed25519",
+  "signature_or_mac_b64url":"HyoR4gOi3bpHKr__cB-VbcA6rcETm4KSsghgfPkKLTsx1JmlLdLx1Patlpe6iRMhQZyrQNrx5bA7hzsAcfZUDA"
+}
