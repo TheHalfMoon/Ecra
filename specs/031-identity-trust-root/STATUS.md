@@ -134,10 +134,31 @@ The temporary helper workflow is not part of the permanent trust surface.
 
 ## Current execution frontier
 
-1. Phase 3 closure head `7eaede3f9f10461c307c8900c021273a4dbffa03` passed permanent ECR-031 CI run `33165941748`, job `98831297208`, result `SUCCESS`; Phase 3 is verified on-branch and the next implementation wave is eligible.
-2. Implementation review discovered MUST-level dependency-order defect IC-001: original T035–T042 cannot be completed honestly before T043–T050 and T059–T060 foundations.
-3. This convergence head synchronizes `implementation-clarifications.md`, `tasks.md`, `plan.md`, `analyze.md`, `STATUS.md`, and `EXECUTION.md` without weakening requirements.
-4. Require permanent ECR-031 CI `completed/success` on the exact IC-001 convergence head; then begin corrected prerequisite task T043, followed by the dependency graph in `tasks.md`.
+1. IC-001 dependency convergence is exact-head verified on `21bce89f2e77bc2a54e74c37d349e9b53aa7631b` by permanent ECR-031 CI run `33168062289`, job `98838136692`, result `SUCCESS`.
+2. T043 `SensitiveBytes` is exact-head verified on `62048d9061dc1b74a9b5e0fed7376fe0ae08f2c3` by permanent ECR-031 CI run `33168253618`, job `98838768800`, result `SUCCESS`; formatting is redacted and owned bytes are zeroized on drop without process/OS-wide memory-secrecy claims.
+3. T044 `SecureRandom` is exact-head verified on `0f84b2215529442cf7efbd1d3fa2892f224e6e6e` by permanent ECR-031 CI run `33168674153`, job `98840158147`, result `SUCCESS`; production uses the locked system CSPRNG boundary and deterministic randomness remains `cfg(test)` only.
+4. This record-only convergence marks T043–T044 complete. Require permanent ECR-031 CI `completed/success` on the exact ledger-convergence head; then begin T045 strict `ProtectedEnvelopeV1`/AAD work and continue the corrected dependency graph.
+
+## Corrected prerequisite wave evidence
+
+```text
+IC001_VERIFIED_HEAD       21bce89f2e77bc2a54e74c37d349e9b53aa7631b
+IC001_ECR031_CI_RUN       33168062289
+IC001_ECR031_CI_JOB       98838136692
+IC001_ECR031_CI_RESULT    SUCCESS
+T043_VERIFIED_HEAD        62048d9061dc1b74a9b5e0fed7376fe0ae08f2c3
+T043_ECR031_CI_RUN        33168253618
+T043_ECR031_CI_JOB        98838768800
+T043_ECR031_CI_RESULT     SUCCESS
+T044_VERIFIED_HEAD        0f84b2215529442cf7efbd1d3fa2892f224e6e6e
+T044_ECR031_CI_RUN        33168674153
+T044_ECR031_CI_JOB        98840158147
+T044_ECR031_CI_RESULT     SUCCESS
+NEXT                      T045
+```
+
+The initial T044 semantic head `522ea0f824dca4f60582f0d365c0a9a0919484f9` failed workspace tests only because its source-architecture assertion matched the assertion's own string literal. The production `SystemSecureRandom` implementation, build, format and strict Clippy were already green. Commit `0f84b2215529442cf7efbd1d3fa2892f224e6e6e` fixed the test forward-only by inspecting only the production source prefix before `#[cfg(test)]`; the complete permanent gate then passed.
+
 
 ## Phase 1 verified closure evidence
 
@@ -182,7 +203,7 @@ Phase 3 T021–T034 is verified on exact semantic head `35df7cab41c85cf9f0c9e6f6
 VERIFIED_PHASE3_HEAD      35df7cab41c85cf9f0c9e6f6b7d20c0a57b18d15
 ECR031_CI_RUN             33165443131
 ECR031_CI_JOB             98829634574
-ECR031_CI_RESULT          SUCCESST021-T023                 strict enrollment/issuer/assertion surfaces + ECR-031 assertion digest
+ECR031_CI_RESULT          SUCCESST021-T023                 strict enrollment/issuer/assertion surfaces + ECR-031 assertion digest
 T024-T030                explicit deterministic validation context + verified trust snapshot + Ed25519 issuance/validation + replay/delegation/identity-only context
 T031                      invalid wire/stateful issuance/trust-snapshot corpus
 T032                      1,000 identical validation iterations produce identical canonical context bytes/digest
@@ -192,7 +213,7 @@ T034                      exact-head Phase 3 gate complete
 
 Stateful issuance/validation lifecycle tests remain crate-internal where crate-private verified snapshot/session factories are required. This is intentional: integration tests do not gain a public test-support backdoor capable of fabricating trusted identity state.
 
-The successful gate covered locked workspace build, rustfmt, strict Clippy, workspace tests, ECS-001/ECR-002 regressions, explicit ECR-031 phase targets, rustdoc, offline replay, core/run/identity boundaries, and dependency/toolchain evidence. Phase 3 adds identity/trust evidence only; it does not add authorization, capability, declassification, approval, browser/model/network/provider/protocol/process behavior, or native-backend verification claims.
+The successful gate covered locked workspace build, rustfmt, strict Clippy, workspace tests, ECR-001/ECR-002 regressions, explicit ECR-031 phase targets, rustdoc, offline replay, core/run/identity boundaries, and dependency/toolchain evidence. Phase 3 adds identity/trust evidence only; it does not add authorization, capability, declassification, approval, browser/model/network/provider/protocol/process behavior, or native-backend verification claims.
 
 ## Phase 4 dependency convergence
 

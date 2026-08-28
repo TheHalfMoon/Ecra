@@ -65,8 +65,8 @@
 
 ## Phase 5 — Sensitive byte handling and protected envelopes
 
-- [ ] **T043** Implement redacted/zeroizing `SensitiveBytes` wrapper for backend-protected software signing/master secrets without claiming process/OS-wide memory secrecy. **Paths:** `crates/ecra-identity/src/envelope.rs`, `crates/ecra-identity/tests/redaction.rs`. **FR-032, SC-009**
-- [ ] **T044** Implement production `SecureRandom` boundary using accepted system CSPRNG dependency; deterministic provider remains test-only and supplies bootstrap IDs, signing seeds and nonces. **Paths:** `crates/ecra-identity/src/backend.rs`, tests. **FR-025, FR-029**
+- [x] **T043** Implement redacted/zeroizing `SensitiveBytes` wrapper for backend-protected software signing/master secrets without claiming process/OS-wide memory secrecy. **Paths:** `crates/ecra-identity/src/envelope.rs`, `crates/ecra-identity/tests/redaction.rs`. **FR-032, SC-009**
+- [x] **T044** Implement production `SecureRandom` boundary using accepted system CSPRNG dependency; deterministic provider remains test-only and supplies bootstrap IDs, signing seeds and nonces. **Paths:** `crates/ecra-identity/src/backend.rs`, tests. **FR-025, FR-029**
 - [ ] **T045** Implement strict `ProtectedEnvelopeV1`, `EnvelopeKeyRef`, purpose/classification and exact AAD generation. **Path:** `crates/ecra-identity/src/envelope.rs`. **FR-026–FR-028, FR-031**
 - [ ] **T046** Implement HKDF-SHA-256 domain-separated derivation over the native-backend-protected v1 master secret materialized only for bounded crypto use; no hardware-non-exportability claim. **Path:** `crates/ecra-identity/src/envelope.rs`. **FR-027–FR-029**
 - [ ] **T047** Implement ChaCha20-Poly1305 RFC 8439 protection with 96-bit unique nonce ownership and full tag. **Path:** `crates/ecra-identity/src/envelope.rs`. **FR-029**

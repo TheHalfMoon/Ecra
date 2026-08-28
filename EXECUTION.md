@@ -36,7 +36,7 @@ Planning-head ECR-001 CI: 33158268342 — SUCCESS
 Planning-head ECR-002 CI: 33158268371 — SUCCESS
 Implementation branch: 031-identity-trust-root
 Implementation PR: #4 — DRAFT
-Current phase: Phase 4 dependency convergence — Phase 3 exact closure is green; IC-001 corrects an implementation-blocking task dependency cycle before new semantic code
+Current phase: Corrected prerequisite wave — IC-001, T043 and T044 exact-head verified; record-only ledger convergence gates T045
 Phase 1 verified head: 0289596bb7cdbb81d5f03c445fd324e985294143
 Phase 1 ECR-031 CI: 33161529028 / job 98816955646 — SUCCESS
 Phase 1 Cargo.lock SHA-256: 5bd1b14d1643ff59492bafb7c6195b270cfc1424832788ad8078e62f22d907bc
@@ -47,7 +47,13 @@ Phase 3 semantic ECR-031 CI: 33165443131 / job 98829634574 — SUCCESS
 Phase 3 verified closure head: 7eaede3f9f10461c307c8900c021273a4dbffa03
 Phase 3 closure ECR-031 CI: 33165941748 / job 98831297208 — SUCCESS
 Implementation clarification: IC-001 — Phase 4 dependency-order correction
-Current task frontier: exact-head CI on IC-001 convergence, then T043
+IC-001 verified convergence head: 21bce89f2e77bc2a54e74c37d349e9b53aa7631b
+IC-001 ECR-031 CI: 33168062289 / job 98838136692 — SUCCESS
+T043 verified head: 62048d9061dc1b74a9b5e0fed7376fe0ae08f2c3
+T043 ECR-031 CI: 33168253618 / job 98838768800 — SUCCESS
+T044 verified head: 0f84b2215529442cf7efbd1d3fa2892f224e6e6e
+T044 ECR-031 CI: 33168674153 / job 98840158147 — SUCCESS
+Current task frontier: exact-head CI on the T043–T044 ledger convergence, then T045
 Analyze Pass 1: 44e85aa9ccd28e185a5761889aa12b50459f286e — PLANNING_REWORK_REQUIRED
 Analyze Pass 2: a3c7d563c139c65886f169f9181c07a997038f1f — ZERO_BLOCKING_PLANNING_DRIFT_FOUND
 Requirements checklist: PASS_FOR_ANALYZE_PASS_2
