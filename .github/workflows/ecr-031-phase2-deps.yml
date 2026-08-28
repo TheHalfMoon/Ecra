@@ -1,0 +1,133 @@
+name: ECR-031 Phase 2 Dependency Delta
+
+on:
+  push:
+    branches:
+      - 031-identity-trust-root
+
+permissions:
+  contents: write
+
+jobs:
+  converge-phase2-dependencies:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact Phase 1 closure base
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='8a876077bdae296fab09087cebe55a6e14010e37'
+          git merge-base --is-ancestor "$base" HEAD
+          delta="$(git diff --name-only "$base"..HEAD)"
+          test "$delta" = '.github/workflows/ecr-031-phase2-deps.yml'
+
+      - name: Apply reviewed Phase 2 support dependency delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manifest = Path('crates/ecra-identity/Cargo.toml')
+          text = manifest.read_text()
+          needle = 'ecra-core = { path = "../ecra-core" }\n'
+          insert = (
+              'ecra-core = { path = "../ecra-core" }\n'
+              'serde = { version = "=1.0.229", default-features = false, features = ["derive", "std"] }\n'
+              'serde_json = { version = "=1.0.151", default-features = false, features = ["std"] }\n'
+              'uuid = { version = "=1.26.0", default-features = false, features = ["serde"] }\n'
+          )
+          if needle not in text or 'serde_json = { version = "=1.0.151"' in text:
+              raise SystemExit('unexpected ecra-identity manifest state')
+          manifest.write_text(text.replace(needle, insert, 1))
+
+          deps = Path('scripts/check-identity-deps.sh')
+          text = deps.read_text()
+          needle = "  printf '%s\\n' hkdf\n  printf '%s\\n' sha2\n  printf '%s\\n' zeroize\n"
+          insert = (
+              "  printf '%s\\n' hkdf\n"
+              "  printf '%s\\n' serde\n"
+              "  printf '%s\\n' serde_json\n"
+              "  printf '%s\\n' sha2\n"
+              "  printf '%s\\n' uuid\n"
+              "  printf '%s\\n' zeroize\n"
+          )
+          if needle not in text:
+              raise SystemExit('identity dependency allowlist anchor not found')
+          deps.write_text(text.replace(needle, insert, 1))
+
+          workflow = Path('.github/workflows/ecr-031.yml')
+          text = workflow.read_text()
+          needle = "          grep -F 'getrandom = { version = \"=0.4.3\", default-features = false }' crates/ecra-identity/Cargo.toml\n"
+          insert = (
+              needle
+              + "          grep -F 'serde = { version = \"=1.0.229\", default-features = false, features = [\"derive\", \"std\"] }' crates/ecra-identity/Cargo.toml\n"
+              + "          grep -F 'serde_json = { version = \"=1.0.151\", default-features = false, features = [\"std\"] }' crates/ecra-identity/Cargo.toml\n"
+              + "          grep -F 'uuid = { version = \"=1.26.0\", default-features = false, features = [\"serde\"] }' crates/ecra-identity/Cargo.toml\n"
+          )
+          if needle not in text or '=1.0.229' in text:
+              raise SystemExit('ECR-031 dependency evidence workflow anchor not found or already updated')
+          workflow.write_text(text.replace(needle, insert, 1))
+
+          research = Path('specs/031-identity-trust-root/research.md')
+          text = research.read_text().rstrip()
+          marker = '## 23. Phase 2 support dependency delta'
+          if marker in text:
+              raise SystemExit('Phase 2 dependency research already recorded')
+          text += '''\n\n## 23. Phase 2 support dependency delta\n\nT011–T019 require the repository's existing typed UUID and strict JSON/Serde conventions. Reimplementing UUID parsing or JSON semantics inside `ecra-identity` would create a competing trusted primitive, so Phase 2 directly reuses the exact versions already locked and reviewed by ECR-001: `serde 1.0.229`, `serde_json 1.0.151`, and `uuid 1.26.0`. No new third-party package version is introduced into the workspace by this delta.\n\nAccepted features are minimal for the Phase 2 contract: Serde `derive+std`, serde_json `std`, and uuid `serde`, all with default features disabled. The repository-pinned Rust 1.98.0 exceeds the previously reviewed compatibility floor for these already-locked packages. The 2026-08-28 RustSec package/advisory review found no advisory entry naming these three packages; similarly named packages such as `serde-json-wasm` are not dependencies. The full resolved `ecra-identity` graph remains subject to the permanent dependency allowlist and exact-head CI before semantic Phase 2 work is accepted.\n\nNo source is copied. The dependency APIs are used only for typed UUID representation and strict JSON/Serde wire handling. This delta does not widen native, network, browser, model, protocol, policy, process, telemetry, or platform-backend authority.\n'''
+          research.write_text(text)
+
+          ledger = Path('research/donor-license-ledger.md')
+          text = ledger.read_text().rstrip()
+          marker = '## ECR-031 Phase 2 Support Dependency Delta'
+          if marker in text:
+              raise SystemExit('Phase 2 dependency ledger already recorded')
+          text += '''\n\n## ECR-031 Phase 2 Support Dependency Delta\n\nPhase 2 adds only direct access to packages already present in the committed workspace lock graph and already reviewed for ECR-001. This avoids a second UUID/JSON implementation inside the identity trust boundary.\n\n| Package | Exact locked version | License | Phase 2 role | Feature disposition |\n|---|---:|---|---|---|\n| `serde` | 1.0.229 | MIT OR Apache-2.0 | strict typed serialization/deserialization | `default-features=false`, `derive`, `std` |\n| `serde_json` | 1.0.151 | MIT OR Apache-2.0 | strict JSON parsing for ECR-031 wire fixtures/contracts | `default-features=false`, `std` |\n| `uuid` | 1.26.0 | Apache-2.0 OR MIT | repository-aligned 128-bit typed identifiers | `default-features=false`, `serde`; no generation feature |\n\nNo package version is newly introduced to the workspace by this delta; only `ecra-identity`'s direct edge set changes. UUID randomness remains owned by the explicit `getrandom`/`SecureRandom` boundary rather than enabling uuid generation features. No donor source is copied or adapted. Any future direct dependency or feature change still requires its own reviewed delta and exact-head evidence.\n'''
+          ledger.write_text(text)
+          PY
+
+      - name: Generate and verify exact lock graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo generate-lockfile
+          cargo metadata --locked --format-version 1 >/dev/null
+          cargo check -p ecra-identity --locked
+          bash scripts/check-identity-unsafe.sh
+          bash scripts/check-identity-deps.sh >/dev/null
+          tree="$(cargo tree -p ecra-identity --edges normal --prefix none --locked)"
+          printf '%s\n' "$tree"
+          ! printf '%s\n' "$tree" | grep -Eq '^arrayref 0\.3\.10( |$)'
+
+      - name: Commit reviewed dependency delta and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/ecr-031-phase2-deps.yml
+          git add \
+            .github/workflows/ecr-031-phase2-deps.yml \
+            .github/workflows/ecr-031.yml \
+            Cargo.lock \
+            crates/ecra-identity/Cargo.toml \
+            scripts/check-identity-deps.sh \
+            specs/031-identity-trust-root/research.md \
+            research/donor-license-ledger.md
+          changed="$(git diff --cached --name-only | sort)"
+          expected="$(printf '%s\n' \
+            '.github/workflows/ecr-031-phase2-deps.yml' \
+            '.github/workflows/ecr-031.yml' \
+            'Cargo.lock' \
+            'crates/ecra-identity/Cargo.toml' \
+            'research/donor-license-ledger.md' \
+            'scripts/check-identity-deps.sh' \
+            'specs/031-identity-trust-root/research.md' | sort)"
+          test "$changed" = "$expected"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'build(identity): add Phase 2 wire dependencies'
+          git push origin HEAD:031-identity-trust-root
