@@ -17,11 +17,11 @@ ECR-002 is fully sealed as a dependency. Its v1 durability authorization remains
 
 | ID | Slice | Lifecycle | Depends on | Eligibility / intent |
 |---|---|---|---|---|
-| ECR-031 | Identity, Trust Root & Sensitive Storage | `TASKS_READY_PENDING_EXACT_GREEN_HEAD` | ECR-001, ECR-002 | Analyze Pass 2 clean; selected critical path; implementation branch waits for exact green lifecycle-convergence main head |
+| ECR-031 | Identity, Trust Root & Sensitive Storage | `IMPLEMENTING` | ECR-001, ECR-002 | exact planning head `f6d8eb6f…` passed ECR-001 run `33158268342` and ECR-002 run `33158268371`; branch `031-identity-trust-root`; Draft PR #4; Phase 1 T001–T010 active |
 | ECR-004 | Verification & Reconciliation | `PLANNED_ELIGIBLE` | ECR-001, ECR-002 | independently planning-eligible; remains separate from ECR-031 |
 | ECR-003 | Authority, Information Flow, Policy & Secrets | `PLANNED_BLOCKED` | ECR-001, ECR-002, ECR-031 | implementation remains blocked until ECR-031 is `CLOSED_CANONICAL` |
 
-ECR-031 planning evidence:
+ECR-031 authorization evidence:
 
 ```text
 Analyze Pass 1: 44e85aa9ccd28e185a5761889aa12b50459f286e — PLANNING_REWORK_REQUIRED
@@ -30,9 +30,14 @@ FR-001–FR-058: OWNED
 SC-001–SC-016: OWNED
 G1–G15: PASS / explicit PASS-N/A
 Pass-1 blockers remediated: 4/4
+Authorized implementation base: f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0
+ECR-001 planning-head CI: 33158268342 — SUCCESS
+ECR-002 planning-head CI: 33158268371 — SUCCESS
+Implementation branch: 031-identity-trust-root
+Implementation PR: #4 — DRAFT
 ```
 
-Implementation is not authorized until the final synchronized planning head passes both closed ECR-001 and ECR-002 workflows; the implementation branch must start from that exact SHA.
+The exact-head planning gate has been satisfied. ECR-031 is now implementing from that exact green base; no downstream sensitive-state authorization is implied until ECR-031 itself is implemented and the relevant ECR-003/ECR-025 ownership gates are satisfied.
 
 ## ECR-031 frozen planning boundaries
 
@@ -48,7 +53,7 @@ Implementation is not authorized until the final synchronized planning head pass
 
 | ID | Slice | Lifecycle | Depends on |
 |---|---|---|---|
-| ECR-031 | Identity, Trust Root & Sensitive Storage | `TASKS_READY_PENDING_EXACT_GREEN_HEAD` | ECR-001, ECR-002 |
+| ECR-031 | Identity, Trust Root & Sensitive Storage | `IMPLEMENTING` | ECR-001, ECR-002 |
 | ECR-004 | Verification & Reconciliation | `PLANNED_ELIGIBLE` | ECR-001, ECR-002 |
 | ECR-003 | Authority, Information Flow, Policy & Secrets | `PLANNED_BLOCKED` | ECR-001, ECR-002, ECR-031 |
 | ECR-005 | Evaluation & Threat Harness | `PLANNED` | ECR-001, ECR-002, ECR-003, ECR-004, ECR-031 |
@@ -77,7 +82,7 @@ Follow exact dependencies in `roadmap.md` for ECR-022 through ECR-030. Deferred 
 
 ```text
 A. Trusted substrate
-   ECR-001 [CLOSED] -> ECR-002 [CLOSED] -> {ECR-031 [TASKS_READY GATE], ECR-004 [ELIGIBLE]} -> ECR-003 -> ECR-005
+   ECR-001 [CLOSED] -> ECR-002 [CLOSED] -> {ECR-031 [IMPLEMENTING], ECR-004 [ELIGIBLE]} -> ECR-003 -> ECR-005
 
 B. Browser wedge
    ECR-006 -> ECR-007 -> ECR-008
@@ -94,8 +99,8 @@ E. Ecosystem/work surfaces
 
 ## Sensitive-state boundary
 
-ECR-002 proved synthetic/non-sensitive local durability. ECR-031 is now the planned protection foundation, but its planning state does not yet authorize downstream slices to persist real authenticated browser secrets, credentials, private workspace payloads or equivalent high-value state. Downstream policy/privacy ownership remains explicit in the roadmap.
+ECR-002 proved synthetic/non-sensitive local durability. ECR-031 is now implementing the protection foundation, but implementation-in-progress does not yet authorize downstream slices to persist real authenticated browser secrets, credentials, private workspace payloads or equivalent high-value state. Downstream policy/privacy ownership remains explicit in the roadmap.
 
 ## Update rule
 
-When a slice lifecycle changes, update this file, `../../EXECUTION.md`, and the status field in `roadmap.md` in the same convergence/closure work. This file never overrides dependency semantics in `roadmap.md`.
+When a slice lifecycle changes, update this file, `../../EXECUTION.md`, and the status field in `roadmap.md` in the same convergence work. This file never overrides dependency semantics in `roadmap.md`.
