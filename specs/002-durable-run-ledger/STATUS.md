@@ -1,72 +1,86 @@
 # ECR-002 Status — Durable Run, Ledger & Budgets
 
 **Slice:** ECR-002  
-**Lifecycle:** IMPLEMENTING / PHASE_9_FINAL_READINESS  
+**Lifecycle:** CLOSED_CANONICAL  
 **Dependency:** ECR-001 `CLOSED_CANONICAL`  
-**Branch:** `002-durable-run-ledger`  
-**Base main:** `5caf5dc4e7f26d07fabac3333713a44f0af22ea1`  
-**PR:** #2 — OPEN / DRAFT  
+**Branch:** `002-durable-run-ledger` — merged  
+**PR:** #2 — MERGED  
+**Final feature head:** `87fd9fc560bf5ca21a07a4d25473f305b4c05f05`  
+**Final feature-head CI:** `33153413462` / job `98790541842` — SUCCESS  
+**Merge commit:** `40efc8a64a9562f0f3eb2555b350cfa03d3e0675`  
+**Post-merge main ECR-002 CI:** `33154108410` / job `98792690359` — SUCCESS  
+**Post-merge main ECR-001 regression CI:** `33154108397` / job `98792690901` — SUCCESS  
+**Review state:** CodeRabbit SUCCESS; zero formal reviews, zero inline review comments, zero review threads; Qodo billing notice informational only  
 **Constitution:** v1.1.0
 
-This is the active ECR-002 execution ledger. Normative semantics live in `spec.md`, `data-model.md`, and `contracts/run-ledger-v1.md`. `implementation-clarifications.md` is historical only because its C1 bounds were folded into the primary normative documents during T070 convergence.
+This is the canonical ECR-002 closure ledger required by `AGENTS.md`. Normative semantics live in `spec.md`, converged `data-model.md`, `contracts/run-ledger-v1.md`, implementation truth on canonical `main`, and the evidence recorded below. `implementation-clarifications.md` is historical/non-normative because C1 was folded into the primary contract during T070.
 
-## Canonical planning gate
-
-```text
-planning package commit  c83a208ad84b2d1da892a80a6911989eaff25ade
-synchronized main head   5caf5dc4e7f26d07fabac3333713a44f0af22ea1
-main CI                   33103802150 — SUCCESS
-analyze                    ZERO_BLOCKING_PLANNING_DRIFT_FOUND
-FR-001–FR-057             OWNED
-SC-001–SC-016             OWNED
-G1–G15                    PASS / explicit N/A
-```
-
-## Verified implementation phases
+## Canonical closure
 
 ```text
-Phase 1 T001–T008
-  head 4577123486fcaf856a3640aeacb3b7dcee733cc3
-  CI   33105751992 — SUCCESS
-
-Phase 2 T009–T018
-  head 2ab8d6d80f43bf7dd07ee43659555a573c47021b
-  CI   33107289499 — SUCCESS
-  job  98640449273 — SUCCESS
-
-Phase 3 T019–T026
-  head ac45fcc835674341ae6b9ad18484e6dacda36809
-  CI   33143735332 — SUCCESS
-
-Phase 4 T027–T034
-  head 69f65ab5b07e6c8a0dbabec6681123c67ae01f5a
-  CI   33145231800 — SUCCESS
-  job  98764652133 — SUCCESS
-
-Phase 5 T035–T044
-  head 90dfb87a2b17ba749663d999c4659ad4244bd131
-  CI   33145935409 — SUCCESS
-  job  98766883647 — SUCCESS
-
-Phase 6 T045–T051
-  head 04d51e913c88e38d2730950e711ab498a3b6e296
-  CI   33146742762 — SUCCESS
-  job  98769387841 — SUCCESS
-
-Phase 7 T052–T059
-  implementation 4cf186372d27e90ad78b4e5e22c28b390e01da89
-  verified head ff4031302e30a46d3d15d2928548f7e8c19e5d9c
-  helper CI     33151102307 — SUCCESS
-  permanent CI  33151219953 — SUCCESS
-  job           98783466698 — SUCCESS
-
-Phase 8 T060–T066
-  ledger head   e86e1822e621c0563f2764fe784902e3204b0085
-  CI            33152251783 — SUCCESS
-  job           98786745867 — SUCCESS
+Phase 1  T001–T008   VERIFIED_ON_BRANCH_AND_MERGED
+Phase 2  T009–T018   VERIFIED_ON_BRANCH_AND_MERGED
+Phase 3  T019–T026   VERIFIED_ON_BRANCH_AND_MERGED
+Phase 4  T027–T034   VERIFIED_ON_BRANCH_AND_MERGED
+Phase 5  T035–T044   VERIFIED_ON_BRANCH_AND_MERGED
+Phase 6  T045–T051   VERIFIED_ON_BRANCH_AND_MERGED
+Phase 7  T052–T059   VERIFIED_ON_BRANCH_AND_MERGED
+Phase 8  T060–T066   VERIFIED_ON_BRANCH_AND_MERGED
+Phase 9  T067–T073   COMPLETE
+Lifecycle             CLOSED_CANONICAL
 ```
 
-Phase 8 final dependency/toolchain evidence:
+T071 is satisfied because the exact final feature head passed the complete ECR-002 gate, PR #2 was Ready/mergeable, CodeRabbit completed successfully, and no actionable review thread/comment remained. T072 is satisfied because PR #2 merged only the exact verified feature head using a non-rebase merge commit and canonical main passed the complete ECR-002 gate. T073 is this canonical closure convergence.
+
+## Final pre-merge evidence
+
+```text
+Head:          87fd9fc560bf5ca21a07a4d25473f305b4c05f05
+ECR-002 run:   33153413462
+Job:           98790541842
+Runner:        macbook — self-hosted macOS
+Result:        SUCCESS
+CodeRabbit:    SUCCESS — Review completed
+Review threads: 0
+```
+
+The exact final feature head passed locked build, rustfmt, strict Clippy, full workspace tests, ECR-001 regression targets, all explicit ECR-002 contract/security/migration/crash/archive/portability targets, rustdoc, offline replay, core/run unsafe and dependency boundaries, and exact dependency evidence.
+
+## Merge and post-merge evidence
+
+```text
+PR:                    #2 — MERGED
+Expected feature head:  87fd9fc560bf5ca21a07a4d25473f305b4c05f05
+Merge method:           merge commit / non-rebase
+Merge commit:           40efc8a64a9562f0f3eb2555b350cfa03d3e0675
+Merge parent 1:         5caf5dc4e7f26d07fabac3333713a44f0af22ea1
+Merge parent 2:         87fd9fc560bf5ca21a07a4d25473f305b4c05f05
+Main ECR-002 run:       33154108410
+Main ECR-002 job:       98792690359
+Main ECR-002 result:    SUCCESS
+Main ECR-001 run:       33154108397
+Main ECR-001 job:       98792690901
+Main ECR-001 result:    SUCCESS
+```
+
+Canonical `main` at the merge commit passed the complete ECR-002 verification surface after the merge, and the closed ECR-001 regression workflow also remained green.
+
+## Phase evidence index
+
+```text
+Phase 1  head 4577123486fcaf856a3640aeacb3b7dcee733cc3  CI 33105751992
+Phase 2  head 2ab8d6d80f43bf7dd07ee43659555a573c47021b  CI 33107289499  job 98640449273
+Phase 3  head ac45fcc835674341ae6b9ad18484e6dacda36809  CI 33143735332
+Phase 4  head 69f65ab5b07e6c8a0dbabec6681123c67ae01f5a  CI 33145231800  job 98764652133
+Phase 5  head 90dfb87a2b17ba749663d999c4659ad4244bd131  CI 33145935409  job 98766883647
+Phase 6  head 04d51e913c88e38d2730950e711ab498a3b6e296  CI 33146742762  job 98769387841
+Phase 7  head ff4031302e30a46d3d15d2928548f7e8c19e5d9c  CI 33151219953  job 98783466698
+Phase 8  head e86e1822e621c0563f2764fe784902e3204b0085  CI 33152251783  job 98786745867
+T070     head 84d8cb5a8c0a28ab7adba42d2cd049e014c8f368  CI 33153174953  job 98789740534
+T071     head 87fd9fc560bf5ca21a07a4d25473f305b4c05f05  CI 33153413462  job 98790541842
+```
+
+## Final dependency/toolchain evidence
 
 ```text
 Rust/Cargo           1.98.0
@@ -77,123 +91,67 @@ bundled SQLite       3.53.2
 zip                  8.6.0, default-features=false
 ```
 
-The permanent Phase 8 gate passed locked build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, all explicit ECR-002 targets including archive/boundaries/portability, rustdoc, offline replay, both core/run unsafe+dependency checks and exact dependency evidence.
-
-## Phase 9 — ACTIVE
-
-### T067 — COMPLETE_ON_BRANCH
-
-`traceability-closure.md` maps FR-001–FR-057 and SC-001–SC-016 to implementation/test/contract evidence.
-
-### T068 — COMPLETE_ON_BRANCH
-
-The same artifact re-checks constitution G1–G15 and platform risks R-006/R-019/R-033/R-039/R-042/R-052/R-053 with zero implicitly accepted Critical risk.
-
-### T069 — COMPLETE_ON_BRANCH
-
-`post-implementation-analyze.md` found zero unowned FR/SC, zero failed constitutional gates, zero implicitly accepted Critical risks, and zero MUST-level production implementation defects. Four documentation/convergence drifts were identified.
-
-### T070 — COMPLETE_ON_BRANCH
-
-All four convergence drifts were remediated:
+## Final implemented boundaries
 
 ```text
-C1 numeric bounds folded into data-model.md and run-ledger-v1.md       COMPLETE
-implementation-clarifications.md historical/non-normative             COMPLETE
-plan/research dependency truth converged                              COMPLETE
-quickstart implemented verification wording converged                 COMPLETE
-EXECUTION.md/STATUS.md/tasks.md lifecycle truth converged              COMPLETE
-spec semantic re-check                                                 NO DRIFT
-threat-model implementation security re-check                         NO DRIFT
-```
-
-Exact convergence verification:
-
-```text
-head    84d8cb5a8c0a28ab7adba42d2cd049e014c8f368
-CI run  33153174953 — SUCCESS
-job     98789740534 — SUCCESS
-```
-
-That gate passed the complete permanent ECR-002 verification surface. The documentation commits that record T070 completion move the branch head again, therefore T071 must verify the resulting final pre-merge ledger head before PR readiness.
-
-### T071 — ACTIVE
-
-Required before merge:
-
-```text
-full exact-head ECR-002 CI SUCCESS on final pre-merge ledger head
-PR head == verified head
-PR mergeable
-no unresolved reviews or inline review threads
-no actionable conversation/check blocker
-Ready-for-review transition followed by one final review/check re-check
-```
-
-Current review evidence before Ready transition:
-
-```text
-formal reviews         0
-inline review comments 0
-conversation comments  CodeRabbit draft-not-reviewed notice + Qodo billing notice only
-mergeable              true at last check
-```
-
-Neither existing conversation comment is an implementation blocker, but the PR remains Draft until the final ledger-head CI is green.
-
-## Current implementation position
-
-```text
-Phase 1 T001–T008  VERIFIED_ON_BRANCH
-Phase 2 T009–T018  VERIFIED_ON_BRANCH
-Phase 3 T019–T026  VERIFIED_ON_BRANCH
-Phase 4 T027–T034  VERIFIED_ON_BRANCH
-Phase 5 T035–T044  VERIFIED_ON_BRANCH
-Phase 6 T045–T051  VERIFIED_ON_BRANCH
-Phase 7 T052–T059  VERIFIED_ON_BRANCH
-Phase 8 T060–T066  VERIFIED_ON_BRANCH
-Phase 9 T067–T070  COMPLETE_ON_BRANCH
-Phase 9 T071        ACTIVE
-Phase 9 T072–T073   BLOCKED_BY_DEPENDENCY_ORDER
-```
-
-## Fixed implementation boundaries
-
-```text
-authoritative run truth     append-only ordered events
-projection                  rebuildable/non-authoritative
-attempt before effect       durable commit required
+authoritative run truth     append-only ordered RunEventEnvelope history
+projection                  rebuildable/non-authoritative RunState cache
+attempt before effect       durable AttemptPrepared commit required
 missing receipt             UNKNOWN/reconciliation-required
-local store                 SQLite / rusqlite, WAL + FULL
+local store                 SQLite via rusqlite, WAL + synchronous=FULL
 write transaction           Immediate + expected-head compare
 budget arithmetic           typed checked I-JSON-safe integers
 portable artifact           deterministic strict Stored-only .ecra ZIP
-real sensitive persistence  NOT AUTHORIZED
+Ecra-owned unsafe           forbidden in ecra-run
+real sensitive persistence  NOT AUTHORIZED by ECR-002
 provider/network execution  NOT IN ECR-002
-hostile tamper resistance   NOT CLAIMED
+hostile tamper resistance   NOT CLAIMED for plain LedgerDigest chain
+```
+
+## Traceability / convergence result
+
+```text
+FR-001–FR-057                         PASS
+SC-001–SC-016                         PASS with feature/post-merge evidence complete
+G1–G15                                PASS / explicit PASS-N/A
+UNOWNED_FR                             0
+UNOWNED_SC                             0
+FAILED_CONSTITUTION_GATES              0
+IMPLICITLY_ACCEPTED_CRITICAL_RISKS     0
+MUST_LEVEL_IMPLEMENTATION_DEFECTS      0
+CONVERGENCE_DRIFT_FOUND                4
+CONVERGENCE_DRIFT_REMEDIATED           4
+```
+
+C1 deterministic UTF-8 bounds are normative in `data-model.md` and `contracts/run-ledger-v1.md`:
+
+```text
+SuspensionReason::other.code  1..=256 bytes
+intervention_recorded.note    0..=4096 bytes when present
 ```
 
 ## Downstream ownership preserved
 
-- authentication/trust roots/protected storage -> ECR-031;
+- identity/principal assertions, trust roots, key lifecycle and protected sensitive storage -> ECR-031;
 - authorization/declassification/approval/budget-revision policy -> ECR-003;
-- independent verification/reconciliation decisions -> ECR-004;
+- independent verification and UNKNOWN reconciliation decisions -> ECR-004;
 - provider/browser/model/tool/process execution -> later owning slices;
 - telemetry/privacy/redaction product controls -> ECR-025.
 
-## Remaining closure order
+## Next dependency-eligible work
+
+Closing ECR-002 makes two roadmap slices dependency-eligible for bounded planning:
 
 ```text
-T071 final feature-head CI + Ready/review/check re-check
-→ T072 exact expected-head non-rebase merge
-→ post-merge canonical-main ECR-002 CI
-→ T073 CLOSED_CANONICAL ledger/platform/roadmap/EXECUTION convergence
-→ identify next genuinely dependency-eligible slice from canonical main
+ECR-031 Identity, Trust Root & Sensitive Storage Foundations
+  depends on ECR-001 + ECR-002
+
+ECR-004 Verification & Reconciliation
+  depends on ECR-001 + ECR-002
 ```
 
-## Evidence discipline
+The selected next critical-path planning slice is **ECR-031** because ECR-003 additionally depends on it and real sensitive persistence remains blocked on its trust/storage contract. ECR-004 is independently planning-eligible and remains a parallel candidate; neither is implementation-authorized until its own Spec Kit package completes specify → plan → tasks → analyze and constitutional gates.
 
-- no task/phase PASS without the required exact-head evidence;
-- any code/test/workflow/contract/status/convergence mutation moves the verification head;
-- no merge until T071 exact-head ECR-002 gate + clean reviews/checks;
-- no `CLOSED_CANONICAL` until exact-head merge + canonical-main gate + closure ledger convergence.
+## Closure-head rule
+
+This closure document update itself moves canonical `main`. ECR-002 may be treated as fully `CLOSED_CANONICAL` only after the final closure-convergence `main` head passes the complete permanent ECR-002 workflow. The resulting exact closure head/run must remain recoverable from repository/GitHub truth before ECR-031 implementation is authorized.
