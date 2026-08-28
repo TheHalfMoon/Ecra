@@ -1,0 +1,55 @@
+name: ECR-031 Phase 2 Rustfmt
+
+on:
+  push:
+    branches:
+      - 031-identity-trust-root
+
+permissions:
+  contents: write
+
+jobs:
+  rustfmt-phase2:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify semantic parent
+        shell: bash
+        run: |
+          set -euo pipefail
+          parent='71c0311574766d5ba92f560ea1db523801d40f83'
+          git merge-base --is-ancestor "$parent" HEAD
+          delta="$(git diff --name-only "$parent"..HEAD)"
+          test "$delta" = '.github/workflows/ecr-031-rustfmt.yml'
+
+      - name: Install pinned Rustfmt
+        shell: bash
+        run: rustup toolchain install 1.98.0 --profile minimal --component rustfmt
+
+      - name: Apply repository rustfmt
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo fmt --all
+          cargo fmt --all --check
+
+      - name: Commit formatting and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/ecr-031-rustfmt.yml
+          git add .github/workflows/ecr-031-rustfmt.yml crates/ecra-identity/src crates/ecra-identity/tests
+          changed="$(git diff --cached --name-only)"
+          test -n "$changed"
+          if printf '%s\n' "$changed" | grep -Ev '^(.github/workflows/ecr-031-rustfmt.yml|crates/ecra-identity/(src|tests)/.*\.rs)$'; then
+            echo 'rustfmt helper changed an unauthorized path' >&2
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'style(identity): apply Phase 2 rustfmt'
+          git push origin HEAD:031-identity-trust-root
