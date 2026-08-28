@@ -1,0 +1,99 @@
+name: ECR-031 T046 Hosted Diagnostic
+
+on:
+  push:
+    branches:
+      - ci/ecr-031-t046-hosted-diagnostic
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ecr-031-t046-hosted-diagnostic
+  cancel-in-progress: true
+
+jobs:
+  diagnostic-only:
+    name: diagnostic-only
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      EXPECTED_T046_HEAD: ba9829d89002cc0d10e291c58af0101ac3cb2a79
+    steps:
+      - name: Checkout exact T046 candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ba9829d89002cc0d10e291c58af0101ac3cb2a79
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$EXPECTED_T046_HEAD"
+          test -z "$(git status --porcelain)"
+          echo "DIAGNOSTIC_ONLY=YES"
+          echo "CANONICAL_GATE=NO"
+          echo "EXACT_T046_HEAD=$actual"
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --fail --silent --show-error https://sh.rustup.rs \
+              | sh -s -- -y --profile minimal --default-toolchain none
+            export PATH="$HOME/.cargo/bin:$PATH"
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt,clippy
+          rustup default 1.98.0
+
+      - name: Fail closed on stale Cargo.lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo metadata --format-version 1 --locked --no-deps >/dev/null
+
+      - name: Build locked workspace
+        run: cargo build --workspace --locked
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+      - name: Test workspace
+        run: cargo test --workspace --locked
+
+      - name: ECR-031 envelope targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo test -p ecra-identity --lib --locked
+          cargo test -p ecra-identity --test envelope --locked
+
+      - name: Rustdoc tests
+        run: cargo test --doc --workspace --locked
+
+      - name: Offline replay gate
+        run: cargo test --workspace --locked --offline
+
+      - name: Boundary diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/check-core-unsafe.sh
+          bash scripts/check-core-deps.sh
+          bash scripts/check-run-unsafe.sh
+          bash scripts/check-run-deps.sh
+          bash scripts/check-identity-unsafe.sh
+          bash scripts/check-identity-deps.sh
+
+      - name: Diagnostic disposition
+        run: |
+          echo "DIAGNOSTIC_ONLY=PASS"
+          echo "T046_CANONICAL_PASS=NOT_CLAIMED"
+          echo "Permanent self-hosted ECR-031 CI remains authoritative."
