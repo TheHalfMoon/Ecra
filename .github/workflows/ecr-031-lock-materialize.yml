@@ -1,0 +1,65 @@
+name: ECR-031 Lock Materialization
+
+on:
+  push:
+    branches:
+      - 031-identity-trust-root
+
+permissions:
+  contents: write
+
+jobs:
+  materialize-lockfile:
+    if: startsWith(github.event.head_commit.message, 'ci(identity): materialize ECR-031 lockfile')
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --fail --silent --show-error https://sh.rustup.rs \
+              | sh -s -- -y --profile minimal --default-toolchain none
+            export PATH="$HOME/.cargo/bin:$PATH"
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt,clippy
+
+      - name: Generate exact lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo generate-lockfile
+          cargo metadata --locked --format-version 1 >/dev/null
+          cargo check -p ecra-identity --locked
+          cargo tree -p ecra-identity --edges normal --depth 1 --locked
+
+      - name: Verify reviewed direct manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["fast", "zeroize"] }' crates/ecra-identity/Cargo.toml
+          grep -F 'chacha20poly1305 = { version = "=0.11.0", default-features = false, features = ["alloc", "zeroize"] }' crates/ecra-identity/Cargo.toml
+          grep -F 'hkdf = { version = "=0.13.0", default-features = false }' crates/ecra-identity/Cargo.toml
+          grep -F 'sha2 = { version = "=0.11.0", default-features = false }' crates/ecra-identity/Cargo.toml
+          grep -F 'zeroize = { version = "=1.9.0", default-features = false, features = ["alloc"] }' crates/ecra-identity/Cargo.toml
+          grep -F 'getrandom = { version = "=0.4.3", default-features = false }' crates/ecra-identity/Cargo.toml
+          grep -F 'security-framework = { version = "=3.7.0", default-features = false, features = ["OSX_10_15"] }' crates/ecra-identity/Cargo.toml
+
+      - name: Commit generated lockfile and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/ecr-031-lock-materialize.yml
+          git add Cargo.lock .github/workflows/ecr-031-lock-materialize.yml
+          changed="$(git diff --cached --name-only | sort)"
+          expected="$(printf '%s\n' '.github/workflows/ecr-031-lock-materialize.yml' 'Cargo.lock' | sort)"
+          test "$changed" = "$expected"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'build(identity): lock reviewed dependency graph'
+          git push origin HEAD:031-identity-trust-root
