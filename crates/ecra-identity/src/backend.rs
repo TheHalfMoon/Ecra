@@ -108,9 +108,10 @@ mod tests {
     #[test]
     fn deterministic_provider_is_compiled_only_for_tests() {
         let source = include_str!("backend.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        assert!(!production.contains("DeterministicSecureRandom"));
         assert!(source.contains(
             "#[cfg(test)]\n#[derive(Debug)]\npub(crate) struct DeterministicSecureRandom"
         ));
-        assert!(!source.contains("pub struct DeterministicSecureRandom"));
     }
 }
