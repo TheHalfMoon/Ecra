@@ -1,15 +1,15 @@
 # ECR-031 Implementation Plan — Identity, Trust Root & Sensitive Storage
 
-**Status:** PLAN_CANDIDATE  
+**Status:** PLAN_CANDIDATE / PASS_1_REMEDIATED  
 **Dependencies:** ECR-001/ECR-002 `CLOSED_CANONICAL`  
 **Target language:** Rust  
 **Trusted crate candidate:** `crates/ecra-identity`
 
 ## 1. Summary
 
-Implement one bounded Rust crate that turns ECR-001 identity references into cryptographically validated local identity context, owns local trust-root/key lifecycle and exposes a versioned authenticated-protection primitive for sensitive local bytes. Native platform key stores are explicit I/O backends; identity validation and canonical cryptographic input construction remain deterministic and testable.
+Implement one bounded Rust crate that turns ECR-001 identity references into cryptographically validated local identity context, bootstraps one Ecra-local installation principal, owns protected local trust-root/key lifecycle, exposes a non-ambient assertion issuance boundary, and provides versioned authenticated protection for sensitive local bytes.
 
-The slice deliberately stops before authorization, secret-use mediation, independent verification, provider execution, protocol federation, sync or local-model gateway work.
+Native platform key stores are explicit I/O backends. Canonical assertion/trust-state/envelope validation remains deterministic and testable. ECR-031 deliberately stops before authorization, secret-use mediation, independent outcome verification, provider execution, protocol federation, sync or local-model gateway work.
 
 ## 2. Proposed repository shape
 
@@ -22,21 +22,25 @@ crates/ecra-identity/
     error.rs
     ids.rs
     algorithm.rs
+    bootstrap.rs
     assertion.rs
     validation.rs
+    issuance.rs
     key.rs
     envelope.rs
     anchor.rs
     backend.rs
-    store.rs              # only if implementation proves ECR-031-owned metadata durability necessary
+    store.rs
     platform/
       mod.rs
       macos.rs
       windows.rs
       linux.rs
   tests/
+    bootstrap.rs
     assertion_contract.rs
     validation.rs
+    issuance.rs
     key_lifecycle.rs
     envelope.rs
     anchor.rs
@@ -44,13 +48,13 @@ crates/ecra-identity/
     macos_backend.rs
     portability.rs
     redaction.rs
-    migration.rs          # if a persistent metadata store exists
+    migration.rs
 
 contracts/ecra-identity-v1/
   valid/
   invalid/
   expected/
-  migrations/             # only if persisted schema exists
+  migrations/
 
 scripts/
   check-identity-deps.sh
@@ -67,14 +71,15 @@ Do not create `ecra-keystore`, `ecra-crypto`, or other speculative crates unless
 platform native APIs / crypto dependencies
                ↑
           ecra-identity
-          ↑          ↑
-     ecra-core    ecra-run? (only if an exact current durability need exists)
+               ↑
+           ecra-core
 ```
 
-Preferred initial dependency direction:
+Initial dependency direction:
 - `ecra-identity -> ecra-core` required;
-- avoid `ecra-identity -> ecra-run` unless ECR-031 itself truly needs run-ledger types;
-- later application services can compose `ecra-run` + `ecra-identity` without either becoming the other's authority source.
+- no `ecra-identity -> ecra-run` dependency is planned;
+- ECR-031 owns a tiny protected trust-state store rather than reusing ECR-002 run tables as identity authority;
+- later application services compose `ecra-run` + `ecra-identity` externally.
 
 Forbidden:
 - `ecra-core -> ecra-identity`;
@@ -84,9 +89,9 @@ Forbidden:
 ## 4. Workstream A — primitives and strict contracts
 
 Implement:
-- `TrustRootId`, `KeyId`, `ProtectedObjectId`, optional replay/delegation IDs using repository typed-ID conventions;
+- `TrustRootId`, `KeyId`, `ProtectedObjectId`, enrollment/replay/delegation IDs using repository typed-ID conventions;
 - exact versioned enums for key purpose/status, signature and AEAD algorithms;
-- strict assertion/protected-envelope/protected-anchor serializers/deserializers;
+- strict assertion/protected-trust-state/protected-envelope/protected-anchor serializers/deserializers;
 - hard parser limits and typed errors;
 - canonical JCS/domain-separated bytes.
 
@@ -94,163 +99,232 @@ Before cryptography, contract fixtures must prove:
 - unknown/duplicate fields rejected;
 - IDs/timestamps/versions bounded;
 - no Actor/Principal conversion shortcut;
-- no authority-bearing fields in validated identity output.
+- no authority-bearing fields in validated identity output;
+- OS username/email/display data cannot become canonical PrincipalId.
 
-## 5. Workstream B — assertion signing/validation
+## 5. Workstream B — local bootstrap and enrollment
 
-Implement pure validation pipeline from contract order:
+V1 bootstraps exactly an **Ecra-local installation principal**. It does not prove a person's legal/external identity.
+
+Bootstrap inputs:
+- explicit production `SecureRandom`;
+- explicit issuance/bootstrap time context;
+- selected production `TrustBackend`.
+
+Bootstrap sequence:
+1. generate opaque `PrincipalId`, `TrustRootId`, enrollment ID and initial purpose-key IDs from approved randomness;
+2. create/store initial protected root/master and Ed25519 software signing secrets through the native backend;
+3. construct initial `ProtectedTrustStateV1` with enrollment, key metadata and state generation;
+4. protect/authenticate that trust state;
+5. durably publish using the ECR-031 atomic protected-state store;
+6. reopen/authenticate and validate invariants;
+7. only then return `EnrolledPrincipalHandle`.
+
+Crash semantics:
+- backend material without published/verified protected state is `incomplete_bootstrap`;
+- restart does not silently mint a second principal/root;
+- cleanup of orphan backend material is explicit/bounded and tested.
+
+No OS username/email/Actor label is imported as PrincipalId.
+
+## 6. Workstream C — protected authoritative trust state
+
+ECR-031 v1 **does require** a small owned persistent trust-state store; this is no longer deferred to implementation discovery.
+
+Authoritative security state is the authenticated `ProtectedTrustStateV1` envelope. Ordinary metadata/indexes are non-authoritative projections.
+
+Store requirements:
+- one bounded current protected trust-state object per local installation/root;
+- crash-safe atomic replacement (`temp -> durable flush -> rename/replace -> directory durability where supported`) with platform behavior tested on the accepted macOS path;
+- strict version/size limits;
+- authenticate/decrypt before semantic use;
+- migration fixture for v1 schema envelope/version behavior;
+- never persist root/private/derived keys in ordinary file metadata.
+
+`VerifiedTrustSnapshot` is created only by opening/authenticating protected state plus validating lifecycle invariants. Pure assertion validation and assertion issuance accept this type, not raw unsigned metadata.
+
+Rollback claim:
+- v1 detects tampering under the backend-key boundary;
+- `state_generation` prevents internal ambiguity but is not a hardware monotonic counter;
+- restoring an older valid protected trust state together with equivalent authorized OS trust-store state is outside the universal v1 rollback-resistance claim.
+
+## 7. Workstream D — assertion signing/validation and issuance
+
+### Validation
+
+Pure validation pipeline:
 
 ```text
-bytes -> structural validation -> trust/key lookup snapshot -> signature -> principal -> actor -> audience -> time -> delegation -> replay -> ValidatedIdentityContext
+bytes
+  -> structural validation
+  -> VerifiedTrustSnapshot
+  -> signature verification
+  -> principal
+  -> actor
+  -> audience
+  -> time
+  -> delegation
+  -> replay
+  -> ValidatedIdentityContext
 ```
 
-Inputs:
-- immutable assertion bytes/object;
-- immutable trust/key snapshot or narrow key resolver;
-- explicit `IdentityValidationContext`.
+No ambient clock/environment/network/native-backend call occurs inside pure validation.
 
-No ambient clock/environment/network.
+### Issuance
 
-Signing/issuance is a separate service path using explicit clock/random/backend inputs. The validator must be independently usable against fixtures/public verification material.
+No generic `issue(principal_id, ...)` API exists.
 
-## 6. Workstream C — key lifecycle
+Issuance sequence:
+1. reopen/authenticate local enrollment and protected trust state -> `EnrolledPrincipalHandle` + `VerifiedTrustSnapshot`;
+2. create a process-local, non-serializable `IssuerSession` fixed to that principal/root/current assertion-signing key;
+3. caller supplies allowed actor/audience/time/replay request values but **not** a replacement subject principal;
+4. issue/sign assertion for the session principal only.
 
-Implement purpose-scoped key metadata and transitions:
+V1 on-behalf-of issuance cannot mint another arbitrary principal. Broader delegation authorization is ECR-003.
+
+No ECR-031 IPC/network issuance service exists.
+
+## 8. Workstream E — frozen v1 signing custody
+
+Canonical v1 assertion and protected-anchor signing algorithm: **Ed25519**.
+
+Custody model:
+- generate 32-byte software Ed25519 seed/key material from production CSPRNG;
+- store it only as native-backend-protected secret material;
+- materialize only for bounded signing operations into a redacted/zeroizing secret wrapper;
+- promptly release/zeroize after use;
+- persist only public verification material in `KeyRecord`/protected trust state.
+
+Claims:
+- macOS v1 acceptance proves Data Protection Keychain protection of the software signing secret at rest;
+- it does **not** claim Secure Enclave signing, hardware-backed private operations, or non-exportability for this portable path;
+- capability flags for those properties remain false on the portable Ed25519 path;
+- a future native non-exportable signing suite requires a versioned contract/algorithm extension and evidence.
+
+This resolves the former portability-vs-Secure-Enclave ambiguity without weakening custody.
+
+## 9. Workstream F — key lifecycle
+
+Implement purpose-scoped transitions:
 
 ```text
 create -> activate -> rotate -> retire -> revoke
 ```
 
 Rules:
-- one active key per trust-root/purpose;
+- one active key per trust-root/purpose in verified protected state;
 - active-only new signing/protection;
 - retired compatibility narrowly defined;
 - revoked assertion-signing key rejects current assertions;
 - destruction/unavailability distinct from revocation;
-- no raw private key in serializable metadata.
+- every lifecycle change produces and atomically publishes a newly authenticated protected trust state;
+- ordinary metadata cannot reactivate/unrevoke a key.
 
-If persistent metadata is needed, use a small versioned local store with crash-safe atomicity/migration fixtures. Do not duplicate ECR-002's run ledger or make run history the identity database.
+## 10. Workstream G — protected envelope
 
-## 7. Workstream D — protected envelope
-
-Lock exact crypto dependencies only after dependency research. Preferred candidate:
-- HKDF-SHA-256 for domain-separated derived keys when raw master IKM is legitimately available;
+Dependency-lock target:
+- HKDF-SHA-256 for domain-separated derived keys;
 - ChaCha20-Poly1305 RFC 8439 for AEAD;
 - 96-bit unique random nonce;
 - full tag;
 - JCS-derived AAD.
 
-If native hardware-backed operations cannot safely expose IKM, use a backend-protected wrapping model instead of extracting a protected key. Amend the contract before implementation if required.
+V1 portable custody assumes the backend can release the protected master secret into bounded process memory for the operation. The master secret uses the same redacted/zeroizing handling discipline as signing material; no hardware non-exportability claim is made.
 
-API shape should make authenticated decryption impossible to confuse with unauthenticated bytes:
+API shape:
 
 ```text
 protect(object metadata, SensitiveBytes) -> ProtectedEnvelopeV1
 open(ProtectedEnvelopeV1, expected metadata) -> SensitiveBytes
 ```
 
-`SensitiveBytes` must use redacted Debug behavior and zeroization where a reviewed dependency/implementation makes it meaningful without overclaiming complete memory erasure.
+Authentication failure returns no plaintext.
 
-## 8. Workstream E — protected authenticity anchor
+## 11. Workstream H — protected authenticity anchor
 
-Implement key-backed `ProtectedAnchorV1` over exact domain-separated payload digest. Initial consumer integration is fixture/API-level only unless the active ECR-031 tasks explicitly add an ECR-002 optional anchor adapter.
+Implement key-backed `ProtectedAnchorV1` over exact domain-separated payload digest, using a purpose-specific Ed25519 software key protected under the same v1 custody model.
 
-Do not mutate existing ECR-002 ledger digest semantics.
+Initial consumer integration is fixture/API-level only. Do not mutate ECR-002 ledger digest semantics and do not call anchor verification ECR-004 outcome verification.
 
-## 9. Workstream F — TrustBackend
+## 12. Workstream I — TrustBackend
 
 ### Common interface
 
-Narrow Rust-owned trait with:
-- backend capability report;
-- create/open protected root material/key;
-- requested signing/MAC/protection operation;
+Narrow Rust-owned trait supporting:
+- capability report;
+- create/store/open/delete protected secret material;
 - locked/unavailable health state;
-- explicit deletion/revocation hooks only where meaningful.
+- no generic raw private-key export API beyond the bounded secret-open operation required by the portable v1 software crypto path.
 
-No generic raw private-key export.
+The API returns `SensitiveBytes` only to bounded ECR-031 crypto operations; callers outside the trusted crate do not receive raw root/signing material.
 
 ### macOS first live backend
 
-The existing trusted CI runner is macOS, so v1 acceptance can require live macOS native backend tests.
+V1 acceptance requires live Data Protection Keychain tests on the trusted repository macOS runner:
+- local-only/non-synchronizing items;
+- protected root/master/signing secret store/open/delete;
+- unavailable/not-found normalization;
+- capability report truth.
 
-Plan:
-- use Data Protection Keychain for local-only protected items;
-- no synchronizable/iCloud item for v1;
-- prefer system access control appropriate to operation;
-- Secure Enclave path only if algorithm/product constraints make it usable without weakening the contract;
-- capability report reflects actual configuration.
+No Secure Enclave signing requirement exists in v1. Hardware-backed/non-exportable flags are false for portable software signing.
 
 ### Windows
 
-Implementation only after exact dependency/API review. If included in v1:
-- default user+machine DPAPI protection semantics accurately represented;
-- no `CRYPTPROTECT_LOCAL_MACHINE` default;
+Implementation only after exact dependency/API review. If included:
+- default user+machine DPAPI semantics accurately represented;
+- no machine-wide default;
 - no cross-machine recovery claim;
-- if asymmetric native signing required, explicitly research CNG/NCrypt instead of simulating it with DPAPI.
+- no hardware-signing claim.
 
 ### Linux
 
-Implementation only after exact DBus/Secret Service dependency review. If included in v1:
+Implementation only after exact DBus/Secret Service dependency review. If included:
 - opaque IDs/fixed namespace only in lookup attributes;
-- secret material only in secret value;
+- secret material only in the item secret;
 - unavailable/locked service fail closed;
-- documentation says upstream 0.2 is currently draft.
+- upstream 0.2 draft status retained.
 
-### Cross-platform acceptance rule
+No platform is marked verified without native/live or explicitly approved equivalent evidence.
 
-No platform is marked verified without native/live or explicitly approved equivalent evidence. Compile-only support is labeled compile-only.
+## 13. Randomness and time boundaries
 
-## 10. Persistent state decision
-
-Default plan: minimize ECR-031-owned persistence.
-
-Persist only what cannot be reconstructed from native backend plus protected metadata:
-- trust-root ID/backend binding;
-- key public metadata/lifecycle/generation;
-- replay nonce state only if v1 issues single-use assertions;
-- protected envelopes owned by ECR-031 itself.
-
-If SQLite is chosen, reuse reviewed `rusqlite` version only if dependency evidence supports it, but create ECR-031-specific schema/migration contracts rather than coupling to ECR-002 tables.
-
-## 11. Randomness and time boundaries
-
-Define traits/inputs such as:
+Define explicit boundaries:
 
 ```text
 SecureRandom
-Clock or explicit IssuanceContext
-ValidationContext.evaluated_at
+BootstrapContext.created_at
+IssuanceContext.issued_at/not_before/expires_at
+IdentityValidationContext.evaluated_at
 ```
 
-Pure validation never calls them. Issuance/encryption requires CSPRNG in production; deterministic test providers are explicit test-only dependencies.
+Pure validation does not call clock/random. Production bootstrap/issuance/encryption use OS CSPRNG through accepted dependency. Deterministic test providers are test-only.
 
-## 12. Error and secret-handling strategy
+## 14. Error and secret-handling strategy
 
 - typed category/code errors;
+- explicit bootstrap/enrollment/issuer-session/trust-snapshot errors;
 - public crypto failures may collapse to authentication failure;
-- no secret/plaintext/private-key bytes in Debug/Display/source chain exposed to logs;
+- no secret/plaintext/private-key bytes in Debug/Display/loggable source chain;
 - backend native errors normalized and redacted;
 - tests capture formatted errors and assert synthetic sentinel secrets absent.
 
-## 13. Dependency research gate
+## 15. Dependency research gate
 
 Before `Cargo.toml` production dependency changes, record exact candidate versions/licenses/advisories/features for:
-- Ed25519/signature implementation candidate;
+- Ed25519 implementation;
 - ChaCha20-Poly1305;
 - HKDF/SHA-256;
-- zeroization/secrecy wrapper if used;
+- zeroization/secrecy wrapper;
+- CSPRNG;
 - macOS Security/Keychain binding dependency;
-- Windows dependency if implemented;
-- Linux D-Bus/Secret Service dependency if implemented.
+- optional Windows dependency if implemented;
+- optional Linux D-Bus/Secret Service dependency if implemented.
 
-Prefer RustCrypto/widely maintained crates with minimal features, but repository evidence—not brand familiarity—decides.
+Prefer small, widely reviewed libraries with minimal features, but current repository evidence decides. No source copying. Update `research/donor-license-ledger.md` before adoption.
 
-No source copying. Update `research/donor-license-ledger.md` before implementation commit that adopts a dependency/native binding.
+## 16. CI plan
 
-## 14. CI plan
-
-Create trusted push-only ECR-031 workflow on implementation branch and `main`, using the same repository-scoped self-hosted security posture.
+Create trusted push-only ECR-031 workflow on implementation branch and `main` using the repository-scoped self-hosted posture.
 
 Required baseline:
 
@@ -269,76 +343,94 @@ bash scripts/check-identity-unsafe.sh
 bash scripts/check-identity-deps.sh
 ```
 
-Plus explicit ECR-031 targets for assertion contract, validation, lifecycle, envelope, anchor, redaction, boundaries and live macOS backend.
+Explicit ECR-031 targets:
+
+```text
+bootstrap
+assertion_contract
+validation
+issuance
+key_lifecycle
+envelope
+anchor
+redaction
+backend_boundaries
+migration
+macos_backend
+portability
+```
 
 ECR-001/ECR-002 workflows remain regression oracles on `main`.
 
-## 15. Constitution gates
+## 17. Constitution gates
 
 ### G1 Domain coherence — PASS
-Reuses ECR-001 Actor/Principal/IdentityAssertion references; new types only for trust/key/protected storage.
+Reuses ECR-001 Actor/Principal/IdentityAssertion references; no second principal namespace.
 
 ### G2 Authority — PASS
-Validated identity context contains no grant/approval/authorization. Identity is input to later ECR-003 fail-closed policy.
+Validated context has no authority; assertion issuance requires enrolled identity handle/session and cannot mint arbitrary caller-selected principals. ECR-003 remains authorization owner.
 
 ### G3 Provenance — PASS
-Assertion issuer/trust root/signing key/digest are explicit; protected objects bind key/purpose metadata.
+Issuer/root/key/digest/enrollment/trust-snapshot provenance explicit.
 
-### G4 Side effects — PASS/NARROW
-Key create/rotate/revoke/protected-write are consequential local effects and must use exact durable operation tests; no external provider side effects.
+### G4 Side effects — PASS
+Bootstrap, key create/rotate/revoke and protected-state writes are consequential local effects with crash/atomicity tests.
 
 ### G5 Verification — PASS
-Cryptographic validation authenticates assertion/envelope/anchor bytes but does not create ECR-004 outcome verification truth.
+Crypto validation authenticates identity/protected bytes, not ECR-004 external outcome truth.
 
 ### G6 Durability — PASS
-Key lifecycle/protected metadata has explicit crash/migration behavior if persisted; native backend unavailable states are honest.
+ProtectedTrustStateV1 is authoritative, crash-safe persisted, reopen-authenticated; incomplete bootstrap and rollback boundaries are explicit.
 
 ### G7 Privacy/secrets — PASS
-No plaintext fallback, minimal raw-key exposure, redacted errors, protected-at-rest contract.
+No plaintext fallback; bounded secret materialization; redacted errors; authenticated storage.
 
 ### G8 Local-first — PASS
 No cloud account/provider required.
 
 ### G9 Interoperability — PASS
-Native stores/protocol standards are adapters; no external identity token becomes Ecra authority.
+Native stores/protocol standards are adapters; no external token becomes local authority.
 
 ### G10 Donor/license — PASS_PENDING_DEPENDENCY_LOCK
-Primary references recorded; exact dependency/license ledger required before implementation dependency adoption.
+Exact dependency/license/advisory review remains T001 before adoption.
 
 ### G11 Upstream/browser maintenance — PASS-N/A
 No browser patch/bridge.
 
 ### G12 Benchmarks — PASS
-Acceptance is reproducible security/contract evidence; no superiority claims.
+Reproducible security/contract acceptance; no superiority claims.
 
 ### G13 Information flow / egress — PASS
-No remote egress in ECR-031; protected/plaintext data remains local. Later disclosure still requires ECR-003.
+No remote egress; later disclosure remains ECR-003.
 
 ### G14 Identity / principal binding — PASS
-This slice is the explicit owner; actor/principal/audience/on-behalf-of/trust-root semantics are typed and fail closed.
+Bootstrap defines an Ecra-local principal without external proofing claim; issuance is session-bound and fail closed.
 
 ### G15 Bounded execution — PASS
-Strict parser limits, bounded attributes/no arbitrary chain; native calls receive timeout/cancellation treatment where APIs permit; no recursive model/tool loops.
+Hard parser/state limits; no recursive model/tool loop; bounded native/crypto operations.
 
-No gate currently fails. G10 must become evidence-backed before implementation dependency lock.
+No constitutional gate fails after Pass-1 remediation. G10 is an implementation dependency-lock gate, not a planning defect.
 
-## 16. Complexity tracking
+## 18. Complexity tracking
 
 ### One new trusted crate
-Justified because ECR-001 must remain zero-I/O and ECR-031 requires native keystore/crypto operations. Simpler alternative—putting identity validation and OS I/O into `ecra-core`—violates the closed zero-I/O contract.
+Necessary because ECR-001 must remain zero-I/O while ECR-031 needs keystore/crypto/persistence operations.
+
+### One tiny protected trust-state store
+Necessary because lifecycle/revocation/enrollment must not depend on unsigned filesystem metadata. Reusing ECR-002 run tables would create the wrong authority coupling. Simpler unsigned metadata would fail A2/R-053.
 
 ### Native backend abstraction
-Justified because sensitive persistence needs protected device/user-local key custody and platform semantics differ materially. Simpler alternative—one plaintext file key—violates FR-022/FR-023 and R-053.
+Necessary because root/software-key custody differs by platform. Plaintext file keys violate the spec.
 
-### Explicit algorithm agility
-Kept narrow to a closed allowlist because Secure Enclave/native backend algorithm capabilities may differ. Simpler hard-coded Ed25519 everywhere risks false hardware-backed claims; generic arbitrary algorithms would be unauditable.
+### Portable software Ed25519 v1
+Chosen to keep one stable v1 assertion/anchor wire while making custody claims honest. Secure Enclave algorithm variation is deferred to a versioned extension rather than hidden behind a misleading abstraction.
 
-## 17. Implementation authorization gate
+## 19. Implementation authorization gate
 
 Implementation is forbidden until:
-- contract/data model/threat model are complete;
+- contract/data model/threat model include Pass-1 remediation;
 - exact dependency candidates are researched enough to make tasks executable;
-- requirements checklist passes;
-- tasks map every FR/SC and name target paths;
-- analyze-equivalent pass reports zero critical planning drift;
+- requirements checklist is rerun against C1–C4/C5;
+- tasks explicitly cover bootstrap, protected trust snapshot, issuance misuse and software-signing custody;
+- analyze Pass 2 reports zero critical planning drift and G1–G15 pass/explicit N/A;
 - platform roadmap/status/EXECUTION truth is synchronized to `TASKS_READY` on an exact green planning head.
