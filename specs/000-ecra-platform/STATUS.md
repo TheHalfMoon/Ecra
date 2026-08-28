@@ -4,44 +4,49 @@
 **Architecture/dependency authority:** `roadmap.md`.  
 **Current execution detail:** `../../EXECUTION.md`.
 
-## Canonically closed slice
+## Canonically closed slices
 
 | ID | Slice | Lifecycle | Notes |
 |---|---|---|---|
 | ECR-001 | Trusted Domain Kernel | `CLOSED_CANONICAL` | closure-ledger head `85e4bf65…`; CI `33099434232` passed |
+| ECR-002 | Durable Run, Ledger & Budgets | `CLOSED_CANONICAL` pending final closure-head recheck | feature head `87fd9fc5…` CI `33153413462` passed; PR #2 merged as `40efc8a6…`; post-merge ECR-002 CI `33154108410` passed |
 
-## Active slice
+ECR-002 closure documentation is being converged on canonical `main`; the last T073 documentation head must itself pass the permanent ECR-002 workflow before the closure is treated as fully sealed for downstream implementation authorization.
 
-| ID | Slice | Lifecycle | Depends on | Evidence |
+## Next planning selection
+
+| ID | Slice | Lifecycle | Depends on | Eligibility / intent |
 |---|---|---|---|---|
-| ECR-002 | Durable Run, Ledger & Budgets | `IMPLEMENTING` | ECR-001 | canonical planning base `5caf5dc4…` passed CI `33103802150`; branch `002-durable-run-ledger`; Phase 1 T001–T008 active |
+| ECR-031 | Identity, Trust Root & Sensitive Storage | `PLANNED_NEXT` | ECR-001, ECR-002 | selected next critical-path planning slice after final ECR-002 closure-head CI |
+| ECR-004 | Verification & Reconciliation | `PLANNED_ELIGIBLE` | ECR-001, ECR-002 | independently planning-eligible in parallel after ECR-002 closure |
+| ECR-003 | Authority, Information Flow, Policy & Secrets | `PLANNED_BLOCKED` | ECR-001, ECR-002, ECR-031 | remains blocked until ECR-031 is `CLOSED_CANONICAL` |
 
-ECR-002 is restricted to the package's local synthetic/non-sensitive durability scope. No downstream dependency is satisfied until ECR-002 becomes `CLOSED_CANONICAL`.
+No ECR-031 or ECR-004 implementation is authorized merely by this table. Each slice must independently complete its Spec Kit planning/analyze gates before an implementation branch/PR exists.
 
 ## Planned critical path
 
 | ID | Slice | Lifecycle | Depends on |
 |---|---|---|---|
-| ECR-031 | Identity, Trust Root & Sensitive Storage | `PLANNED` | ECR-001, ECR-002 |
-| ECR-004 | Verification & Reconciliation | `PLANNED` | ECR-001, ECR-002 |
-| ECR-003 | Authority, Information Flow, Policy & Secrets | `PLANNED` | ECR-001, ECR-002, ECR-031 |
+| ECR-031 | Identity, Trust Root & Sensitive Storage | `PLANNED_NEXT` | ECR-001, ECR-002 |
+| ECR-004 | Verification & Reconciliation | `PLANNED_ELIGIBLE` | ECR-001, ECR-002 |
+| ECR-003 | Authority, Information Flow, Policy & Secrets | `PLANNED_BLOCKED` | ECR-001, ECR-002, ECR-031 |
 | ECR-005 | Evaluation & Threat Harness | `PLANNED` | ECR-001, ECR-002, ECR-003, ECR-004, ECR-031 |
-| ECR-006 | Stock Firefox / WebDriver BiDi Prototype | `PLANNED` | trusted substrate/evaluation gates |
+| ECR-006 | Stock Firefox / WebDriver BiDi Prototype | `PLANNED` | ECR-001–ECR-005, ECR-031 |
 | ECR-007 | Browser Foundation & Upstream Strategy | `PLANNED` | ECR-006 |
-| ECR-008 | Ecra Browser Wedge | `PLANNED` | policy, verification, browser foundation, identity/trust |
-| ECR-009 | Search Evidence Fabric | `PLANNED` | trusted substrate/policy/verification |
-| ECR-010 | Workspace & Memory | `PLANNED` | trusted substrate/search/identity |
-| ECR-011 | Browser-Native Semantic Capabilities | `PLANNED` | policy/verification/browser/search |
-| ECR-012 | Skill IR | `PLANNED` | trusted substrate/policy/verification |
-| ECR-013 | Skill Compiler | `PLANNED` | evaluation/memory/semantic router/Skill IR |
+| ECR-008 | Ecra Browser Wedge | `PLANNED` | ECR-003, ECR-004, ECR-006, ECR-007, ECR-031 |
+| ECR-009 | Search Evidence Fabric | `PLANNED` | ECR-001, ECR-002, ECR-003, ECR-004 |
+| ECR-010 | Workspace & Memory | `PLANNED` | ECR-001–ECR-004, ECR-009, ECR-031 |
+| ECR-011 | Browser-Native Semantic Capabilities | `PLANNED` | ECR-003, ECR-004, ECR-006, ECR-009 |
+| ECR-012 | Skill IR | `PLANNED` | ECR-001–ECR-004 |
+| ECR-013 | Skill Compiler | `PLANNED` | ECR-005, ECR-010, ECR-011, ECR-012 |
 | ECR-014 | Deterministic Replay | `PLANNED` | ECR-012, ECR-013 |
 | ECR-015 | Divergence & Repair | `PLANNED` | ECR-014 |
-| ECR-016 | Protocol Gateway | `PLANNED` | trusted substrate/search/memory/Skill IR/identity |
-| ECR-017 | Plugin & Sandbox Runtime | `PLANNED` | policy/verification/evaluation/protocol gateway |
-| ECR-018 | Terminal Execution | `PLANNED` | durable runtime/policy/verification/evaluation/sandbox/identity |
-| ECR-019 | Developer Workspace | `PLANNED` | search/memory/protocol/terminal |
-| ECR-020 | Data & Analytics | `PLANNED` | verification/search/memory/sandbox/identity |
-| ECR-021 | Local Model Gateway | `PLANNED` | search through protocol/supply-chain foundations per roadmap |
+| ECR-016 | Protocol Gateway | `PLANNED` | ECR-001–ECR-004, ECR-009, ECR-010, ECR-012, ECR-031 |
+| ECR-017 | Plugin & Sandbox Runtime | `PLANNED` | ECR-003, ECR-004, ECR-005, ECR-016 |
+| ECR-018 | Terminal Execution | `PLANNED` | ECR-002–ECR-005, ECR-017, ECR-031 |
+| ECR-019 | Developer Workspace | `PLANNED` | ECR-009, ECR-010, ECR-016, ECR-018 |
+| ECR-020 | Data & Analytics | `PLANNED` | ECR-004, ECR-009, ECR-010, ECR-017, ECR-031 |
+| ECR-021 | Local Model Gateway | `PLANNED` | ECR-009–ECR-017, ECR-024 |
 
 ## Deferred / cross-cutting program
 
@@ -51,7 +56,7 @@ Follow exact dependencies in `roadmap.md` for ECR-022 through ECR-030. Deferred 
 
 ```text
 A. Trusted substrate
-   ECR-001 [CLOSED] → ECR-002 [IMPLEMENTING] → ECR-031/ECR-004 → ECR-003 → ECR-005
+   ECR-001 [CLOSED] → ECR-002 [CLOSED] → {ECR-031 [NEXT], ECR-004 [ELIGIBLE]} → ECR-003 → ECR-005
 
 B. Browser wedge
    ECR-006 → ECR-007 → ECR-008
@@ -65,6 +70,10 @@ D. Skills
 E. Ecosystem/work surfaces
    ECR-016/ECR-017 → ECR-018/ECR-019/ECR-020/ECR-021
 ```
+
+## Sensitive-state boundary
+
+ECR-002 proved synthetic/non-sensitive local durability. It did **not** authorize persistence of real authenticated browser secrets, credentials, private workspace payloads or equivalent high-value state. That progression remains blocked on ECR-031 plus the later policy/privacy owners named in the roadmap.
 
 ## Update rule
 
