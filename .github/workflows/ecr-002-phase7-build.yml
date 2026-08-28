@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-phase7:
-    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): build phase7 archive') }}"
+    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): repair phase7 extra-data') }}"
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -32,6 +32,18 @@ jobs:
         run: |
           set -euo pipefail
           python3 .github/ecr-002-phase7-materialize.py
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('crates/ecra-run/src/archive.rs')
+          text = path.read_text()
+          old = '!file.extra_data().is_empty()'
+          new = 'file.extra_data().is_some_and(|data| !data.is_empty())'
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f'expected exactly one extra_data repair site, found {count}')
+          path.write_text(text.replace(old, new, 1))
+          PY
           cargo fmt --all
       - name: Compile and lint archive candidate
         shell: bash
