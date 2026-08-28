@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Deserializer, Serialize, de};
 
@@ -11,6 +11,8 @@ pub const MAX_BUDGET_AMOUNT: u64 = 9_007_199_254_740_991;
 pub struct BudgetAmount(u64);
 
 impl BudgetAmount {
+    pub const ZERO: Self = Self(0);
+
     pub fn new(value: u64) -> Result<Self, RunError> {
         if value > MAX_BUDGET_AMOUNT {
             return Err(RunError::new(
@@ -73,6 +75,25 @@ pub enum BudgetDimension {
     NetworkBytes,
     StorageBytes,
     RecursionDepth,
+}
+
+impl BudgetDimension {
+    pub const ALL: [Self; 14] = [
+        Self::ActiveWallMillis,
+        Self::Steps,
+        Self::ToolCalls,
+        Self::ModelCalls,
+        Self::InputTokens,
+        Self::OutputTokens,
+        Self::CostMicrounits,
+        Self::ProcessCount,
+        Self::ProcessMillis,
+        Self::OutputBytes,
+        Self::NetworkRequests,
+        Self::NetworkBytes,
+        Self::StorageBytes,
+        Self::RecursionDepth,
+    ];
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -163,6 +184,66 @@ impl RunBudget {
     pub fn limits(&self) -> &[BudgetLimit] {
         &self.limits
     }
+
+    #[must_use]
+    pub fn limit(&self, dimension: BudgetDimension) -> Option<&BudgetLimit> {
+        self.limits
+            .iter()
+            .find(|limit| limit.dimension() == dimension)
+    }
+
+    #[must_use]
+    pub fn remaining(
+        &self,
+        usage: &BudgetUsage,
+        dimension: BudgetDimension,
+    ) -> Option<BudgetAmount> {
+        let limit = self.limit(dimension)?;
+        let current = usage.get(dimension).get();
+        Some(BudgetAmount(
+            limit.hard().get().saturating_sub(current),
+        ))
+    }
+
+    pub fn preflight(
+        &self,
+        usage: &BudgetUsage,
+        dimension: BudgetDimension,
+        known_upper_bound: BudgetAmount,
+    ) -> Result<(), RunError> {
+        let Some(remaining) = self.remaining(usage, dimension) else {
+            return Ok(());
+        };
+        if known_upper_bound > remaining {
+            return Err(RunError::new(
+                RunErrorCategory::Budget,
+                RunErrorCode::BudgetPreflightExceeded,
+                "known upper bound exceeds remaining configured hard budget",
+            ));
+        }
+        Ok(())
+    }
+
+    #[must_use]
+    pub fn soft_crossing(
+        &self,
+        dimension: BudgetDimension,
+        previous: BudgetAmount,
+        cumulative: BudgetAmount,
+    ) -> Option<(BudgetAmount, BudgetAmount)> {
+        let soft = self.limit(dimension)?.soft()?;
+        (previous < soft && cumulative >= soft).then_some((soft, cumulative))
+    }
+
+    #[must_use]
+    pub fn hard_exhaustion(
+        &self,
+        dimension: BudgetDimension,
+        cumulative: BudgetAmount,
+    ) -> Option<(BudgetAmount, BudgetAmount)> {
+        let hard = self.limit(dimension)?.hard();
+        (cumulative >= hard).then_some((hard, cumulative))
+    }
 }
 
 #[derive(Deserialize)]
@@ -177,5 +258,40 @@ impl<'de> Deserialize<'de> for RunBudget {
         D: Deserializer<'de>,
     {
         Self::new(RunBudgetWire::deserialize(deserializer)?.limits).map_err(de::Error::custom)
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct BudgetUsage(BTreeMap<BudgetDimension, BudgetAmount>);
+
+impl BudgetUsage {
+    #[must_use]
+    pub fn get(&self, dimension: BudgetDimension) -> BudgetAmount {
+        self.0
+            .get(&dimension)
+            .copied()
+            .unwrap_or(BudgetAmount::ZERO)
+    }
+
+    #[must_use]
+    pub fn recorded(&self, dimension: BudgetDimension) -> Option<BudgetAmount> {
+        self.0.get(&dimension).copied()
+    }
+
+    #[must_use]
+    pub fn amounts(&self) -> &BTreeMap<BudgetDimension, BudgetAmount> {
+        &self.0
+    }
+
+    pub fn charge(
+        &mut self,
+        dimension: BudgetDimension,
+        amount: BudgetAmount,
+    ) -> Result<(BudgetAmount, BudgetAmount), RunError> {
+        let previous = self.get(dimension);
+        let cumulative = previous.checked_add(amount)?;
+        self.0.insert(dimension, cumulative);
+        Ok((previous, cumulative))
     }
 }
