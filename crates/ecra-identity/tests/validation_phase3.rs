@@ -5,10 +5,14 @@ fn phase3_public_wire_rejects_invalid_corpus() {
     for fixture in [
         include_bytes!("../../../contracts/ecra-identity-v1/invalid/assertion-unknown-field.json")
             .as_slice(),
-        include_bytes!("../../../contracts/ecra-identity-v1/invalid/assertion-unsupported-version.json")
-            .as_slice(),
-        include_bytes!("../../../contracts/ecra-identity-v1/invalid/assertion-malformed-signature.json")
-            .as_slice(),
+        include_bytes!(
+            "../../../contracts/ecra-identity-v1/invalid/assertion-unsupported-version.json"
+        )
+        .as_slice(),
+        include_bytes!(
+            "../../../contracts/ecra-identity-v1/invalid/assertion-malformed-signature.json"
+        )
+        .as_slice(),
     ] {
         assert!(IdentityAssertionV1::from_json_slice(fixture).is_err());
     }
@@ -27,7 +31,10 @@ fn stateful_phase3_validation_corpus_stays_inside_the_crate_boundary() {
         "authenticated_snapshot_rejects_lifecycle_ambiguity",
         "validation_is_deterministic_for_one_thousand_identical_evaluations",
     ] {
-        assert!(source.contains(required_test), "missing crate-private validation test: {required_test}");
+        assert!(
+            source.contains(required_test),
+            "missing crate-private validation test: {required_test}"
+        );
     }
     assert!(source.contains("for _ in 0..1_000"));
 }

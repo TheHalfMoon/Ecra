@@ -7,9 +7,9 @@ use crate::{
     ActorBinding, AssertionAttributes, AssertionAudience, AssertionAudienceService,
     AssertionIssuanceRequest, AssertionIssuer, AssertionNonceId, AssertionSignature, DelegationId,
     EnrolledPrincipalHandle, EnrollmentId, IdentityAssertionPayloadV1, IdentityAssertionV1,
-    IdentityErrorCode, IdentityValidationContext, IssuerSession, KeyId, KeyStatus, OnBehalfOfBinding,
-    ReplayValidationInput, TrustRootId, TrustStateDigest, VerifiedAssertionKey, VerifiedTrustSnapshot,
-    validate_identity_assertion,
+    IdentityErrorCode, IdentityValidationContext, IssuerSession, KeyId, KeyStatus,
+    OnBehalfOfBinding, ReplayValidationInput, TrustRootId, TrustStateDigest, VerifiedAssertionKey,
+    VerifiedTrustSnapshot, validate_identity_assertion,
 };
 
 const ASSERTION_ID: &str = "00000000-0000-0000-0000-000000000001";
@@ -134,7 +134,10 @@ fn signed_assertion_round_trips_and_validates() {
     )
     .unwrap();
     assert_eq!(validated.principal(), fixture.session.principal());
-    assert_eq!(validated.signing_key_id(), KeyId::parse_str(KEY_ID).unwrap());
+    assert_eq!(
+        validated.signing_key_id(),
+        KeyId::parse_str(KEY_ID).unwrap()
+    );
 }
 
 #[test]
@@ -170,7 +173,8 @@ fn wrong_issuer_key_and_subject_are_rejected_before_context_creation() {
     let other_key = "00000000-0000-0000-0000-000000000013";
     wrong_key["issuer"]["key_id"] = other_key.into();
     wrong_key["signature"]["key_id"] = other_key.into();
-    let parsed = IdentityAssertionV1::from_json_slice(&serde_json::to_vec(&wrong_key).unwrap()).unwrap();
+    let parsed =
+        IdentityAssertionV1::from_json_slice(&serde_json::to_vec(&wrong_key).unwrap()).unwrap();
     let error = validate_identity_assertion(
         &parsed,
         &context(
@@ -185,8 +189,7 @@ fn wrong_issuer_key_and_subject_are_rejected_before_context_creation() {
     assert_eq!(error.code(), IdentityErrorCode::KeyNotFound);
 
     let mut wrong_subject = serde_json::to_value(&assertion).unwrap();
-    wrong_subject["subject_principal_id"] =
-        "00000000-0000-0000-0000-000000000014".into();
+    wrong_subject["subject_principal_id"] = "00000000-0000-0000-0000-000000000014".into();
     let parsed =
         IdentityAssertionV1::from_json_slice(&serde_json::to_vec(&wrong_subject).unwrap()).unwrap();
     let error = validate_identity_assertion(
@@ -200,7 +203,10 @@ fn wrong_issuer_key_and_subject_are_rejected_before_context_creation() {
         ),
     )
     .unwrap_err();
-    assert_eq!(error.code(), IdentityErrorCode::TrustSnapshotStaleOrMismatched);
+    assert_eq!(
+        error.code(),
+        IdentityErrorCode::TrustSnapshotStaleOrMismatched
+    );
 }
 
 #[test]
@@ -429,7 +435,10 @@ fn authenticated_snapshot_rejects_lifecycle_ambiguity() {
         TrustStateDigest::from_bytes([11u8; 32]),
     )
     .unwrap_err();
-    assert_eq!(error.code(), IdentityErrorCode::TrustSnapshotLifecycleInvalid);
+    assert_eq!(
+        error.code(),
+        IdentityErrorCode::TrustSnapshotLifecycleInvalid
+    );
 }
 
 #[test]

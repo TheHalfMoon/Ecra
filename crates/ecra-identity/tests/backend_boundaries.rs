@@ -22,7 +22,10 @@ fn validated_context_exposes_identity_evidence_only() {
         "SensitiveBytes",
         "SigningKey",
     ] {
-        assert!(!validated.contains(forbidden), "forbidden authority/secret field: {forbidden}");
+        assert!(
+            !validated.contains(forbidden),
+            "forbidden authority/secret field: {forbidden}"
+        );
     }
 }
 
@@ -74,6 +77,9 @@ fn pure_validation_has_no_ambient_io_clock_or_authorization_dependencies() {
         "CapabilityGrant",
         "AuthorizationDecision",
     ] {
-        assert!(!production.contains(forbidden), "ambient/authority dependency: {forbidden}");
+        assert!(
+            !production.contains(forbidden),
+            "ambient/authority dependency: {forbidden}"
+        );
     }
 }

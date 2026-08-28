@@ -52,10 +52,14 @@ fn phase3_invalid_wire_corpus_fails_before_identity_context_creation() {
     for fixture in [
         include_bytes!("../../../contracts/ecra-identity-v1/invalid/assertion-unknown-field.json")
             .as_slice(),
-        include_bytes!("../../../contracts/ecra-identity-v1/invalid/assertion-unsupported-version.json")
-            .as_slice(),
-        include_bytes!("../../../contracts/ecra-identity-v1/invalid/assertion-malformed-signature.json")
-            .as_slice(),
+        include_bytes!(
+            "../../../contracts/ecra-identity-v1/invalid/assertion-unsupported-version.json"
+        )
+        .as_slice(),
+        include_bytes!(
+            "../../../contracts/ecra-identity-v1/invalid/assertion-malformed-signature.json"
+        )
+        .as_slice(),
     ] {
         assert!(IdentityAssertionV1::from_json_slice(fixture).is_err());
     }
