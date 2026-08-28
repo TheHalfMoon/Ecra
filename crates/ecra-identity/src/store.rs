@@ -5,15 +5,18 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use ecra_core::{SchemaVersion, to_jcs_vec};
+use ecra_core::{EpochMillis, SchemaVersion, to_jcs_vec};
+use ed25519_dalek::SigningKey;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
+use uuid::Uuid;
+use zeroize::Zeroizing;
 
 use crate::backend::{SecureRandom, TrustBackend, TrustBackendSecretRef, TrustBackendStatus};
 use crate::envelope::{open_envelope, protect_envelope};
-use crate::key::ProtectedTrustStateV1;
+use crate::key::{KeyRecord, KeyStatus, ProtectedTrustStateV1, MAX_I_JSON_U64};
 use crate::{
-    EnvelopeKeyRef, IdentityError, IdentityErrorCategory, IdentityErrorCode, KeyPurpose,
+    EnvelopeKeyRef, IdentityError, IdentityErrorCategory, IdentityErrorCode, KeyId, KeyPurpose,
     MAX_JSON_DEPTH, MAX_PROTECTED_ENVELOPE_WIRE_BYTES, ProtectedEnvelopeV1,
     ProtectedInformationClass, ProtectedObjectId, ProtectedPurpose, SensitiveBytes,
     TrustStateDigest, validate_ecr031_version, validate_json_limits,
@@ -23,6 +26,7 @@ const TRUST_STATE_PURPOSE: ProtectedPurpose = ProtectedPurpose::TrustState;
 const TRUST_STATE_INFORMATION_CLASS: ProtectedInformationClass =
     ProtectedInformationClass::Sensitive;
 const BOOTSTRAP_MARKER_BYTES: &[u8] = br#"{"state":"in_progress","version":{"major":1,"minor":0}}"#;
+const ROTATION_SECRET_BYTES: usize = 32;
 
 /// Filesystem location owned by the protected store boundary rather than by
 /// identity bootstrap logic. The location is operational metadata only and can
@@ -221,6 +225,79 @@ impl ProtectedTrustStateStore {
         self.atomic_replace(&wire)
     }
 
+    /// Rotate one active purpose key through the authoritative protected state.
+    ///
+    /// The next secret is protected by the selected backend before any state is
+    /// published. The prior generation is retired, the next generation becomes
+    /// active and the complete transition is committed through the same
+    /// crash-safe atomic replacement used by ordinary protected-state writes.
+    /// Backend material created before a failed publish is non-authoritative
+    /// orphan material and cannot become identity authority by itself.
+    #[allow(dead_code)]
+    pub(crate) fn rotate_key(
+        &self,
+        backend: &impl TrustBackend,
+        random: &mut impl SecureRandom,
+        purpose: KeyPurpose,
+        transitioned_at: EpochMillis,
+    ) -> Result<AuthenticatedTrustState, IdentityError> {
+        let authenticated = self.open_authenticated(backend)?;
+        let state = authenticated.state();
+        state.validate_schema_invariants()?;
+        if transitioned_at.get() < state.updated_at().get() {
+            return Err(rotation_error("rotation_timestamp_before_state"));
+        }
+
+        let current = state.active_key(purpose)?;
+        current.ensure_new_material_use_allowed()?;
+        let next_generation = current
+            .generation()
+            .checked_add(1)
+            .filter(|generation| *generation <= MAX_I_JSON_U64)
+            .ok_or_else(|| rotation_error("rotation_key_generation_overflow"))?;
+        let next_state_generation = state
+            .state_generation()
+            .checked_add(1)
+            .filter(|generation| *generation <= MAX_I_JSON_U64)
+            .ok_or_else(|| rotation_error("rotation_state_generation_overflow"))?;
+        let next_key_id = random_rotation_key_id(random)?;
+        if state.keys().iter().any(|key| key.key_id() == next_key_id) {
+            return Err(rotation_error("rotation_key_id_collision"));
+        }
+
+        let next_key = protect_rotated_secret(
+            backend,
+            random,
+            state.trust_root_id(),
+            next_key_id,
+            purpose,
+            next_generation,
+            transitioned_at,
+        )?;
+        let retired_current = current.retire(transitioned_at)?;
+        let current_key_id = current.key_id();
+        let mut keys = Vec::with_capacity(state.keys().len().saturating_add(1));
+        for key in state.keys() {
+            if key.key_id() == current_key_id {
+                keys.push(retired_current.clone());
+            } else {
+                keys.push(key.clone());
+            }
+        }
+        keys.push(next_key);
+
+        let next_state = ProtectedTrustStateV1::new(
+            state.trust_root_id(),
+            state.enrollment(),
+            next_state_generation,
+            keys,
+            state.revoked_key_ids().clone(),
+            transitioned_at,
+        )?;
+        self.publish(backend, random, &next_state)?;
+        self.open_authenticated(backend)
+    }
+
     pub(crate) fn open_authenticated(
         &self,
         backend: &impl TrustBackend,
@@ -296,6 +373,67 @@ impl ProtectedTrustStateStore {
     fn atomic_replace(&self, bytes: &[u8]) -> Result<(), IdentityError> {
         atomic_replace_path(&self.path, bytes)
     }
+}
+
+fn protect_rotated_secret(
+    backend: &impl TrustBackend,
+    random: &mut impl SecureRandom,
+    trust_root_id: crate::TrustRootId,
+    key_id: KeyId,
+    purpose: KeyPurpose,
+    generation: u64,
+    transitioned_at: EpochMillis,
+) -> Result<KeyRecord, IdentityError> {
+    let mut secret = Zeroizing::new([0_u8; ROTATION_SECRET_BYTES]);
+    random.fill(&mut *secret)?;
+
+    let record = match purpose {
+        KeyPurpose::ProtectedEnvelopeRoot => KeyRecord::new_protected_envelope_root(
+            key_id,
+            trust_root_id,
+            generation,
+            KeyStatus::Active,
+            transitioned_at,
+            transitioned_at,
+            None,
+            None,
+        )?,
+        KeyPurpose::IdentityAssertionSigning | KeyPurpose::ProtectedAnchorSigning => {
+            let signing_key = SigningKey::from_bytes(&secret);
+            KeyRecord::new_ed25519(
+                key_id,
+                trust_root_id,
+                purpose,
+                generation,
+                KeyStatus::Active,
+                signing_key.verifying_key().to_bytes(),
+                transitioned_at,
+                transitioned_at,
+                None,
+                None,
+            )?
+        }
+    };
+
+    let secret_ref = TrustBackendSecretRef::new(trust_root_id, key_id, generation, purpose)?;
+    backend.protect_secret(secret_ref, &SensitiveBytes::new(secret.to_vec()))?;
+    Ok(record)
+}
+
+fn random_rotation_key_id(random: &mut impl SecureRandom) -> Result<KeyId, IdentityError> {
+    let mut bytes = [0_u8; 16];
+    random.fill(&mut bytes)?;
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    KeyId::from_uuid(Uuid::from_bytes(bytes))
+}
+
+fn rotation_error(context: &'static str) -> IdentityError {
+    IdentityError::new(
+        IdentityErrorCategory::KeyState,
+        IdentityErrorCode::TrustSnapshotLifecycleInvalid,
+        Some(context),
+    )
 }
 
 #[derive(Deserialize)]
@@ -488,9 +626,16 @@ fn sync_parent_directory(_parent: &Path) -> Result<(), IdentityError> {
 
 #[cfg(test)]
 mod tests {
-    use std::{env, fs, path::PathBuf, process};
+    use std::{
+        cell::RefCell,
+        collections::HashMap,
+        env, fs,
+        path::PathBuf,
+        process,
+    };
 
     use ecra_core::{EpochMillis, PrincipalId, to_jcs_vec};
+    use ed25519_dalek::SigningKey;
 
     use super::{
         BootstrapStoreLocation, ProtectedTrustStateStore, TRUST_STATE_INFORMATION_CLASS,
@@ -504,12 +649,13 @@ mod tests {
     use crate::envelope::protect_envelope;
     use crate::key::{KeyRecord, KeyStatus, ProtectedTrustStateV1};
     use crate::{
-        EnrollmentId, EnvelopeKeyRef, IdentityError, IdentityErrorCode, KeyId, ProtectedObjectId,
-        SensitiveBytes, TrustRootId,
+        EnrollmentId, EnvelopeKeyRef, IdentityError, IdentityErrorCategory, IdentityErrorCode,
+        KeyId, KeyPurpose, ProtectedObjectId, SensitiveBytes, TrustRootId,
     };
 
     const ROOT: &str = "00000000-0000-0000-0000-000000000002";
     const KEY: &str = "00000000-0000-0000-0000-000000000011";
+    const SIGNING_KEY: &str = "00000000-0000-0000-0000-000000000003";
     const OBJECT: &str = "00000000-0000-0000-0000-000000000010";
     const PRINCIPAL: &str = "00000000-0000-0000-0000-000000000004";
     const ENROLLMENT: &str = "00000000-0000-0000-0000-000000000030";
@@ -556,6 +702,75 @@ mod tests {
         }
     }
 
+    struct RotationBackend {
+        secrets: RefCell<HashMap<TrustBackendSecretRef, Vec<u8>>>,
+    }
+
+    impl RotationBackend {
+        fn new() -> Self {
+            Self {
+                secrets: RefCell::new(HashMap::new()),
+            }
+        }
+
+        fn insert(&self, secret_ref: TrustBackendSecretRef, secret: Vec<u8>) {
+            self.secrets.borrow_mut().insert(secret_ref, secret);
+        }
+    }
+
+    impl TrustBackend for RotationBackend {
+        fn capabilities(&self) -> TrustBackendCapabilities {
+            TrustBackendCapabilities::new(TrustBackendKind::MacosDataProtectionKeychain)
+        }
+
+        fn status(&self) -> Result<TrustBackendStatus, IdentityError> {
+            Ok(TrustBackendStatus::Available)
+        }
+
+        fn protect_secret(
+            &self,
+            secret_ref: TrustBackendSecretRef,
+            secret: &SensitiveBytes,
+        ) -> Result<(), IdentityError> {
+            let mut secrets = self.secrets.borrow_mut();
+            if secrets.contains_key(&secret_ref) {
+                return Err(IdentityError::new(
+                    IdentityErrorCategory::TrustBackend,
+                    IdentityErrorCode::BackendInvariantViolation,
+                    Some("rotation_test_duplicate_secret"),
+                ));
+            }
+            secrets.insert(secret_ref, secret.as_slice().to_vec());
+            Ok(())
+        }
+
+        fn open_protected_secret(
+            &self,
+            secret_ref: TrustBackendSecretRef,
+        ) -> Result<SensitiveBytes, IdentityError> {
+            self.secrets
+                .borrow()
+                .get(&secret_ref)
+                .cloned()
+                .map(SensitiveBytes::new)
+                .ok_or_else(|| {
+                    IdentityError::new(
+                        IdentityErrorCategory::TrustBackend,
+                        IdentityErrorCode::KeyNotFound,
+                        Some("rotation_test_secret"),
+                    )
+                })
+        }
+
+        fn delete_backend_material(
+            &self,
+            secret_ref: TrustBackendSecretRef,
+        ) -> Result<(), IdentityError> {
+            self.secrets.borrow_mut().remove(&secret_ref);
+            Ok(())
+        }
+    }
+
     fn timestamp(value: i64) -> EpochMillis {
         EpochMillis::new(value).unwrap()
     }
@@ -566,6 +781,10 @@ mod tests {
 
     fn key_id() -> KeyId {
         KeyId::parse_str(KEY).unwrap()
+    }
+
+    fn signing_key_id() -> KeyId {
+        KeyId::parse_str(SIGNING_KEY).unwrap()
     }
 
     fn object_id() -> ProtectedObjectId {
@@ -582,12 +801,37 @@ mod tests {
                 root_id(),
                 key_id(),
                 1,
-                crate::KeyPurpose::ProtectedEnvelopeRoot,
+                KeyPurpose::ProtectedEnvelopeRoot,
             )
             .unwrap(),
             secret: vec![0x42; 32],
             status: TrustBackendStatus::Available,
         }
+    }
+
+    fn rotation_backend() -> RotationBackend {
+        let backend = RotationBackend::new();
+        backend.insert(
+            TrustBackendSecretRef::new(
+                root_id(),
+                key_id(),
+                1,
+                KeyPurpose::ProtectedEnvelopeRoot,
+            )
+            .unwrap(),
+            vec![0x42; 32],
+        );
+        backend.insert(
+            TrustBackendSecretRef::new(
+                root_id(),
+                signing_key_id(),
+                1,
+                KeyPurpose::IdentityAssertionSigning,
+            )
+            .unwrap(),
+            vec![0x07; 32],
+        );
+        backend
     }
 
     fn state(generation: u64, updated_at: i64) -> ProtectedTrustStateV1 {
@@ -612,6 +856,46 @@ mod tests {
             vec![root_key],
             Default::default(),
             timestamp(updated_at),
+        )
+        .unwrap()
+    }
+
+    fn rotation_state() -> ProtectedTrustStateV1 {
+        let root_key = KeyRecord::new_protected_envelope_root(
+            key_id(),
+            root_id(),
+            1,
+            KeyStatus::Active,
+            timestamp(900),
+            timestamp(1_000),
+            None,
+            None,
+        )
+        .unwrap();
+        let signing_key = SigningKey::from_bytes(&[0x07; 32]);
+        let signing_record = KeyRecord::new_ed25519(
+            signing_key_id(),
+            root_id(),
+            KeyPurpose::IdentityAssertionSigning,
+            1,
+            KeyStatus::Active,
+            signing_key.verifying_key().to_bytes(),
+            timestamp(900),
+            timestamp(1_000),
+            None,
+            None,
+        )
+        .unwrap();
+        ProtectedTrustStateV1::new(
+            root_id(),
+            ProtectedEnrollmentV1::new(
+                EnrollmentId::parse_str(ENROLLMENT).unwrap(),
+                PrincipalId::parse_str(PRINCIPAL).unwrap(),
+            ),
+            1,
+            vec![root_key, signing_record],
+            Default::default(),
+            timestamp(1_200),
         )
         .unwrap()
     }
@@ -653,6 +937,131 @@ mod tests {
         store.publish(&backend, &mut random, &second).unwrap();
         assert_eq!(store.open_authenticated(&backend).unwrap().state(), &second);
         assert!(!temp_path_for(store.path()).unwrap().exists());
+
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn rotation_protects_next_signing_generation_and_retires_previous() {
+        let (directory, store) = test_store("rotate-signing");
+        let backend = rotation_backend();
+        let initial = rotation_state();
+        let mut publish_random = DeterministicSecureRandom::new(vec![0x11; 12]);
+        store
+            .publish(&backend, &mut publish_random, &initial)
+            .unwrap();
+
+        let mut rotation_random = DeterministicSecureRandom::new(vec![0x22; 60]);
+        let authenticated = store
+            .rotate_key(
+                &backend,
+                &mut rotation_random,
+                KeyPurpose::IdentityAssertionSigning,
+                timestamp(1_300),
+            )
+            .unwrap();
+        let rotated = authenticated.state();
+        assert_eq!(rotated.state_generation(), 2);
+        let old = rotated
+            .keys()
+            .iter()
+            .find(|key| key.key_id() == signing_key_id())
+            .unwrap();
+        assert_eq!(old.status(), KeyStatus::RetiredVerifyOrDecryptOnly);
+        assert_eq!(old.retired_at(), Some(timestamp(1_300)));
+        let active = rotated
+            .active_key(KeyPurpose::IdentityAssertionSigning)
+            .unwrap();
+        assert_eq!(active.generation(), 2);
+        assert_ne!(active.key_id(), signing_key_id());
+        let new_secret_ref = TrustBackendSecretRef::new(
+            root_id(),
+            active.key_id(),
+            2,
+            KeyPurpose::IdentityAssertionSigning,
+        )
+        .unwrap();
+        assert!(backend.secrets.borrow().contains_key(&new_secret_ref));
+        assert_eq!(backend.secrets.borrow().len(), 3);
+
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn rotation_of_envelope_root_reencrypts_state_under_new_active_root() {
+        let (directory, store) = test_store("rotate-envelope-root");
+        let backend = rotation_backend();
+        let initial = rotation_state();
+        let mut publish_random = DeterministicSecureRandom::new(vec![0x31; 12]);
+        store
+            .publish(&backend, &mut publish_random, &initial)
+            .unwrap();
+
+        let mut rotation_random = DeterministicSecureRandom::new(vec![0x44; 60]);
+        let authenticated = store
+            .rotate_key(
+                &backend,
+                &mut rotation_random,
+                KeyPurpose::ProtectedEnvelopeRoot,
+                timestamp(1_300),
+            )
+            .unwrap();
+        let rotated = authenticated.state();
+        let old = rotated
+            .keys()
+            .iter()
+            .find(|key| key.key_id() == key_id())
+            .unwrap();
+        assert_eq!(old.status(), KeyStatus::RetiredVerifyOrDecryptOnly);
+        let active = rotated.active_key(KeyPurpose::ProtectedEnvelopeRoot).unwrap();
+        assert_eq!(active.generation(), 2);
+        assert_ne!(active.key_id(), key_id());
+        let new_secret_ref = TrustBackendSecretRef::new(
+            root_id(),
+            active.key_id(),
+            2,
+            KeyPurpose::ProtectedEnvelopeRoot,
+        )
+        .unwrap();
+        assert!(backend.secrets.borrow().contains_key(&new_secret_ref));
+        assert_eq!(
+            store
+                .open_authenticated(&backend)
+                .unwrap()
+                .state()
+                .active_key(KeyPurpose::ProtectedEnvelopeRoot)
+                .unwrap()
+                .key_id(),
+            active.key_id()
+        );
+
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn rotation_rejects_non_monotonic_transition_time_before_creating_secret() {
+        let (directory, store) = test_store("rotate-non-monotonic");
+        let backend = rotation_backend();
+        let initial = rotation_state();
+        let mut publish_random = DeterministicSecureRandom::new(vec![0x51; 12]);
+        store
+            .publish(&backend, &mut publish_random, &initial)
+            .unwrap();
+        let before = backend.secrets.borrow().len();
+        let mut rotation_random = DeterministicSecureRandom::new(vec![0x61; 60]);
+        let error = store
+            .rotate_key(
+                &backend,
+                &mut rotation_random,
+                KeyPurpose::IdentityAssertionSigning,
+                timestamp(1_199),
+            )
+            .unwrap_err();
+        assert_eq!(
+            error.code(),
+            IdentityErrorCode::TrustSnapshotLifecycleInvalid
+        );
+        assert_eq!(backend.secrets.borrow().len(), before);
 
         fs::remove_dir_all(directory).unwrap();
     }
