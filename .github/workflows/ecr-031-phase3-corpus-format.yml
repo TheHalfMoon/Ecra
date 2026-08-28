@@ -1,0 +1,70 @@
+name: ECR-031 Phase 3 Corpus Format Convergence
+
+on:
+  push:
+    branches:
+      - 031-identity-trust-root
+
+permissions:
+  contents: write
+
+jobs:
+  converge-phase3-corpus:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact corpus base
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='5519ee5c50fa74185d1683869863d3d6980fbcaa'
+          git merge-base --is-ancestor "$base" HEAD
+          delta="$(git diff --name-only "$base"..HEAD)"
+          test "$delta" = '.github/workflows/ecr-031-phase3-corpus-format.yml'
+
+      - name: Format and verify complete trusted workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo fmt --all
+          cargo build --workspace --locked
+          cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+          cargo test --workspace --locked
+          cargo test --doc --workspace --locked
+          cargo test --workspace --locked --offline
+          bash scripts/check-core-unsafe.sh
+          bash scripts/check-core-deps.sh >/dev/null
+          bash scripts/check-run-unsafe.sh
+          bash scripts/check-run-deps.sh >/dev/null
+          bash scripts/check-identity-unsafe.sh
+          bash scripts/check-identity-deps.sh >/dev/null
+
+      - name: Commit corpus formatting and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/ecr-031-phase3-corpus-format.yml
+          git add \
+            .github/workflows/ecr-031-phase3-corpus-format.yml \
+            crates/ecra-identity/src/lib.rs \
+            crates/ecra-identity/src/phase3_tests.rs \
+            crates/ecra-identity/tests/assertion_contract.rs \
+            crates/ecra-identity/tests/issuance.rs \
+            crates/ecra-identity/tests/backend_boundaries.rs \
+            crates/ecra-identity/tests/validation_phase3.rs
+          changed="$(git diff --cached --name-only | sort)"
+          printf '%s\n' "$changed"
+          while IFS= read -r path; do
+            case "$path" in
+              .github/workflows/ecr-031-phase3-corpus-format.yml|crates/ecra-identity/src/lib.rs|crates/ecra-identity/src/phase3_tests.rs|crates/ecra-identity/tests/assertion_contract.rs|crates/ecra-identity/tests/issuance.rs|crates/ecra-identity/tests/backend_boundaries.rs|crates/ecra-identity/tests/validation_phase3.rs) ;;
+              *) echo "unexpected formatted path: $path" >&2; exit 1 ;;
+            esac
+          done <<< "$changed"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'style(identity): converge Phase 3 corpus'
+          git push origin HEAD:031-identity-trust-root
