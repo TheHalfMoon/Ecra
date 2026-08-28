@@ -101,7 +101,11 @@ impl ProtectedTrustStateStore {
     }
 
     pub(crate) fn exists(&self) -> Result<bool, IdentityError> {
-        path_is_regular_file_if_present(&self.path, "trust_state_store_file_type")
+        Self::store_exists(&self.path)
+    }
+
+    pub(crate) fn store_exists(path: &Path) -> Result<bool, IdentityError> {
+        path_is_regular_file_if_present(path, "trust_state_store_file_type")
     }
 
     pub(crate) fn bootstrap_marker_exists(path: &Path) -> Result<bool, IdentityError> {
@@ -468,7 +472,9 @@ mod tests {
 
     use ecra_core::{EpochMillis, PrincipalId, to_jcs_vec};
 
-    use super::{ProtectedTrustStateStore, TRUST_STATE_INFORMATION_CLASS, TRUST_STATE_PURPOSE};
+    use super::{
+        ProtectedTrustStateStore, TRUST_STATE_INFORMATION_CLASS, TRUST_STATE_PURPOSE, temp_path_for,
+    };
     use crate::backend::{
         DeterministicSecureRandom, TrustBackend, TrustBackendCapabilities, TrustBackendKind,
         TrustBackendSecretRef, TrustBackendStatus,
