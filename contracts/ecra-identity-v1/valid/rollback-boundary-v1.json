@@ -1,0 +1,73 @@
+{
+  "claim": "no_monotonic_rollback_resistance",
+  "older": {
+    "version": {"major": 1, "minor": 0},
+    "trust_root_id": "00000000-0000-0000-0000-000000000002",
+    "enrollment": {
+      "enrollment_id": "00000000-0000-0000-0000-000000000030",
+      "principal_id": "00000000-0000-0000-0000-000000000004",
+      "kind": "ecra_local_installation_principal"
+    },
+    "state_generation": 1,
+    "keys": [
+      {
+        "version": {"major": 1, "minor": 0},
+        "key_id": "00000000-0000-0000-0000-000000000011",
+        "trust_root_id": "00000000-0000-0000-0000-000000000002",
+        "purpose": "protected_envelope_root",
+        "algorithm": "ecra_protected_envelope_root_v1",
+        "generation": 1,
+        "status": "active",
+        "public_material_b64url": null,
+        "created_at": 900,
+        "activated_at": 900,
+        "retired_at": null,
+        "revoked_at": null
+      }
+    ],
+    "revoked_key_ids": [],
+    "updated_at": 1000
+  },
+  "newer": {
+    "version": {"major": 1, "minor": 0},
+    "trust_root_id": "00000000-0000-0000-0000-000000000002",
+    "enrollment": {
+      "enrollment_id": "00000000-0000-0000-0000-000000000030",
+      "principal_id": "00000000-0000-0000-0000-000000000004",
+      "kind": "ecra_local_installation_principal"
+    },
+    "state_generation": 2,
+    "keys": [
+      {
+        "version": {"major": 1, "minor": 0},
+        "key_id": "00000000-0000-0000-0000-000000000011",
+        "trust_root_id": "00000000-0000-0000-0000-000000000002",
+        "purpose": "protected_envelope_root",
+        "algorithm": "ecra_protected_envelope_root_v1",
+        "generation": 1,
+        "status": "retired_verify_or_decrypt_only",
+        "public_material_b64url": null,
+        "created_at": 900,
+        "activated_at": 900,
+        "retired_at": 1100,
+        "revoked_at": null
+      },
+      {
+        "version": {"major": 1, "minor": 0},
+        "key_id": "00000000-0000-0000-0000-000000000012",
+        "trust_root_id": "00000000-0000-0000-0000-000000000002",
+        "purpose": "protected_envelope_root",
+        "algorithm": "ecra_protected_envelope_root_v1",
+        "generation": 2,
+        "status": "active",
+        "public_material_b64url": null,
+        "created_at": 1100,
+        "activated_at": 1100,
+        "retired_at": null,
+        "revoked_at": null
+      }
+    ],
+    "revoked_key_ids": [],
+    "updated_at": 1200
+  }
+}

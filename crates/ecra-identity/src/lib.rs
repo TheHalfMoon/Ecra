@@ -78,6 +78,8 @@ pub mod validation;
 
 #[cfg(test)]
 mod phase3_tests;
+#[cfg(test)]
+mod phase4_tests;
 
 use ecra_core::SchemaVersion;
 
