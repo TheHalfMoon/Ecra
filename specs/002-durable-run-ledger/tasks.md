@@ -89,13 +89,13 @@
 
 ## Phase 8 — Cross-cutting portability, security and documentation gates
 
-- [ ] T060 Add production-source scan proving reducer/canonical archive logic has no OS clock/random/network/environment/process dependency and library has no network/provider call surface. **Path:** `crates/ecra-run/tests/boundaries.rs`. **FR-005, FR-056, SC-013**
-- [ ] T061 Prove `ecra-core` dependency/zero-I/O/zero-unsafe gates remain green after workspace/dependency expansion. **Paths:** existing core scripts + `.github/workflows/ecr-002.yml`. **FR-054, SC-014**
-- [ ] T062 Add `ecra-run` unsafe/dependency boundary gates including explicit native SQLite rationale. **Paths:** `scripts/check-run-unsafe.sh`, `scripts/check-run-deps.sh`, `.github/workflows/ecr-002.yml`. **FR-055**
-- [ ] T063 Add strict portability tests for LF/CRLF/JSON formatting input where semantically applicable and deterministic reducer/archive output. **Path:** `crates/ecra-run/tests/portability.rs`. **SC-003, SC-011**
-- [ ] T064 Audit committed fixtures for synthetic/non-sensitive content and docs for no hostile-tamper/verification/authorization overclaim. **Paths:** `crates/ecra-run/tests/boundaries.rs`, `crates/ecra-run/README.md`, `specs/002-durable-run-ledger/threat-model.md`. **FR-030, FR-057, SC-013**
-- [ ] T065 Add run architecture map and misuse warnings covering receipt!=verification, Actor!=Principal, ledger digest!=authenticity, unresolved!=retryable, projection!=truth, budget!=authority, `.ecra`!=protected secret container. **Path:** `crates/ecra-run/README.md`.
-- [ ] T066 Run full exact-head quickstart gate and record dependency versions/licenses/SQLite version/archive library configuration. **Paths:** `specs/002-durable-run-ledger/STATUS.md`, `research/donor-license-ledger.md`. **SC-015**
+- [x] T060 Add production-source scan proving reducer/canonical archive logic has no OS clock/random/network/environment/process dependency and library has no network/provider call surface. **Path:** `crates/ecra-run/tests/boundaries.rs`. **FR-005, FR-056, SC-013**
+- [x] T061 Prove `ecra-core` dependency/zero-I/O/zero-unsafe gates remain green after workspace/dependency expansion. **Paths:** existing core scripts + `.github/workflows/ecr-002.yml`. **FR-054, SC-014**
+- [x] T062 Add `ecra-run` unsafe/dependency boundary gates including explicit native SQLite rationale. **Paths:** `scripts/check-run-unsafe.sh`, `scripts/check-run-deps.sh`, `.github/workflows/ecr-002.yml`. **FR-055**
+- [x] T063 Add strict portability tests for LF/CRLF/JSON formatting input where semantically applicable and deterministic reducer/archive output. **Path:** `crates/ecra-run/tests/portability.rs`. **SC-003, SC-011**
+- [x] T064 Audit committed fixtures for synthetic/non-sensitive content and docs for no hostile-tamper/verification/authorization overclaim. **Paths:** `crates/ecra-run/tests/boundaries.rs`, `crates/ecra-run/README.md`, `specs/002-durable-run-ledger/threat-model.md`. **FR-030, FR-057, SC-013**
+- [x] T065 Add run architecture map and misuse warnings covering receipt!=verification, Actor!=Principal, ledger digest!=authenticity, unresolved!=retryable, projection!=truth, budget!=authority, `.ecra`!=protected secret container. **Path:** `crates/ecra-run/README.md`.
+- [x] T066 Run full exact-head quickstart gate and record dependency versions/licenses/SQLite version/archive library configuration. **Paths:** `specs/002-durable-run-ledger/STATUS.md`, `research/donor-license-ledger.md`. **SC-015**
 
 ## Phase 9 — Traceability, convergence, PR and canonical closure
 
