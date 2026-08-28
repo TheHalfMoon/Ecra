@@ -78,14 +78,14 @@
 
 ## Phase 7 — Deterministic `.ecra` archive
 
-- [ ] T052 Implement strict manifest/path/entry metadata model and v1 hard parser limits. **Path:** `crates/ecra-run/src/archive.rs`. **FR-046–FR-052**
-- [ ] T053 Implement deterministic Stored-only writer with fixed timestamp/permissions/no comments/encryption/symlinks/directories and stable entry order. **Paths:** `crates/ecra-run/src/archive.rs`, `crates/ecra-run/tests/archive.rs`. **FR-046–FR-050**
-- [ ] T054 Implement archive reader preflight for path, duplicate, method/encryption/symlink, count and size limits before trusted materialization. **Paths:** `crates/ecra-run/src/archive.rs`, `crates/ecra-run/tests/archive.rs`. **FR-049**
-- [ ] T055 Implement manifest-entry whitelist, ContentDigest/size checks, strict event parse, full ledger validation and reducer validation before import. **Paths:** `crates/ecra-run/src/archive.rs`, `crates/ecra-run/tests/archive.rs`. **FR-048–FR-051**
-- [ ] T056 Add deterministic export golden/hash: identical logical content produces byte-identical archive bytes. **Paths:** `contracts/ecra-run-v1/expected/`, `crates/ecra-run/tests/archive.rs`. **SC-011**
-- [ ] T057 Add malicious archive corpus: absolute/traversal/backslash/NUL/duplicate/symlink/unsupported compression/encryption/count/size breaches. **Path:** `crates/ecra-run/tests/archive.rs`. **SC-012**
-- [ ] T058 Add malformed manifest/event/content/ledger digest mismatch import failures. **Path:** `crates/ecra-run/tests/archive.rs`. **SC-002, SC-012**
-- [ ] T059 Prove archive never contains/exports live SQLite database/WAL files and import/export fixtures remain synthetic/non-sensitive. **Paths:** `crates/ecra-run/tests/archive.rs`, `crates/ecra-run/tests/boundaries.rs`. **FR-028, FR-030, FR-048, FR-052, SC-013**
+- [x] T052 Implement strict manifest/path/entry metadata model and v1 hard parser limits. **Path:** `crates/ecra-run/src/archive.rs`. **FR-046–FR-052**
+- [x] T053 Implement deterministic Stored-only writer with fixed timestamp/permissions/no comments/encryption/symlinks/directories and stable entry order. **Paths:** `crates/ecra-run/src/archive.rs`, `crates/ecra-run/tests/archive.rs`. **FR-046–FR-050**
+- [x] T054 Implement archive reader preflight for path, duplicate, method/encryption/symlink, count and size limits before trusted materialization. **Paths:** `crates/ecra-run/src/archive.rs`, `crates/ecra-run/tests/archive.rs`. **FR-049**
+- [x] T055 Implement manifest-entry whitelist, ContentDigest/size checks, strict event parse, full ledger validation and reducer validation before import. **Paths:** `crates/ecra-run/src/archive.rs`, `crates/ecra-run/tests/archive.rs`. **FR-048–FR-051**
+- [x] T056 Add deterministic export golden/hash: identical logical content produces byte-identical archive bytes. **Paths:** `contracts/ecra-run-v1/expected/`, `crates/ecra-run/tests/archive.rs`. **SC-011**
+- [x] T057 Add malicious archive corpus: absolute/traversal/backslash/NUL/duplicate/symlink/unsupported compression/encryption/count/size breaches. **Path:** `crates/ecra-run/tests/archive.rs`. **SC-012**
+- [x] T058 Add malformed manifest/event/content/ledger digest mismatch import failures. **Path:** `crates/ecra-run/tests/archive.rs`. **SC-002, SC-012**
+- [x] T059 Prove archive never contains/exports live SQLite database/WAL files and import/export fixtures remain synthetic/non-sensitive. **Paths:** `crates/ecra-run/tests/archive.rs`, `crates/ecra-run/tests/boundaries.rs`. **FR-028, FR-030, FR-048, FR-052, SC-013**
 
 ## Phase 8 — Cross-cutting portability, security and documentation gates
 
