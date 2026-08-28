@@ -120,6 +120,8 @@ Phase 8 T060–T066  blocked by Phase 7 exact-head verification
 Phase 9 T067–T073  blocked
 ```
 
+Phase 7 semantic mutation starts only after a full exact-head ECR-002 gate passes on this Phase 6 ledger state.
+
 Immediate work:
 
 ```text
