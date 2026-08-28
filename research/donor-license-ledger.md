@@ -2,7 +2,7 @@
 
 **Status:** CANONICAL_IMPLEMENTATION_LEDGER  
 **Created:** 2026-08-27  
-**Updated:** 2026-08-27 for ECR-001 locked dependency review
+**Updated:** 2026-08-28 for local-model world gateway planning
 
 This ledger separates **conceptual reference**, **dependency candidate**, **locked dependency**, and **source-reuse candidate**. Listing a project here never authorizes copying its source. Source reuse requires exact-file review, license compatibility, notice handling, and an implementation change that records what was copied/modified.
 
@@ -59,10 +59,22 @@ This ledger separates **conceptual reference**, **dependency candidate**, **lock
 |---|---|---|---|---|
 | cedar-policy/cedar | Fine-grained authorization engine | Apache-2.0 | DEPENDENCY_CANDIDATE | ECR-003 adapter candidate; Ecra capability model remains independent. |
 | Bytecode Alliance Wasmtime | WebAssembly/component runtime | Apache-2.0 WITH LLVM-exception / upstream notices | DEPENDENCY_CANDIDATE | ECR-017 plugin sandbox candidate; sandbox is not treated as infallible. |
+| GoogleChromeLabs/webmcp-tools | WebMCP developer utilities, polyfill, demos and tool-calling evaluation methodology | Apache-2.0; LICENSE verified at research time | REFERENCE/DEPENDENCY_CANDIDATE | Snapshot reviewed at `d39eae4bd51e8c12736b8cae840bd98f190f3179`. ECR-011 donor for structured site capabilities and ECR-028 donor for static/live/smoke tool-call evaluation. WebMCP schemas are `CapabilityOffer`s, never authority. No source copying authorized by this entry. |
+| opensandbox-group/OpenSandbox | General-purpose AI sandbox, network egress controls, stronger isolation integrations and outbound credential mediation | Apache-2.0; LICENSE verified at research time | REFERENCE/INTEGRATION_CANDIDATE | Snapshot reviewed at `48b0215f1bd097b31d0f022a44640e00c11ac49d`. Strong ECR-017/ECR-003 donor for replaceable sandbox mechanics, default-deny egress and credential injection. Must not become Ecra policy/identity/receipt/verification authority or mandatory trusted-core dependency. |
 | modelcontextprotocol/rust-sdk (`rmcp`) | MCP Rust SDK | mixed transition: Apache-2.0 for newly relicensed/new code; legacy MIT portions per upstream notice | DEPENDENCY_CANDIDATE | ECR-016 must pin reviewed version and preserve applicable notices. |
 | agentclientprotocol/rust-sdk | ACP Rust SDK | verify exact version license before dependency | DEPENDENCY_CANDIDATE | ECR-016 only. |
 | A2A Rust SDK | Agent-to-agent protocol | verify exact version license before dependency | DEPENDENCY_CANDIDATE | ECR-016 only. |
 | Agent Skills specification | Portable skill knowledge format | verify spec/code licensing before bundled source use | REFERENCE/INTEROP | ECR-016 import/export semantics; Ecra Skill IR remains distinct. |
+
+### Local-model world gateway donor boundary
+
+The WebMCP/OpenSandbox review supplies architecture and evaluation evidence only. It does not authorize ECR-002 scope growth and does not authorize source reuse. Future use must remain split by ownership:
+
+- ECR-011 owns WebMCP/native semantic-capability routing and origin binding;
+- ECR-017 owns sandbox backend abstractions and enforcement profiles;
+- ECR-003/ECR-031 own authority, information flow and secret semantics;
+- ECR-021 owns model-facing context/tool/inference integration;
+- ECR-028 owns reproducible uplift/security evaluation.
 
 ## Serialization / Trusted Core Candidates
 
