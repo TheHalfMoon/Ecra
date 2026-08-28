@@ -154,3 +154,26 @@ WINDOWS_LINUX_BACKENDS    not adopted / not verified
 ```
 
 The exact-head run passed stale-lock rejection, locked workspace build, rustfmt, strict Clippy, workspace tests, ECR-001/ECR-002 regressions, ECR-031 phase hooks, rustdoc, offline replay, core/run/identity boundary scripts, and dependency/toolchain evidence. This closes only the Phase 1 workspace/dependency/CI gate; it does not claim semantic identity, envelope, key-lifecycle, or native Keychain behavior is implemented.
+
+## Phase 2 verified closure evidence
+
+Phase 2 T011–T020 is verified on exact head `4ddb6da267ebc90647e27fde382385a9d2529452`. Permanent ECR-031 CI run `33163366128`, job `98822931741`, completed `SUCCESS` with all steps green.
+
+```text
+VERIFIED_PHASE2_HEAD      4ddb6da267ebc90647e27fde382385a9d2529452
+ECR031_CI_RUN             33163366128
+ECR031_CI_JOB             98822931741
+ECR031_CI_RESULT          SUCCESS
+T011-T012                 strong UUID-backed IDs + compile/type separation
+T013                      closed redacted identity errors
+T014-T015                 closed algorithm/lifecycle enums + strict v1 version gate
+T016-T017                 pre-crypto byte/depth/count limits + valid/invalid fixture corpus
+T018-T019                 ecra-core JCS reuse + domain-separated SHA-256 + fixed goldens
+T020                      exact-head Phase 2 gate complete
+```
+
+The successful gate covered locked workspace build, rustfmt, strict Clippy, workspace tests, ECR-001/ECR-002 regressions, explicit ECR-031 assertion/validation/anchor targets, rustdoc, offline replay, core/run/identity unsafe+dependency boundaries, and dependency/toolchain evidence. Phase 2 introduces no authorization, browser/model/network/provider/protocol/process behavior and no native-backend verification claim.
+
+## Phase 3 execution frontier
+
+Phase 3 becomes eligible only after this record-only Phase 2 ledger-convergence head itself passes permanent ECR-031 CI. Once that exact closure head is green, continue T021–T034 strictly in dependency order. No Phase 3 API may introduce ambient issuance or caller-selected subject substitution, and validation remains identity/trust evidence rather than authorization.
