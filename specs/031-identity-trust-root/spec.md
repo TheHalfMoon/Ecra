@@ -168,39 +168,84 @@ Acceptance:
 - **FR-057** No team/shared multi-principal governance or cross-device recovery/sync is implemented in v1.
 - **FR-058** All later consumers MUST receive references/validated contexts, not ambient reusable raw key or secret material.
 
+### Normative planning convergence — C1–C4
+
+The following refinements close Analyze Pass 1 findings without creating a second requirement namespace. They are binding interpretations of the FRs above.
+
+#### C1 — Ecra-local principal bootstrap / enrollment
+
+Refines **FR-003, FR-013, FR-015, FR-021, FR-022, FR-056**.
+
+- V1 establishes an **Ecra-local installation principal** under the current protected local installation/user context. It does not claim legal identity proofing, government identity, email ownership, OS-account proofing, or NIST assurance-level certification.
+- First enrollment generates fresh opaque `PrincipalId`, `TrustRootId`, enrollment identity and initial key generations using approved CSPRNG/key generation. OS username, account name, email, Actor label, filesystem path or protocol subject MUST NOT be used as canonical `PrincipalId`.
+- Bootstrap MUST produce either a complete protected enrollment/trust state or a typed incomplete/unavailable failure. Partial initialization MUST NOT be interpreted as a usable principal/trust root.
+- The native backend binding establishes local key custody under the documented backend assumptions; it does not prove the real-world identity of the human operating the account.
+
+#### C2 — Protected authoritative trust snapshot / rollback boundary
+
+Refines **FR-014, FR-017–FR-023, FR-054**.
+
+- Security-critical current key generation, lifecycle status, revocation set and trust-root binding MUST be authenticated/protected under the trust backend/root before they can influence validation or issuance.
+- Pure assertion validation consumes a `VerifiedTrustSnapshot` created only after the protected authoritative trust state has been authenticated/opened successfully.
+- Ordinary unsigned files/SQLite rows/caches may be audit/projection metadata only. Restoring stale ordinary metadata MUST NOT reactivate a retired/revoked key or change the verified current generation.
+- V1 does **not** claim universal monotonic rollback resistance against an attacker capable of restoring or controlling the entire authorized native trust store/root state. Such whole-root rollback/equivalent keystore authority remains outside the filesystem-only tamper guarantee unless a backend-specific monotonic/external anchor is later added.
+
+#### C3 — Non-ambient assertion issuance
+
+Refines **FR-003–FR-005, FR-009, FR-012, FR-022–FR-025, FR-058**.
+
+- ECR-031 MUST NOT expose a general public API that mints an assertion for an arbitrary caller-supplied `PrincipalId`.
+- Assertion issuance requires an opaque non-serializable `EnrolledPrincipalHandle` / `IssuerSession` obtained only after successful protected local enrollment/trust-state verification, or a future explicitly versioned validated parent-identity path.
+- The assertion subject principal is taken from the issuer session. A caller may request a bounded actor/audience binding, but cannot substitute another subject principal by passing an ID.
+- On-behalf-of identity evidence remains structurally authenticated by ECR-031; whether delegation is authorized for an action remains ECR-003.
+- ECR-031 v1 provides no network/IPC identity-minting service.
+
+#### C4 — Frozen v1 signing custody and claim boundary
+
+Refines **FR-016, FR-022, FR-024, FR-042, FR-045, FR-046, FR-052**.
+
+- V1 canonical assertion and protected-anchor signing algorithm is **Ed25519**.
+- The Ed25519 private signing key is generated from approved CSPRNG/key generation and persisted only as a sensitive secret protected by the selected native trust backend. It may be materialized only for bounded signing use and must use the selected redacted/zeroizing secret wrapper for in-process lifetime management.
+- V1 MUST NOT claim the Ed25519 signing key is Secure Enclave-backed, hardware-backed, or non-exportable merely because its wrapped secret is protected by macOS Keychain or another native backend.
+- Secure Enclave/CNG/other non-exportable native signing is a future versioned algorithm-suite extension only after contract, dependency and live evidence establish compatible semantics.
+- macOS v1 acceptance therefore proves Data Protection Keychain protection of the wrapped signing/master secret and exact backend capability reporting, not universal hardware signing.
+
 ## 5. Success criteria
 
-- **SC-001** Every invalid assertion class in FR-009–FR-011 has a deterministic negative fixture and typed failure.
-- **SC-002** 1,000 repeated validations of the same assertion/trust snapshot/context produce byte-identical canonical validated-context output.
-- **SC-003** Actor/Principal type-confusion compile-fail/runtime negative tests preserve ECR-001 separation.
-- **SC-004** Rotation/retirement/revocation transition table is exhaustively tested with no ambiguous active-key selection.
+- **SC-001** Every invalid assertion class in FR-009–FR-011 has a deterministic negative fixture and typed failure; bootstrap/issuance fixtures also prove arbitrary subject-principal minting and incomplete enrollment fail closed.
+- **SC-002** 1,000 repeated validations of the same assertion/verified trust snapshot/context produce byte-identical canonical validated-context output.
+- **SC-003** Actor/Principal type-confusion compile-fail/runtime negative tests preserve ECR-001 separation, and bootstrap never derives `PrincipalId` from display/account metadata.
+- **SC-004** Rotation/retirement/revocation transition table is exhaustively tested with no ambiguous active-key selection; stale ordinary metadata cannot override the protected verified trust snapshot.
 - **SC-005** Protected-envelope golden/test-vector suite detects every one-byte mutation of authenticated fixture components selected by the test corpus.
 - **SC-006** Wrong key, wrong AAD, wrong nonce/ciphertext/tag and unsupported version never return plaintext.
 - **SC-007** Synthetic protected-at-rest fixture scan finds no committed plaintext secret outside intentional test source literals/expected-memory scope.
-- **SC-008** Production-backend-unavailable/locked tests prove no plaintext/test-backend fallback.
+- **SC-008** Production-backend-unavailable/locked tests prove no plaintext/test-backend fallback and no usable partial bootstrap/issuer session is returned.
 - **SC-009** Secret/redaction test corpus proves sensitive/key bytes are absent from Debug/Display/error strings/log-capture fixtures.
 - **SC-010** Protected-anchor fixture rejects modified payload/domain/key/signature and remains type-distinct from LedgerDigest/VerificationReceipt.
-- **SC-011** macOS native backend has live CI coverage on the repository's trusted macOS runner for its supported v1 operations.
+- **SC-011** macOS native backend has live CI coverage on the repository's trusted macOS runner for its supported v1 operations, including protection/opening of the wrapped Ed25519 signing/master secret; no Secure Enclave signing claim is required for v1.
 - **SC-012** Windows/Linux backends are not claimed verified without corresponding target/native evidence; any implemented support has explicit compile/fixture/live coverage status.
 - **SC-013** `ecra-core` and `ecra-run` complete regression gates remain green.
 - **SC-014** Dependency/unsafe/source-I/O boundary checks enforce that no model/browser/network/protocol/policy engine leaks into ECR-031.
 - **SC-015** Donor/reference/license ledger records exact crypto/native-backend dependencies and distinguishes conceptual reference from source reuse.
-- **SC-016** Post-implementation traceability maps FR-001–FR-058 and SC-001–SC-016 to implementation/tests/contracts with zero unowned requirement and G1–G15 passing or explicitly N/A.
+- **SC-016** Post-implementation traceability maps FR-001–FR-058 and SC-001–SC-016, including C1–C4 refinements, to implementation/tests/contracts with zero unowned requirement and G1–G15 passing or explicitly N/A.
 
 ## 6. Non-goals
 
 - authorization/declassification/approval/secret-use mediation;
 - independent action outcome verification;
 - remote identity federation product/provider integration;
+- proof of legal/real-world human identity from local bootstrap;
 - password manager/autofill/browser credential UX;
 - WebAuthn/passkey product flows;
 - cloud account requirement;
 - team/organization/multi-device governance;
 - sync/recovery/export product design;
+- universal monotonic rollback resistance against restoration/control of the entire native trust store;
+- hardware-backed/non-exportable Ed25519 signing in v1;
 - hardware-token/TPM universal abstraction unless later evidence requires it;
 - changing ECR-001 IDs or ECR-002 ledger semantics;
 - local-model/browser/search/terminal/plugin execution.
 
 ## 7. Release/security claims
 
-ECR-031 may claim only the guarantees demonstrated by its selected backend and cryptographic contract. “Encrypted”, “tamper-resistant”, “hardware-backed”, “device-bound”, “user-presence protected” and similar terms MUST be scoped to exact evidence. General resistance to a fully compromised user account/kernel/debugger is not claimed.
+ECR-031 may claim only the guarantees demonstrated by its selected backend and cryptographic contract. “Encrypted”, “tamper-resistant”, “hardware-backed”, “device-bound”, “user-presence protected” and similar terms MUST be scoped to exact evidence. General resistance to a fully compromised user account/kernel/debugger or an attacker with equivalent native trust-store authority is not claimed. Local bootstrap establishes an Ecra-local principal/trust context; it does not claim externally proofed human identity. V1 Ed25519 signing uses native-backend-protected wrapped key material and does not imply Secure Enclave/non-exportable signing.
