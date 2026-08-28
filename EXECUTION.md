@@ -1,6 +1,6 @@
 # Ecra Execution Guide
 
-> **Operational start-here document.** Recover live work from this file, platform roadmap/status, the active slice package, and exact GitHub truth; do not depend on private chat state.
+> **Operational start-here document.** Recover live work from this file, platform roadmap/status, the selected planning slice package, and exact GitHub truth; do not depend on private chat state.
 
 ## Source-of-truth order
 
@@ -10,7 +10,7 @@
 4. `specs/000-ecra-platform/STATUS.md`
 5. relevant platform architecture/threat/gap/risk/benchmark/decision artifacts
 6. `specs/README.md`
-7. active package `specs/002-durable-run-ledger/`
+7. selected slice package, once created
 8. exact live branch/head, PR, CI, reviews and changed files
 
 Stale prose must be updated to live evidence, never the reverse.
@@ -22,44 +22,24 @@ ECR-001 — Trusted Domain Kernel: CLOSED_CANONICAL
 ECR-001 closure-ledger head: 85e4bf657b6c33e3f88d83e92e7a35279d177349
 ECR-001 closure-ledger CI: 33099434232 — SUCCESS
 
-Active slice: ECR-002 — Durable Run, Ledger & Budgets
-Lifecycle: IMPLEMENTING / PHASE_9_FINAL_READINESS
-Branch: 002-durable-run-ledger
-Canonical planning base: 5caf5dc4e7f26d07fabac3333713a44f0af22ea1
-PR: #2 OPEN / DRAFT
+ECR-002 — Durable Run, Ledger & Budgets: CANONICAL_CLOSURE_CONVERGENCE
+Final feature head: 87fd9fc560bf5ca21a07a4d25473f305b4c05f05
+Final feature CI: 33153413462 / job 98790541842 — SUCCESS
+PR: #2 — MERGED
+Merge commit: 40efc8a64a9562f0f3eb2555b350cfa03d3e0675
+Post-merge ECR-002 CI: 33154108410 / job 98792690359 — SUCCESS
+Post-merge ECR-001 CI: 33154108397 / job 98792690901 — SUCCESS
+Review: CodeRabbit SUCCESS; no review threads or inline findings
 
-Phase 1 T001–T008: VERIFIED_ON_BRANCH
-Phase 2 T009–T018: VERIFIED_ON_BRANCH
-Phase 3 T019–T026: VERIFIED_ON_BRANCH
-Phase 4 T027–T034: VERIFIED_ON_BRANCH
-Phase 5 T035–T044: VERIFIED_ON_BRANCH
-Phase 6 T045–T051: VERIFIED_ON_BRANCH
-Phase 7 T052–T059: VERIFIED_ON_BRANCH
-Phase 8 T060–T066: VERIFIED_ON_BRANCH
-Phase 9 T067–T070: COMPLETE_ON_BRANCH
-Phase 9 T071: ACTIVE
-Phase 9 T072–T073: BLOCKED_BY_DEPENDENCY_ORDER
-
-Phase 8 ledger head: e86e1822e621c0563f2764fe784902e3204b0085
-Phase 8 CI: 33152251783 — SUCCESS
-Convergence verified head: 84d8cb5a8c0a28ab7adba42d2cd049e014c8f368
-Convergence CI: 33153174953 — SUCCESS
-Convergence job: 98789740534 — SUCCESS
-
-T067 traceability mapping: COMPLETE_ON_BRANCH
-T068 constitution/risk re-check: COMPLETE_ON_BRANCH
-T069 post-implementation analyze: COMPLETE_ON_BRANCH
-T070 convergence: COMPLETE_ON_BRANCH
-T071 final exact-head readiness: ACTIVE
-T072 merge/post-merge main gate: BLOCKED_BY_T071
-T073 canonical closure: BLOCKED_BY_T072
+T001–T070: COMPLETE
+T071: COMPLETE — exact-head CI/review/readiness satisfied
+T072: COMPLETE — exact verified head merged non-rebase + main CI passed
+T073: ACTIVE — canonical closure/index convergence + final closure-head CI
 ```
 
-ECR-002 implementation remains authorized only inside its local/synthetic/non-sensitive durability scope. Real sensitive persistence, authentication/trust roots, authorization/declassification, independent verification/reconciliation, provider execution, distributed workflow infrastructure and multi-device sync remain outside this slice.
+`CLOSED_CANONICAL` is not considered finally sealed until the last T073 documentation-convergence head itself passes the complete permanent ECR-002 workflow on `main`.
 
-## ECR-002 package
-
-Read in order:
+## ECR-002 canonical package
 
 ```text
 specs/002-durable-run-ledger/STATUS.md
@@ -67,7 +47,7 @@ specs/002-durable-run-ledger/spec.md
 specs/002-durable-run-ledger/research.md
 specs/002-durable-run-ledger/data-model.md
 specs/002-durable-run-ledger/contracts/run-ledger-v1.md
-specs/002-durable-run-ledger/implementation-clarifications.md
+specs/002-durable-run-ledger/implementation-clarifications.md  # historical/non-normative
 specs/002-durable-run-ledger/threat-model.md
 specs/002-durable-run-ledger/plan.md
 specs/002-durable-run-ledger/tasks.md
@@ -78,114 +58,22 @@ specs/002-durable-run-ledger/post-implementation-analyze.md
 specs/002-durable-run-ledger/checklists/requirements.md
 ```
 
-Current post-implementation result:
+Final ECR-002 result:
 
 ```text
 FR-001–FR-057 PASS
-SC-001–SC-014 PASS
-SC-015 PASS_BASELINE / FINAL_FEATURE_AND_POST_MERGE_MAIN_REQUIRED
-SC-016 PASS_TRACEABILITY_AND_CONVERGENCE
+SC-001–SC-016 PASS with feature-head and post-merge evidence
 G1–G15 PASS / explicit PASS-N/A
 UNOWNED_FR=0
 UNOWNED_SC=0
 FAILED_CONSTITUTION_GATES=0
 IMPLICITLY_ACCEPTED_CRITICAL_RISKS=0
 MUST_LEVEL_IMPLEMENTATION_DEFECTS_FOUND=0
+CONVERGENCE_DRIFT_FOUND=4
+CONVERGENCE_DRIFT_REMEDIATED=4
 ```
 
-## Fixed implementation decisions
-
-```text
-authoritative truth     append-only RunEventEnvelope history
-ordering                EventSequence only
-projection              rebuildable/non-authoritative RunState cache
-attempt safety          committed AttemptPrepared before provider invocation
-missing receipt         UNKNOWN / reconciliation-required
-integrity               domain-separated RFC8785 + SHA-256 LedgerDigest
-local store             SQLite via rusqlite 0.40.2
-SQLite engine           bundled SQLite 3.53.2 via libsqlite3-sys 0.38.2
-SQLite durability       WAL + synchronous=FULL, asserted at open
-write transaction       Immediate + expected-head compare
-budget accounting       typed checked I-JSON-safe integers
-portable artifact       deterministic strict Stored-only ZIP via zip 8.6.0
-ecra-run unsafe         forbidden in Ecra-authored Rust
-archive/store fixtures  synthetic/non-sensitive only
-hostile rewrite claim   not provided by plain hash chain
-Cargo.lock SHA-256      b720472bf40a554ab61afb74eae95dd625bc6b2604e47a632991faea630e42c6
-```
-
-## Active task order
-
-```text
-T071 final feature-head readiness:
-  - require full ECR-002 CI SUCCESS on the exact ledger head that records T070 complete
-  - require PR head equals the verified head
-  - require mergeable state
-  - require no unresolved reviews or inline review threads
-  - classify conversation comments and require no actionable blocker
-  - move PR out of Draft only after the exact-head gate is green
-  - re-check reviews/comments/checks after Ready-for-review transition
-
-T072 after T071:
-  - merge exact expected head using a non-rebase method
-  - require canonical-main ECR-002 CI SUCCESS
-
-T073 after T072:
-  - record exact merge/post-merge evidence
-  - mark ECR-002 CLOSED_CANONICAL
-  - converge roadmap/platform status/EXECUTION
-  - identify next genuinely dependency-eligible slice from canonical main
-```
-
-## CI architecture
-
-The repository-scoped self-hosted macOS runner `macbook` remains the trusted execution oracle. Persistent personal runners must not execute untrusted fork PR code.
-
-The trusted ECR-002 workflow is push-only for:
-
-```text
-push: 002-durable-run-ledger
-push: main
-workflow_dispatch
-runs-on: self-hosted
-permissions: contents: read
-```
-
-## Full target verification surface
-
-```bash
-cargo build --workspace --locked
-cargo fmt --all --check
-cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-cargo test --workspace --locked
-cargo test --doc --workspace --locked
-cargo test --workspace --locked --offline
-bash scripts/check-core-unsafe.sh
-bash scripts/check-core-deps.sh
-bash scripts/check-run-unsafe.sh
-bash scripts/check-run-deps.sh
-cargo test -p ecra-core --locked
-cargo test -p ecra-run --test event_contract --locked
-cargo test -p ecra-run --test reducer --locked
-cargo test -p ecra-run --test attempts --locked
-cargo test -p ecra-run --test budgets --locked
-cargo test -p ecra-run --test sqlite_store --locked
-cargo test -p ecra-run --test migration --locked
-cargo test -p ecra-run --test crash_recovery --locked
-cargo test -p ecra-run --test archive --locked
-cargo test -p ecra-run --test portability --locked
-cargo test -p ecra-run --test boundaries --locked
-cargo tree -p ecra-core
-cargo tree -p ecra-run
-```
-
-The permanent workflow also records exact dependency/toolchain evidence and keeps explicit archive/boundaries/portability targets in the gate.
-
-## Execution rule
-
-Continue T001–T073 in dependency order. Fix actual CI/review blockers and immediately resume. Do not weaken tests or boundaries to make a gate green. No force-push, rebase or destructive history rewriting. Never mark PASS, MERGED or `CLOSED_CANONICAL` without exact-head/post-merge evidence.
-
-## Non-negotiable invariants
+## Closed trusted-substrate invariants
 
 ```text
 Actor != authenticated Principal
@@ -201,3 +89,71 @@ LedgerDigest != authentication/signature/MAC/VerificationReceipt
 budget != authority
 `.ecra` != protected secret container
 ```
+
+ECR-002 additionally freezes:
+
+```text
+authoritative run truth     append-only ordered RunEventEnvelope history
+attempt before effect       durable AttemptPrepared commit required
+missing receipt             UNKNOWN / reconciliation-required
+local store                 SQLite via rusqlite 0.40.2
+SQLite engine               bundled SQLite 3.53.2 via libsqlite3-sys 0.38.2
+SQLite durability           WAL + synchronous=FULL, asserted at open
+write transaction           Immediate + expected-head compare
+budget accounting           typed checked I-JSON-safe integers
+portable artifact           deterministic strict Stored-only ZIP via zip 8.6.0
+real sensitive persistence  NOT AUTHORIZED by ECR-002
+provider/network execution  NOT IN ECR-002
+hostile rewrite claim       not provided by plain hash chain
+```
+
+## Next genuinely dependency-eligible planning
+
+Once the T073 closure-head CI is green, ECR-002 is a closed dependency and two slices become dependency-eligible for bounded planning:
+
+```text
+ECR-031 — Identity, Trust Root & Sensitive Storage Foundations
+  depends on ECR-001 + ECR-002
+
+ECR-004 — Verification & Reconciliation
+  depends on ECR-001 + ECR-002
+```
+
+### Selected next slice: ECR-031
+
+ECR-031 is selected as the next critical-path planning package because:
+
+1. ECR-003 additionally depends on ECR-031;
+2. real sensitive persistence remains blocked until protected storage/trust-root semantics exist;
+3. authenticated Principal/IdentityAssertion/on-behalf-of semantics must precede privileged policy/execution;
+4. ECR-004 remains independently planning-eligible in parallel and must not be counterfeited inside ECR-031.
+
+There is currently no canonical `specs/031-identity-trust-root/` package. Create it only after ECR-002's final closure-convergence head is green. Planning must proceed through specify → research/plan/data-model/contracts → checklist → tasks → analyze before any ECR-031 implementation branch/PR exists.
+
+## ECR-031 scope boundary to preserve
+
+Roadmap-owned outcome:
+
+```text
+identity/principal assertions and on-behalf-of binding
+device/user-local trust root
+key lifecycle and revocation
+protected sensitive-storage/authenticity envelope semantics
+```
+
+Do not smuggle into ECR-031:
+- general authorization/declassification/approval policy (ECR-003);
+- independent verification/reconciliation decisions (ECR-004);
+- browser/provider/model/tool execution;
+- local-model gateway work (ECR-021);
+- broad sync/telemetry/portability product behavior.
+
+## CI architecture
+
+The repository-scoped self-hosted macOS runner `macbook` remains the trusted execution oracle. Persistent personal runners must not execute untrusted fork PR code.
+
+Closed ECR-001 and ECR-002 workflows remain push gates on `main` so new trusted-substrate changes cannot silently regress either contract.
+
+## Execution rule
+
+Finish T073 exact-head closure verification first. Then re-read canonical main and start ECR-031 planning from that exact state. Do not implement ECR-003, ECR-004, browser, search, local models, or other later surfaces out of dependency order. No force-push, rebase or destructive history rewriting. Never mark PASS, MERGED or `CLOSED_CANONICAL` without exact-head/post-merge evidence.
