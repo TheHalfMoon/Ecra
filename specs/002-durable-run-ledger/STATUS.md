@@ -37,14 +37,28 @@ The gate passed locked workspace build, rustfmt, strict Clippy, workspace tests,
 
 The generated `Cargo.lock` is committed with SHA-256 `b720472bf40a554ab61afb74eae95dd625bc6b2604e47a632991faea630e42c6`. Temporary bootstrap/lock-helper workflows were removed; `.github/workflows/ecr-002.yml` is the trusted push-only exact-head gate.
 
+## Phase 2 — VERIFIED_ON_BRANCH
+
+T009–T018 are complete on the exact verified Phase 2 head:
+
+```text
+exact head  2ab8d6d80f43bf7dd07ee43659555a573c47021b
+CI run      33107289499 — SUCCESS
+job         run-ledger / 98640449273 — SUCCESS
+```
+
+The exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests, ECR-001 regression contract targets, ECR-002 event contract targets, rustdoc, offline replay, and both unsafe/dependency boundary suites.
+
+Phase 2 establishes the strict v1 error taxonomy, integer wrappers, run phases/suspension reasons, all 17 run-event kinds, strict envelopes, domain-separated RFC 8785 + SHA-256 `LedgerDigest`, fixtures, golden canonical bytes/digest, and machine-readable error coverage.
+
 ## Current implementation position
 
 ```text
 Phase 1 T001–T008  VERIFIED_ON_BRANCH
-Phase 2 T009–T018  ACTIVE
-Phase 3 T019–T026  blocked by Phase 2 exact-head verification
-Phase 4 T027–T034  blocked
-Phase 5 T035–T044  blocked
+Phase 2 T009–T018  VERIFIED_ON_BRANCH
+Phase 3 T019–T026  ACTIVE
+Phase 4 T027–T034  blocked by Phase 3 exact-head verification
+Phase 5 T035–T044  blocked by Phase 3 exact-head verification
 Phase 6 T045–T051  blocked
 Phase 7 T052–T059  blocked
 Phase 8 T060–T066  blocked
@@ -54,13 +68,14 @@ Phase 9 T067–T073  blocked
 Immediate work:
 
 ```text
-T009 typed RunError taxonomy
-T010 EventSequence + BudgetAmount wrappers
-T011 LedgerDigest + canonical domain-separated digest
-T012 RunPhase + SuspensionReason + RunErrorSummary
-T013 strict v1 RunEvent bodies
-T014 strict RunEventEnvelope validation
-T015–T018 golden/valid/invalid/error-matrix contract evidence
+T019 derived RunState + PreparedAttemptState + ordered projections
+T020 pure RunReducer
+T021 exact transition matrix + terminal rejection
+T022 attempt uniqueness and exact receipt binding
+T023 recovery-boundary unresolved semantics
+T024 v1 resume blockers
+T025 exhaustive transition tests
+T026 deterministic 1,000x replay property evidence
 ```
 
 ## Active implementation clarification

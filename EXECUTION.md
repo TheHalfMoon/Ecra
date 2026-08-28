@@ -27,8 +27,12 @@ Lifecycle: IMPLEMENTING
 Branch: 002-durable-run-ledger
 Canonical planning base: 5caf5dc4e7f26d07fabac3333713a44f0af22ea1
 Planning/status CI: 33103802150 — SUCCESS
-Current phase: Phase 1 T001–T008
-PR: open Draft after branch lifecycle activation
+Phase 1 verified head: 4577123486fcaf856a3640aeacb3b7dcee733cc3
+Phase 1 CI: 33105751992 — SUCCESS
+Phase 2 verified head: 2ab8d6d80f43bf7dd07ee43659555a573c47021b
+Phase 2 CI: 33107289499 — SUCCESS
+Current phase: Phase 3 T019–T026
+PR: #2 OPEN / DRAFT / mergeable at last live check
 ```
 
 ECR-002 implementation is authorized only inside its local/synthetic/non-sensitive durability scope. Real sensitive persistence, authentication/trust roots, authorization/declassification, independent verification/reconciliation, provider execution, distributed workflow infrastructure and multi-device sync remain outside this slice.
@@ -43,6 +47,7 @@ specs/002-durable-run-ledger/spec.md
 specs/002-durable-run-ledger/research.md
 specs/002-durable-run-ledger/data-model.md
 specs/002-durable-run-ledger/contracts/run-ledger-v1.md
+specs/002-durable-run-ledger/implementation-clarifications.md
 specs/002-durable-run-ledger/threat-model.md
 specs/002-durable-run-ledger/plan.md
 specs/002-durable-run-ledger/tasks.md
@@ -81,23 +86,23 @@ hostile rewrite claim   not provided by plain hash chain
 ## Active task order
 
 ```text
-T001 workspace/crate skeleton
-T002 exact dependencies/lockfile
-T003 unsafe/docs boundary
-T004 run dependency checker
-T005 run unsafe/source-I/O checker
-T006 ECR-002 workflow
-T007 donor/license lock delta
-T008 exact-head Phase 1 baseline
+T019 derived RunState / PreparedAttemptState / ordered projections
+T020 pure RunReducer
+T021 exact phase transition matrix and terminal rejection
+T022 exact attempt identity and receipt binding
+T023 recovery boundary -> unresolved without fabricated outcome
+T024 resume blockers
+T025 exhaustive transition tests
+T026 1,000x deterministic replay property test
 ```
 
-No Phase 2 semantic implementation is considered verified before T008.
+Phase 4 and Phase 5 become eligible only after the complete ECR-002 exact-head gate verifies Phase 3.
 
 ## CI architecture
 
 The repository-scoped self-hosted macOS runner `macbook` remains the trusted execution oracle. Persistent personal runners must not execute untrusted fork PR code.
 
-T006 will add trusted push-only ECR-002 workflow triggers for:
+The trusted ECR-002 workflow is push-only for:
 
 ```text
 push: 002-durable-run-ledger
@@ -107,7 +112,7 @@ runs-on: self-hosted
 permissions: contents: read
 ```
 
-The workflow will run the full workspace gate, ECR-001 regression boundary and ECR-002 dedicated tests/checkers.
+The workflow runs the full workspace gate, ECR-001 regression boundary and ECR-002 dedicated tests/checkers.
 
 ## Full target verification surface
 
@@ -136,6 +141,8 @@ cargo test -p ecra-run --test boundaries --locked
 cargo tree -p ecra-core
 cargo tree -p ecra-run
 ```
+
+Only targets that exist for the current implementation phase are invoked by the phase-specific ECR-002 workflow; later task-owned targets join the gate when their owning phase lands.
 
 ## Execution rule
 

@@ -9,27 +9,27 @@
 
 ## Phase 1 — Workspace, crate and CI boundaries
 
-- [ ] T001 Add `crates/ecra-run` to the root workspace while preserving `crates/ecra-core` boundaries. **Paths:** `Cargo.toml`, `crates/ecra-run/Cargo.toml`, `crates/ecra-run/src/lib.rs`.
-- [ ] T002 Add reviewed exact dependency candidates with minimal features: `rusqlite` bundled SQLite, `zip` Stored-only profile support, workspace-aligned serialization/digest/error dependencies. **Paths:** `crates/ecra-run/Cargo.toml`, `Cargo.lock`.
-- [ ] T003 Add `#![forbid(unsafe_code)]` and crate-level architecture/misuse docs. **Paths:** `crates/ecra-run/src/lib.rs`, `crates/ecra-run/README.md`. **FR-054–FR-057**
-- [ ] T004 Add ECR-002 dependency allowlist/native-boundary checker without weakening ECR-001 checks. **Paths:** `scripts/check-run-deps.sh`, existing `scripts/check-core-deps.sh`. **SC-014**
-- [ ] T005 Add Ecra-owned unsafe/source-I/O boundary checker for `ecra-run`. **Paths:** `scripts/check-run-unsafe.sh`. **SC-013, SC-014**
-- [ ] T006 Add trusted push-only ECR-002 workflow for branch `002-durable-run-ledger` and `main`, mirroring workspace/core gates plus ECR-002 gates. **Path:** `.github/workflows/ecr-002.yml`. **SC-015**
-- [ ] T007 Record exact locked dependency/license/provenance delta including bundled SQLite and zip; no source-copy claim. **Path:** `research/donor-license-ledger.md`. **G10, FR-055**
-- [ ] T008 Verify baseline build/fmt/Clippy/tests/core gates on the first workspace head before semantic implementation. **Paths:** CI evidence + `specs/002-durable-run-ledger/STATUS.md`.
+- [x] T001 Add `crates/ecra-run` to the root workspace while preserving `crates/ecra-core` boundaries. **Paths:** `Cargo.toml`, `crates/ecra-run/Cargo.toml`, `crates/ecra-run/src/lib.rs`.
+- [x] T002 Add reviewed exact dependency candidates with minimal features: `rusqlite` bundled SQLite, `zip` Stored-only profile support, workspace-aligned serialization/digest/error dependencies. **Paths:** `crates/ecra-run/Cargo.toml`, `Cargo.lock`.
+- [x] T003 Add `#![forbid(unsafe_code)]` and crate-level architecture/misuse docs. **Paths:** `crates/ecra-run/src/lib.rs`, `crates/ecra-run/README.md`. **FR-054–FR-057**
+- [x] T004 Add ECR-002 dependency allowlist/native-boundary checker without weakening ECR-001 checks. **Paths:** `scripts/check-run-deps.sh`, existing `scripts/check-core-deps.sh`. **SC-014**
+- [x] T005 Add Ecra-owned unsafe/source-I/O boundary checker for `ecra-run`. **Paths:** `scripts/check-run-unsafe.sh`. **SC-013, SC-014**
+- [x] T006 Add trusted push-only ECR-002 workflow for branch `002-durable-run-ledger` and `main`, mirroring workspace/core gates plus ECR-002 gates. **Path:** `.github/workflows/ecr-002.yml`. **SC-015**
+- [x] T007 Record exact locked dependency/license/provenance delta including bundled SQLite and zip; no source-copy claim. **Path:** `research/donor-license-ledger.md`. **G10, FR-055**
+- [x] T008 Verify baseline build/fmt/Clippy/tests/core gates on the first workspace head before semantic implementation. **Paths:** CI evidence + `specs/002-durable-run-ledger/STATUS.md`.
 
 ## Phase 2 — Errors, primitives, events and ledger digest
 
-- [ ] T009 Implement typed `RunErrorCategory`, `RunErrorCode`, `RunError` exactly from contract. **Path:** `crates/ecra-run/src/error.rs`. **FR-053**
-- [ ] T010 Implement `EventSequence` and `BudgetAmount` I-JSON-safe checked wrappers. **Paths:** `crates/ecra-run/src/event.rs`, `crates/ecra-run/src/budget.rs`. **FR-003, FR-032–FR-034**
-- [ ] T011 Implement distinct `LedgerDigest` and domain-separated RFC8785+SHA-256 event digest. **Path:** `crates/ecra-run/src/digest.rs`. **FR-019–FR-022**
-- [ ] T012 Implement strict `RunPhase`, `SuspensionReason`, `RunErrorSummary`. **Paths:** `crates/ecra-run/src/state.rs`, `crates/ecra-run/src/error.rs`. **FR-006–FR-009**
-- [ ] T013 Implement strict `RunEvent` tagged enum and all v1 event bodies. **Path:** `crates/ecra-run/src/event.rs`. **FR-001–FR-017, FR-031–FR-045**
-- [ ] T014 Implement strict `RunEventEnvelope` version/sequence/previous-digest/event-digest validation. **Paths:** `crates/ecra-run/src/event.rs`, `crates/ecra-run/src/digest.rs`. **FR-001–FR-005, FR-019–FR-021**
-- [ ] T015 Add fixed canonical event bytes + LedgerDigest golden. **Paths:** `contracts/ecra-run-v1/expected/run-created-golden.v1.jcs`, `contracts/ecra-run-v1/expected/run-created-golden.sha256`, `crates/ecra-run/tests/event_contract.rs`. **SC-001, SC-003, SC-006**
-- [ ] T016 Add valid event/envelope fixtures for every event kind. **Paths:** `contracts/ecra-run-v1/valid/*.json`, `crates/ecra-run/tests/event_contract.rs`. **SC-001**
-- [ ] T017 Add invalid version/sequence/unknown-field/digest/previous-link/cross-run fixtures. **Paths:** `contracts/ecra-run-v1/invalid/*.json`, `crates/ecra-run/tests/event_contract.rs`. **SC-002, SC-006**
-- [ ] T018 Add error-category/code coverage without display-string parsing. **Path:** `crates/ecra-run/tests/event_contract.rs`. **FR-053, SC-002**
+- [x] T009 Implement typed `RunErrorCategory`, `RunErrorCode`, `RunError` exactly from contract. **Path:** `crates/ecra-run/src/error.rs`. **FR-053**
+- [x] T010 Implement `EventSequence` and `BudgetAmount` I-JSON-safe checked wrappers. **Paths:** `crates/ecra-run/src/event.rs`, `crates/ecra-run/src/budget.rs`. **FR-003, FR-032–FR-034**
+- [x] T011 Implement distinct `LedgerDigest` and domain-separated RFC8785+SHA-256 event digest. **Path:** `crates/ecra-run/src/digest.rs`. **FR-019–FR-022**
+- [x] T012 Implement strict `RunPhase`, `SuspensionReason`, `RunErrorSummary`. **Paths:** `crates/ecra-run/src/state.rs`, `crates/ecra-run/src/error.rs`. **FR-006–FR-009**
+- [x] T013 Implement strict `RunEvent` tagged enum and all v1 event bodies. **Path:** `crates/ecra-run/src/event.rs`. **FR-001–FR-017, FR-031–FR-045**
+- [x] T014 Implement strict `RunEventEnvelope` version/sequence/previous-digest/event-digest validation. **Paths:** `crates/ecra-run/src/event.rs`, `crates/ecra-run/src/digest.rs`. **FR-001–FR-005, FR-019–FR-021**
+- [x] T015 Add fixed canonical event bytes + LedgerDigest golden. **Paths:** `contracts/ecra-run-v1/expected/run-created-golden.v1.jcs`, `contracts/ecra-run-v1/expected/run-created-golden.sha256`, `crates/ecra-run/tests/event_contract.rs`. **SC-001, SC-003, SC-006**
+- [x] T016 Add valid event/envelope fixtures for every event kind. **Paths:** `contracts/ecra-run-v1/valid/*.json`, `crates/ecra-run/tests/event_contract.rs`. **SC-001**
+- [x] T017 Add invalid version/sequence/unknown-field/digest/previous-link/cross-run fixtures. **Paths:** `contracts/ecra-run-v1/invalid/*.json`, `crates/ecra-run/tests/event_contract.rs`. **SC-002, SC-006**
+- [x] T018 Add error-category/code coverage without display-string parsing. **Path:** `crates/ecra-run/tests/event_contract.rs`. **FR-053, SC-002**
 
 ## Phase 3 — Pure reducer and run state machine
 
