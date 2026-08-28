@@ -78,6 +78,20 @@ The exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests
 
 Phase 4 establishes all 14 fixed budget dimensions, strict I-JSON-safe checked accounting, remaining-budget/preflight refusal, first-crossing soft evidence, exact hard-exhaustion evidence/suspension, deterministic hard stops, and preservation of unresolved-attempt truth.
 
+## Phase 5 — VERIFIED_ON_BRANCH
+
+T035–T044 are complete on the exact verified Phase 5 head:
+
+```text
+exact head  90dfb87a2b17ba749663d999c4659ad4244bd131
+CI run      33145935409 — SUCCESS
+job         run-ledger / 98766883647 — SUCCESS
+```
+
+The exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests, ECR-001 regression targets, explicit ECR-002 migration/SQLite store/crash-recovery targets, rustdoc, offline replay, and both boundary suites.
+
+Phase 5 establishes WAL + FULL SQLite configuration with read-back, deterministic STRICT schema v1 and append-only authoritative events, transactional schema handling, Immediate expected-head append, reducer-before-commit validation, strict authoritative replay, rebuildable projections, synthetic content-addressed blobs, mutation/corruption rejection, and process-crash durability evidence.
+
 ## Current implementation position
 
 ```text
@@ -85,9 +99,9 @@ Phase 1 T001–T008  VERIFIED_ON_BRANCH
 Phase 2 T009–T018  VERIFIED_ON_BRANCH
 Phase 3 T019–T026  VERIFIED_ON_BRANCH
 Phase 4 T027–T034  VERIFIED_ON_BRANCH
-Phase 5 T035–T044  ACTIVE
-Phase 6 T045–T051  blocked by Phase 5 exact-head verification
-Phase 7 T052–T059  blocked
+Phase 5 T035–T044  VERIFIED_ON_BRANCH
+Phase 6 T045–T051  ACTIVE
+Phase 7 T052–T059  blocked by Phase 6 exact-head verification
 Phase 8 T060–T066  blocked
 Phase 9 T067–T073  blocked
 ```
@@ -95,16 +109,13 @@ Phase 9 T067–T073  blocked
 Immediate work:
 
 ```text
-T035 SQLite open/configuration + pragma read-back
-T036 deterministic STRICT schema v1 + append-only triggers
-T037 schema-version create/reject/migration fixtures
-T038 ExpectedRunHead + Immediate atomic append
-T039 reducer validation before commit + atomic projection
-T040 strict ordered history load + chain verification
-T041 projection delete/rebuild equivalence
-T042 synthetic content-addressed blob put/get + storage hook
-T043 mutation/corruption rejection tests
-T044 process-crash persistence + WAL/FULL evidence
+T045 durable prepare_attempt store API
+T046 exact-bound record_receipt store API
+T047 recovery scan + explicit recovery-boundary append
+T048 ECR-001-preserving retry guard + unresolved blind-retry block
+T049 crash matrix A–D
+T050 multiple-attempt/one-action distinctness + receipt cross-bind rejection
+T051 two-connection expected-head concurrency
 ```
 
 ## Active implementation clarification

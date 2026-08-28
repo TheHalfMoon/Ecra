@@ -55,16 +55,16 @@
 
 ## Phase 5 — SQLite schema, migrations, append and projections
 
-- [ ] T035 Implement SQLite open/configuration adapter and read-back assertion for WAL/FULL/foreign_keys/trusted_schema. **Path:** `crates/ecra-run/src/sqlite.rs`. **FR-024–FR-028**
-- [ ] T036 Implement deterministic schema v1 (`run_events`, `run_heads`, `artifact_blobs`) with STRICT/check/unique constraints and UPDATE/DELETE-deny triggers. **Paths:** `crates/ecra-run/src/migration.rs`, `crates/ecra-run/tests/migration.rs`. **FR-018, FR-023–FR-030**
-- [ ] T037 Implement database schema-version check: create v1, reject newer, transactionally migrate supported older fixtures. **Paths:** `crates/ecra-run/src/migration.rs`, `contracts/ecra-run-v1/migrations/*`, `crates/ecra-run/tests/migration.rs`. **FR-001, FR-002, FR-027**
-- [ ] T038 Implement `ExpectedRunHead` and atomic append with Immediate transaction/expected-head check. **Paths:** `crates/ecra-run/src/store.rs`, `crates/ecra-run/src/sqlite.rs`. **FR-023, FR-026**
-- [ ] T039 Ensure append validates canonical envelope/reducer result before authoritative commit and atomically updates projection. **Paths:** `crates/ecra-run/src/store.rs`, `crates/ecra-run/src/sqlite.rs`, `crates/ecra-run/tests/sqlite_store.rs`. **FR-008–FR-010, FR-021–FR-023**
-- [ ] T040 Implement strict history load ordered only by EventSequence with full chain verification. **Paths:** `crates/ecra-run/src/store.rs`, `crates/ecra-run/tests/sqlite_store.rs`. **FR-003–FR-005, FR-021**
-- [ ] T041 Implement projection deletion/rebuild from authoritative events with publish-after-full-validation. **Paths:** `crates/ecra-run/src/store.rs`, `crates/ecra-run/tests/sqlite_store.rs`. **FR-010, SC-008**
-- [ ] T042 Implement synthetic content-addressed blob put/get with ECR-001 ContentDigest/size validation and storage-budget hook. **Paths:** `crates/ecra-run/src/store.rs`, `crates/ecra-run/tests/sqlite_store.rs`. **FR-029, FR-030**
-- [ ] T043 Add ordinary UPDATE/DELETE rejection tests and corruption/chain mismatch load failures. **Path:** `crates/ecra-run/tests/sqlite_store.rs`. **FR-018–FR-023, SC-006**
-- [ ] T044 Add process-crash persistence test for committed SQLite events and assert WAL+FULL configuration. **Path:** `crates/ecra-run/tests/crash_recovery.rs`. **SC-007**
+- [x] T035 Implement SQLite open/configuration adapter and read-back assertion for WAL/FULL/foreign_keys/trusted_schema. **Path:** `crates/ecra-run/src/sqlite.rs`. **FR-024–FR-028**
+- [x] T036 Implement deterministic schema v1 (`run_events`, `run_heads`, `artifact_blobs`) with STRICT/check/unique constraints and UPDATE/DELETE-deny triggers. **Paths:** `crates/ecra-run/src/migration.rs`, `crates/ecra-run/tests/migration.rs`. **FR-018, FR-023–FR-030**
+- [x] T037 Implement database schema-version check: create v1, reject newer, transactionally migrate supported older fixtures. **Paths:** `crates/ecra-run/src/migration.rs`, `contracts/ecra-run-v1/migrations/*`, `crates/ecra-run/tests/migration.rs`. **FR-001, FR-002, FR-027**
+- [x] T038 Implement `ExpectedRunHead` and atomic append with Immediate transaction/expected-head check. **Paths:** `crates/ecra-run/src/store.rs`, `crates/ecra-run/src/sqlite.rs`. **FR-023, FR-026**
+- [x] T039 Ensure append validates canonical envelope/reducer result before authoritative commit and atomically updates projection. **Paths:** `crates/ecra-run/src/store.rs`, `crates/ecra-run/src/sqlite.rs`, `crates/ecra-run/tests/sqlite_store.rs`. **FR-008–FR-010, FR-021–FR-023**
+- [x] T040 Implement strict history load ordered only by EventSequence with full chain verification. **Paths:** `crates/ecra-run/src/store.rs`, `crates/ecra-run/tests/sqlite_store.rs`. **FR-003–FR-005, FR-021**
+- [x] T041 Implement projection deletion/rebuild from authoritative events with publish-after-full-validation. **Paths:** `crates/ecra-run/src/store.rs`, `crates/ecra-run/tests/sqlite_store.rs`. **FR-010, SC-008**
+- [x] T042 Implement synthetic content-addressed blob put/get with ECR-001 ContentDigest/size validation and storage-budget hook. **Paths:** `crates/ecra-run/src/store.rs`, `crates/ecra-run/tests/sqlite_store.rs`. **FR-029, FR-030**
+- [x] T043 Add ordinary UPDATE/DELETE rejection tests and corruption/chain mismatch load failures. **Path:** `crates/ecra-run/tests/sqlite_store.rs`. **FR-018–FR-023, SC-006**
+- [x] T044 Add process-crash persistence test for committed SQLite events and assert WAL+FULL configuration. **Path:** `crates/ecra-run/tests/crash_recovery.rs`. **SC-007**
 
 ## Phase 6 — Attempt guard, recovery and concurrency
 
