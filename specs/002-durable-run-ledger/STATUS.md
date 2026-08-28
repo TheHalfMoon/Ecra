@@ -106,6 +106,8 @@ Phase 8 T060–T066  blocked
 Phase 9 T067–T073  blocked
 ```
 
+Phase 6 semantic mutation starts only after a full exact-head ECR-002 gate passes on this Phase 5 ledger state.
+
 Immediate work:
 
 ```text
