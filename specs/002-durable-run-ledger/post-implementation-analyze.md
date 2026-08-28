@@ -5,7 +5,8 @@
 **Implementation baseline:** Phase 8 ledger head `e86e1822e621c0563f2764fe784902e3204b0085`  
 **Baseline CI:** `33152251783` / job `98786745867` — SUCCESS  
 **Traceability artifact:** `traceability-closure.md`  
-**Convergence state:** T070 documentation corrections applied; final exact-head convergence gate pending
+**Convergence verification head:** `84d8cb5a8c0a28ab7adba42d2cd049e014c8f368`  
+**Convergence CI:** `33153174953` / job `98789740534` — SUCCESS
 
 ## Decision
 
@@ -19,12 +20,15 @@ MUST_LEVEL_IMPLEMENTATION_DEFECTS_FOUND=0
 CONVERGENCE_DRIFT_FOUND=4
 CONVERGENCE_DRIFT_REMEDIATED=4
 T069=COMPLETE_ON_BRANCH
-T070=ACTIVE_PENDING_FINAL_EXACT_HEAD_GATE
-PR_READY=NO
+T070=COMPLETE_ON_BRANCH
+T071=REQUIRED_ON_FINAL_LEDGER_HEAD
+PR_READY=NO_PENDING_T071
 MERGE_AUTHORIZED=NO
 ```
 
-The implementation satisfies the ECR-002 behavioral/security contract on the verified Phase 8 ledger state. Post-implementation analysis found four documentation/convergence defects and no production semantic defect. All four documentation defects have now been remediated in the branch; T070 still requires one complete exact-head ECR-002 gate on the final converged head before it can be marked complete.
+The implementation satisfies the ECR-002 behavioral/security contract. Post-implementation analysis found four documentation/convergence defects and no production semantic defect. All four documentation defects were remediated and the complete permanent ECR-002 gate passed on exact convergence head `84d8cb5a8c0a28ab7adba42d2cd049e014c8f368`.
+
+T070 is therefore complete on the feature branch. The subsequent ledger/status/task updates that record this result move the branch head, so T071 still requires a complete exact-head gate on that final pre-merge ledger head before PR readiness or merge.
 
 ## Inputs reviewed
 
@@ -83,7 +87,7 @@ Planning/research studied `rusqlite 0.40.1`; implementation exact-pinned and ver
 **Type:** recovery/runbook drift  
 **Disposition:** REMEDIATED
 
-`EXECUTION.md` now records Phases 1–8 as verified, T067–T069 complete, T070 active, the latest green convergence baseline, exact dependency/toolchain evidence and the T070→T073 closure order.
+`EXECUTION.md` now records Phases 1–8 as verified, Phase 9 closure work, exact dependency/toolchain evidence and the T070→T073 closure order.
 
 ### CVG-004 — verification/contract prose retained pre-implementation wording
 
@@ -91,12 +95,12 @@ Planning/research studied `rusqlite 0.40.1`; implementation exact-pinned and ver
 **Type:** lifecycle/documentation drift  
 **Disposition:** REMEDIATED
 
-Convergence now records:
+Convergence records:
 - `contracts/run-ledger-v1.md` as `NORMATIVE_IMPLEMENTED` and `crates/ecra-run` as implemented;
 - `data-model.md` as `IMPLEMENTED_NORMATIVE_MODEL`;
 - `plan.md` as `IMPLEMENTED_PENDING_CLOSURE` with exact dependency truth;
 - `quickstart.md` as the implemented exact verification surface;
-- `STATUS.md` and `EXECUTION.md` as Phase 9 pre-merge convergence truth.
+- `STATUS.md` and `EXECUTION.md` as Phase 9 pre-merge truth.
 
 The primary `spec.md` was re-read against implementation/traceability and no semantic amendment was required. The threat model was re-read against the implemented Phase 8 security acceptance suite and no missing security control or new Critical-risk acceptance was found.
 
@@ -107,8 +111,8 @@ The primary `spec.md` was re-read against implementation/traceability and no sem
 ```text
 FR-001–FR-057  PASS
 SC-001–SC-014  PASS
-SC-015         PASS_BASELINE / FINAL_EXACT_HEAD_AND_MAIN_REQUIRED
-SC-016         PASS_TRACEABILITY / CONVERGENCE_FINAL_GATE_PENDING
+SC-015         PASS_BASELINE / FINAL_FEATURE_AND_POST_MERGE_MAIN_REQUIRED
+SC-016         PASS_TRACEABILITY_AND_CONVERGENCE
 G1–G15         PASS or explicit PASS-N/A
 R-006          mitigated for ECR-002, ECR-004 retains independent reconciliation
 R-019          version/migration mitigation implemented
@@ -134,7 +138,7 @@ No convergence action widens ECR-002 into authentication, authorization, indepen
 [x] Re-check spec.md: no semantic drift requiring amendment
 [x] Re-check threat-model.md: implementation acceptance section current
 [x] Re-check STATUS.md/tasks.md against final convergence state
-[ ] Run complete exact-head CI after convergence
+[x] Run complete exact-head CI after convergence — head 84d8cb5a8c0a28ab7adba42d2cd049e014c8f368, run 33153174953, job 98789740534 — SUCCESS
 ```
 
 ## Analyze decision
@@ -142,6 +146,6 @@ No convergence action widens ECR-002 into authentication, authorization, indepen
 ```text
 ZERO_BLOCKING_IMPLEMENTATION_SEMANTIC_DRIFT_FOUND
 DOCUMENTATION_CONVERGENCE_REMEDIATED=YES
-FINAL_CONVERGENCE_EXACT_HEAD_GATE=REQUIRED
-T070_MUST_COMPLETE_BEFORE_T071=YES
+T070_COMPLETE_ON_BRANCH=YES
+T071_FINAL_LEDGER_HEAD_GATE=REQUIRED
 ```
