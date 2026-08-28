@@ -1,0 +1,103 @@
+name: ECR-031 Phase 3 Format Convergence
+
+on:
+  push:
+    branches:
+      - 031-identity-trust-root
+
+permissions:
+  contents: write
+
+jobs:
+  converge-phase3-format:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact semantic base
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='703ab26f847190a0edf13d7516f7fcc3073ce63a'
+          git merge-base --is-ancestor "$base" HEAD
+          delta="$(git diff --name-only "$base"..HEAD)"
+          test "$delta" = '.github/workflows/ecr-031-phase3-format.yml'
+
+      - name: Keep future Phase 4 factories non-public
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              'crates/ecra-identity/src/bootstrap.rs': [
+                  ('    pub(crate) fn from_verified_snapshot(snapshot: &VerifiedTrustSnapshot) -> Self {',
+                   '    // Phase 4 protected-state opening is the production caller; keep this non-public.\n    #[allow(dead_code)]\n    pub(crate) fn from_verified_snapshot(snapshot: &VerifiedTrustSnapshot) -> Self {'),
+              ],
+              'crates/ecra-identity/src/issuance.rs': [
+                  ('    pub(crate) fn from_verified_state(',
+                   '    // Phase 4 authenticated key opening is the production caller; keep this non-public.\n    #[allow(dead_code)]\n    pub(crate) fn from_verified_state('),
+              ],
+              'crates/ecra-identity/src/key.rs': [
+                  ('    pub(crate) fn new(\n',
+                   '    // Phase 4 authenticated trust-state parsing is the production caller.\n    #[allow(dead_code)]\n    pub(crate) fn new(\n'),
+                  ('    pub(crate) fn from_authenticated_parts(\n',
+                   '    // Phase 4 protected-state authentication is the production caller; no public constructor.\n    #[allow(dead_code)]\n    pub(crate) fn from_authenticated_parts(\n'),
+                  ('fn lifecycle_error(context: &\'static str) -> IdentityError {',
+                   '#[allow(dead_code)]\nfn lifecycle_error(context: &\'static str) -> IdentityError {'),
+              ],
+          }
+
+          for path_text, edits in replacements.items():
+              path = Path(path_text)
+              text = path.read_text()
+              for old, new in edits:
+                  if old not in text:
+                      raise SystemExit(f'missing expected lint anchor in {path_text}: {old!r}')
+                  text = text.replace(old, new, 1)
+              path.write_text(text)
+          PY
+
+      - name: Format and verify Phase 3 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo fmt --all
+          cargo build --workspace --locked
+          cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+          cargo test -p ecra-identity --locked
+          cargo test --doc -p ecra-identity --locked
+          bash scripts/check-identity-unsafe.sh
+          bash scripts/check-identity-deps.sh >/dev/null
+
+      - name: Commit formatting convergence and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/ecr-031-phase3-format.yml
+          git add \
+            .github/workflows/ecr-031-phase3-format.yml \
+            crates/ecra-identity/src/assertion.rs \
+            crates/ecra-identity/src/bootstrap.rs \
+            crates/ecra-identity/src/issuance.rs \
+            crates/ecra-identity/src/key.rs \
+            crates/ecra-identity/src/lib.rs \
+            crates/ecra-identity/src/validation.rs
+          changed="$(git diff --cached --name-only | sort)"
+          expected="$(printf '%s\n' \
+            '.github/workflows/ecr-031-phase3-format.yml' \
+            'crates/ecra-identity/src/assertion.rs' \
+            'crates/ecra-identity/src/bootstrap.rs' \
+            'crates/ecra-identity/src/issuance.rs' \
+            'crates/ecra-identity/src/key.rs' \
+            'crates/ecra-identity/src/lib.rs' \
+            'crates/ecra-identity/src/validation.rs' | sort)"
+          test "$changed" = "$expected"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'style(identity): converge Phase 3 source'
+          git push origin HEAD:031-identity-trust-root
