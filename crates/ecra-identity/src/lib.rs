@@ -85,7 +85,9 @@ use ecra_core::SchemaVersion;
 
 pub use algorithm::{AeadAlgorithm, SignatureAlgorithm};
 pub use anchor::{
-    PROTECTED_ANCHOR_DOMAIN, canonical_protected_anchor_input, protected_anchor_input_digest_bytes,
+    MAX_PROTECTED_ANCHOR_WIRE_BYTES, PROTECTED_ANCHOR_DOMAIN, ProtectedAnchorPayloadDigest,
+    ProtectedAnchorPurpose, ProtectedAnchorV1, canonical_protected_anchor_input,
+    protected_anchor_input_digest_bytes,
 };
 pub use assertion::{
     ActorBinding, AssertionAttributes, AssertionAudience, AssertionAudienceService,
