@@ -56,7 +56,10 @@ fn retirement_blocks_new_material_but_preserves_historical_compatibility() {
     assert_eq!(retired.status(), KeyStatus::RetiredVerifyOrDecryptOnly);
     assert_eq!(retired.retired_at(), Some(timestamp(1_100)));
     assert_eq!(
-        retired.ensure_new_material_use_allowed().unwrap_err().code(),
+        retired
+            .ensure_new_material_use_allowed()
+            .unwrap_err()
+            .code(),
         IdentityErrorCode::KeyNotActive
     );
     retired.ensure_historical_use_allowed().unwrap();
@@ -102,7 +105,10 @@ fn revocation_set_is_authoritative_and_cannot_be_unsignedly_reactivated() {
         KeyStatus::Revoked,
     );
     assert_eq!(
-        revoked.ensure_new_material_use_allowed().unwrap_err().code(),
+        revoked
+            .ensure_new_material_use_allowed()
+            .unwrap_err()
+            .code(),
         IdentityErrorCode::KeyRevoked
     );
     assert_eq!(
@@ -166,7 +172,9 @@ fn issuance_and_validation_sources_require_current_authenticated_lifecycle() {
     assert!(issuance.contains("matches!(active_key.status(), KeyStatus::Active)"));
 
     let validation = include_str!("../src/validation.rs");
-    let revoked_check = validation.find("snapshot.is_revoked(key.key_id())").unwrap();
+    let revoked_check = validation
+        .find("snapshot.is_revoked(key.key_id())")
+        .unwrap();
     let signature_verify = validation.find("verifying_key").unwrap();
     assert!(revoked_check < signature_verify);
     assert!(validation.contains("IdentityErrorCode::KeyRevoked"));

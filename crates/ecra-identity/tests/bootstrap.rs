@@ -34,12 +34,18 @@ fn bootstrap_transaction_orders_fail_closed_crash_boundaries() {
         "fn enrolled_handle_from_authenticated(",
     );
 
-    let store_exists = transaction.find("ProtectedTrustStateStore::store_exists").unwrap();
-    let open_existing = transaction.find("ProtectedTrustStateStore::open_existing").unwrap();
+    let store_exists = transaction
+        .find("ProtectedTrustStateStore::store_exists")
+        .unwrap();
+    let open_existing = transaction
+        .find("ProtectedTrustStateStore::open_existing")
+        .unwrap();
     let marker_exists = transaction
         .find("ProtectedTrustStateStore::bootstrap_marker_exists")
         .unwrap();
-    let incomplete = transaction.find("return Err(incomplete_bootstrap_error())").unwrap();
+    let incomplete = transaction
+        .find("return Err(incomplete_bootstrap_error())")
+        .unwrap();
     let marker_write = transaction
         .find("ProtectedTrustStateStore::write_bootstrap_marker")
         .unwrap();

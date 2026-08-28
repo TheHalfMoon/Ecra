@@ -88,7 +88,8 @@ fn test_location(name: &str) -> (std::path::PathBuf, BootstrapStoreLocation) {
     let directory = env::temp_dir().join(format!("ecra-identity-t040-{}-{name}", process::id()));
     let _ = fs::remove_dir_all(&directory);
     fs::create_dir_all(&directory).unwrap();
-    let location = BootstrapStoreLocation::new(directory.join("protected-trust-state.json")).unwrap();
+    let location =
+        BootstrapStoreLocation::new(directory.join("protected-trust-state.json")).unwrap();
     (directory, location)
 }
 
@@ -107,18 +108,13 @@ fn signing_snapshot(status: KeyStatus, signing_key: &SigningKey) -> VerifiedTrus
     }
     VerifiedTrustSnapshot::from_authenticated_parts(
         EnrollmentId::parse_str("00000000-0000-0000-0000-000000000030").unwrap(),
-        PrincipalRef::new(
-            PrincipalId::parse_str("00000000-0000-0000-0000-000000000004").unwrap(),
-        ),
+        PrincipalRef::new(PrincipalId::parse_str("00000000-0000-0000-0000-000000000004").unwrap()),
         TrustRootId::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
         1,
-        vec![VerifiedAssertionKey::new(
-            key_id,
-            1,
-            status,
-            signing_key.verifying_key().to_bytes(),
-        )
-        .unwrap()],
+        vec![
+            VerifiedAssertionKey::new(key_id, 1, status, signing_key.verifying_key().to_bytes())
+                .unwrap(),
+        ],
         revoked,
         TrustStateDigest::from_bytes([9_u8; 32]),
     )
@@ -161,13 +157,9 @@ fn published_state_with_stale_marker_reopens_same_identity_and_clears_marker() {
     let (directory, location) = test_location("post-publish-marker");
     let backend = TestBackend::available();
     let mut random = deterministic_random();
-    let first = bootstrap_or_reopen_local_principal(
-        &location,
-        &backend,
-        &mut random,
-        timestamp(1_000),
-    )
-    .unwrap();
+    let first =
+        bootstrap_or_reopen_local_principal(&location, &backend, &mut random, timestamp(1_000))
+            .unwrap();
     ProtectedTrustStateStore::write_bootstrap_marker(location.path()).unwrap();
 
     let mut no_randomness = DeterministicSecureRandom::new(Vec::new());
