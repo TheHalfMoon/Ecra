@@ -1,17 +1,18 @@
 # ECR-031 Status — Identity, Trust Root & Sensitive Storage Foundations
 
 **Slice:** ECR-031  
-**Lifecycle:** TASKS_READY_PENDING_EXACT_GREEN_HEAD  
+**Lifecycle:** IMPLEMENTING  
 **Dependencies:** ECR-001 `CLOSED_CANONICAL`, ECR-002 `CLOSED_CANONICAL`  
-**Canonical planning base:** `aadc19c972e619222d426674d7542dd9c00dbe44`  
-**ECR-002 closure-head CI:** `33155302100` — SUCCESS  
-**ECR-001 regression CI:** `33155302026` — SUCCESS  
+**Canonical implementation base:** `f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0`  
+**Implementation branch:** `031-identity-trust-root`  
+**Exact-head ECR-001 planning gate:** `33158268342` — SUCCESS  
+**Exact-head ECR-002 planning gate:** `33158268371` — SUCCESS  
 **Analyze Pass 1:** `44e85aa9ccd28e185a5761889aa12b50459f286e` — `PLANNING_REWORK_REQUIRED`  
 **Analyze Pass 2:** `a3c7d563c139c65886f169f9181c07a997038f1f` — `ZERO_BLOCKING_PLANNING_DRIFT_FOUND`  
 **Requirements checklist:** PASS_FOR_ANALYZE_PASS_2  
 **Constitution:** v1.1.0
 
-ECR-031 planning is now semantically complete and analyze-clean. Implementation remains blocked until the final lifecycle-convergence planning head itself passes the existing ECR-001 and ECR-002 permanent workflows on canonical `main`. The implementation branch must be created from that exact green planning head.
+The final synchronized planning head `f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0` passed both permanent closed-slice regression workflows and is the exact implementation base. ECR-031 is therefore authorized to implement on `031-identity-trust-root` in `tasks.md` dependency order.
 
 ## Roadmap-owned outcome
 
@@ -103,14 +104,13 @@ checklists/requirements.md      PASS_FOR_ANALYZE_PASS_2
 analyze.md                      Pass 2 ZERO_BLOCKING_PLANNING_DRIFT_FOUND
 ```
 
-## Next gate
+## Current execution frontier
 
-1. synchronize platform roadmap/status/EXECUTION/spec indexes to this planning state;
-2. freeze the resulting `main` head;
-3. require both ECR-001 and ECR-002 permanent workflows SUCCESS on that exact head;
-4. only then set the effective lifecycle to `TASKS_READY` and create `031-identity-trust-root` from that exact SHA;
-5. create a Draft implementation PR;
-6. execute T001 first — re-verify current dependency versions/licenses/advisories/MSRV before dependency adoption;
-7. continue T002–T082 in dependency order without scope expansion.
+1. create the Draft ECR-031 implementation PR from `031-identity-trust-root` to `main`;
+2. execute T001 dependency/version/license/advisory/MSRV review and update the donor/license ledger before adoption;
+3. execute T002–T008 workspace, crate, dependency and trusted CI boundaries;
+4. require exact-head Phase 1 CI success for T009;
+5. record T010 exact dependency/license/native-boundary disposition before semantic primitives begin;
+6. continue T011–T082 strictly in dependency order.
 
-No production code has been authorized or committed for ECR-031 yet.
+No task is marked complete until its required evidence is present. `VERIFIED_ON_BRANCH` will not be treated as `CLOSED_CANONICAL`.
