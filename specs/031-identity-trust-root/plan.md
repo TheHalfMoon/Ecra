@@ -86,6 +86,19 @@ Forbidden:
 - model/browser/network/protocol/policy SDK dependencies in `ecra-identity`;
 - native platform types in canonical public wire/domain structures.
 
+## 3.1 Implementation dependency correction IC-001
+
+Live Phase 4 implementation review found that the original phase order was not executable without violating frozen requirements. Bootstrap and lifecycle persistence depend on `SensitiveBytes`, `SecureRandom`, authenticated-envelope primitives and the Rust-owned `TrustBackend`, while crash tests depend on the store they verify.
+
+The canonical execution order is therefore dependency-driven while stable task IDs are preserved:
+
+```text
+T043 → T044 → T045 → T046 → T047 → T048 → T049 → T050 → T059 → T060
+  → T035 → T036 → T041 → T041A → T038 → T037 → T039 → T040 → T042
+```
+
+T035 now owns the strict pure schemas/invariants. T041A owns the complete generated/durable bootstrap transaction after the authenticated store exists. This is an ordering correction only: no security requirement, backend fail-closed rule, identity non-claim or slice boundary is weakened. See `implementation-clarifications.md`.
+
 ## 4. Workstream A — primitives and strict contracts
 
 Implement:

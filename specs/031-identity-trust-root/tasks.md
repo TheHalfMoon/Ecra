@@ -51,14 +51,17 @@
 
 ## Phase 4 — Local bootstrap, protected trust state and key lifecycle
 
-- [ ] **T035** Implement strict `TrustRootRecord`, `KeyRecord`, `ProtectedTrustStateV1` and local enrollment invariants with no serialized private/root/symmetric key material; local principal IDs are generated, never derived from OS/user labels. **Paths:** `crates/ecra-identity/src/bootstrap.rs`, `crates/ecra-identity/src/key.rs`. **FR-015–FR-018, FR-021, FR-024**
+> **Implementation dependency correction IC-001:** before T035, execute the already-owned prerequisite tasks T043 → T044 → T045 → T046 → T047 → T048 → T049 → T050 → T059 → T060. These stable task IDs remain defined in their original phase sections below; executing them early is the canonical dependency order, not a scope bypass. See `implementation-clarifications.md`.
+
+- [ ] **T035** Implement strict `TrustRootRecord`, `KeyRecord`, `ProtectedTrustStateV1` and pure local enrollment/trust-state schema invariants with no serialized private/root/symmetric key material. IDs remain opaque and cannot be derived from OS/user labels; the complete generated/durable bootstrap transaction is owned by T041A after the protected store exists. **Paths:** `crates/ecra-identity/src/bootstrap.rs`, `crates/ecra-identity/src/key.rs`. **FR-015–FR-018, FR-021, FR-024**
 - [ ] **T036** Implement one-active-key-per-trust-root/purpose selection inside authenticated protected trust state and reject ambiguous/duplicate active generations. **Path:** `crates/ecra-identity/src/key.rs`. **FR-018, FR-021**
-- [ ] **T037** Implement rotate transition: create/protect next generation, activate it and atomically publish new protected trust state; prior active becomes retired according to purpose. **Paths:** `crates/ecra-identity/src/key.rs`, `crates/ecra-identity/src/store.rs`. **FR-019, FR-021**
+- [ ] **T041** Implement the ECR-031-owned versioned protected trust-state store using authenticated envelope + crash-safe atomic replacement; ordinary metadata is rebuildable/non-authoritative. Add migration/corruption fixtures; do not reuse ECR-002 tables as identity authority. **Paths:** `crates/ecra-identity/src/store.rs`, `contracts/ecra-identity-v1/migrations/`, `crates/ecra-identity/tests/migration.rs`. **FR-021, FR-054**
+- [ ] **T041A** Implement the complete local bootstrap/enrollment transaction using `SecureRandom`, the production/test-isolated `TrustBackend` boundary and the authenticated protected trust-state store: generate fresh opaque principal/root/enrollment/key IDs, protect required secrets, atomically publish state, reopen/authenticate, then return `EnrolledPrincipalHandle`; partial state is `incomplete_bootstrap` and never silently remints identity. **Paths:** `crates/ecra-identity/src/bootstrap.rs`, `crates/ecra-identity/src/backend.rs`, `crates/ecra-identity/src/store.rs`. **FR-003, FR-013, FR-015, FR-021–FR-025, FR-056; C1/C2; SC-008**
 - [ ] **T038** Implement retirement semantics blocking new signing/protection while permitting only contract-authorized historical verification/decryption. **Path:** `crates/ecra-identity/src/key.rs`. **FR-017–FR-020**
+- [ ] **T037** Implement rotate transition: create/protect next generation, activate it and atomically publish new protected trust state; prior active becomes retired according to purpose. **Paths:** `crates/ecra-identity/src/key.rs`, `crates/ecra-identity/src/store.rs`. **FR-019, FR-021**
 - [ ] **T039** Implement revocation semantics in protected trust state blocking new use/current assertion validation; distinguish revocation from unavailable/destroyed key and reject ordinary metadata attempts to unrevoke/reactivate. **Paths:** `crates/ecra-identity/src/key.rs`, `crates/ecra-identity/src/validation.rs`, `crates/ecra-identity/src/store.rs`. **FR-020, FR-021**
 - [ ] **T040** Add exhaustive lifecycle/bootstrap tests including first enrollment, crash before/after backend secret creation and before/after protected-state publish, incomplete-bootstrap recovery, invalid second bootstrap, generation collision, stale-key issuance, revoked-key validation, stale/unsigned metadata and explicit no-monotonic-rollback-overclaim fixture. **Paths:** `crates/ecra-identity/tests/bootstrap.rs`, `crates/ecra-identity/tests/key_lifecycle.rs`. **SC-004, SC-008**
-- [ ] **T041** Implement the ECR-031-owned versioned protected trust-state store using authenticated envelope + crash-safe atomic replacement; ordinary metadata is rebuildable/non-authoritative. Add migration/corruption fixtures; do not reuse ECR-002 tables as identity authority. **Paths:** `crates/ecra-identity/src/store.rs`, `contracts/ecra-identity-v1/migrations/`, `crates/ecra-identity/tests/migration.rs`. **FR-021, FR-054**
-- [ ] **T042** Exact-head Phase 4 CI and status ledger update. **Path:** `specs/031-identity-trust-root/STATUS.md`. **SC-004, SC-008, SC-013**
+- [ ] **T042** Exact-head Phase 4 CI and status ledger update after T035–T041A and the corrected prerequisite wave are complete. **Path:** `specs/031-identity-trust-root/STATUS.md`. **SC-004, SC-008, SC-013**
 
 ## Phase 5 — Sensitive byte handling and protected envelopes
 
@@ -124,13 +127,16 @@ T011–T020 strict primitives/contracts
         ↓
 T021–T034 assertion/bootstrap interfaces/issuance/validation
         ↓
-T035–T042 protected bootstrap/trust state/key lifecycle
+IC-001 prerequisite wave:
+T043 → T044 → T045 → T046 → T047 → T048 → T049 → T050 → T059 → T060
         ↓
-T043–T053 protected envelope + secret custody
+T035 → T036 → T041 → T041A → T038 → T037 → T039 → T040 → T042
+        ↓
+T051–T053 remaining protected-envelope/redaction closure
         ↓
 T054–T058 protected anchor
         ↓
-T059–T068 native backend/macOS acceptance
+T061–T068 native backend/macOS acceptance
         ↓
 T069–T074 cross-cutting gates
         ↓

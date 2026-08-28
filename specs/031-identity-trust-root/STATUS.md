@@ -134,10 +134,10 @@ The temporary helper workflow is not part of the permanent trust surface.
 
 ## Current execution frontier
 
-1. Phase 3 semantic implementation is verified on exact head `35df7cab41c85cf9f0c9e6f6b7d20c0a57b18d15` by permanent ECR-031 CI run `33165443131`, job `98829634574`, result `SUCCESS`;
-2. this record-only ledger convergence marks T021–T034 complete and synchronizes `tasks.md`, `STATUS.md`, and `EXECUTION.md`;
-3. require permanent ECR-031 CI to reach terminal `completed/success` on the exact ledger-convergence head before semantic Phase 4 work begins;
-4. after that exact-head gate succeeds, begin T035 and continue Phase 4 strictly in dependency order; any dependency/feature/native-backend change requires fresh reviewed disposition and exact-head evidence.
+1. Phase 3 closure head `7eaede3f9f10461c307c8900c021273a4dbffa03` passed permanent ECR-031 CI run `33165941748`, job `98831297208`, result `SUCCESS`; Phase 3 is verified on-branch and the next implementation wave is eligible.
+2. Implementation review discovered MUST-level dependency-order defect IC-001: original T035–T042 cannot be completed honestly before T043–T050 and T059–T060 foundations.
+3. This convergence head synchronizes `implementation-clarifications.md`, `tasks.md`, `plan.md`, `analyze.md`, `STATUS.md`, and `EXECUTION.md` without weakening requirements.
+4. Require permanent ECR-031 CI `completed/success` on the exact IC-001 convergence head; then begin corrected prerequisite task T043, followed by the dependency graph in `tasks.md`.
 
 ## Phase 1 verified closure evidence
 
@@ -194,6 +194,10 @@ Stateful issuance/validation lifecycle tests remain crate-internal where crate-p
 
 The successful gate covered locked workspace build, rustfmt, strict Clippy, workspace tests, ECS-001/ECR-002 regressions, explicit ECR-031 phase targets, rustdoc, offline replay, core/run/identity boundaries, and dependency/toolchain evidence. Phase 3 adds identity/trust evidence only; it does not add authorization, capability, declassification, approval, browser/model/network/provider/protocol/process behavior, or native-backend verification claims.
 
-## Phase 4 execution frontier
+## Phase 4 dependency convergence
 
-Semantic Phase 4 T035–T042 is eligible only after the record-only Phase 3 ledger-convergence head itself passes permanent ECR-031 CI. Once that exact closure head is green, re-read the live Phase 4 requirements/contracts/data model and implement T035 first. The authenticated-envelope dependency in T041 must be reconciled with the ordered Phase 5 envelope implementation before any store behavior is claimed complete; no task-order bypass is permitted.
+The record-only Phase 3 closure head `7eaede3f9f10461c307c8900c021273a4dbffa03` passed permanent ECR-031 CI run `33165941748` / job `98831297208` with result `SUCCESS`.
+
+Live implementation review then proved the previously noted T041 envelope tension is broader and MUST-level: complete bootstrap/rotation/store semantics also require T043 `SensitiveBytes`, T044 `SecureRandom`, T045–T050 authenticated-envelope implementation/evidence, and T059–T060 backend boundary/production-selection guarantees. T040 crash tests also depend on T041 rather than preceding it.
+
+IC-001 remediates the graph without weakening frozen requirements. After this documentation convergence head is exact-green, execution starts at T043 and follows the corrected dependency graph. No plaintext fallback, unsigned lifecycle authority, fake generated IDs or test backend in production is permitted.
