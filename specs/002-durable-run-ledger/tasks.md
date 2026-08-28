@@ -68,13 +68,13 @@
 
 ## Phase 6 — Attempt guard, recovery and concurrency
 
-- [ ] T045 Implement `prepare_attempt` store API returning only after durable commit. **Paths:** `crates/ecra-run/src/store.rs`, `crates/ecra-run/src/recovery.rs`. **FR-011–FR-012**
-- [ ] T046 Implement `record_receipt` exact-binding store API. **Paths:** `crates/ecra-run/src/store.rs`, `crates/ecra-run/src/recovery.rs`. **FR-013**
-- [ ] T047 Implement recovery scan + explicit recovery-boundary append before continued scheduling. **Paths:** `crates/ecra-run/src/recovery.rs`, `crates/ecra-run/tests/crash_recovery.rs`. **FR-014–FR-016, FR-043–FR-045**
-- [ ] T048 Implement retry guard preserving ECR-001 idempotency/retry classes and blocking blind unresolved retries. **Paths:** `crates/ecra-run/src/recovery.rs`, `crates/ecra-run/tests/attempts.rs`. **FR-016, FR-044**
-- [ ] T049 Add crash matrix A–D covering before-preparation, after-preparation, after simulated external effect/before receipt, and after receipt commit. **Path:** `crates/ecra-run/tests/crash_recovery.rs`. **SC-004**
-- [ ] T050 Add multiple-attempt/one-action tests proving attempts remain distinct and receipts cannot cross-bind. **Path:** `crates/ecra-run/tests/attempts.rs`. **FR-012–FR-017**
-- [ ] T051 Add two-connection expected-head concurrency test proving exactly one competing append succeeds. **Path:** `crates/ecra-run/tests/sqlite_store.rs`. **SC-005**
+- [x] T045 Implement `prepare_attempt` store API returning only after durable commit. **Paths:** `crates/ecra-run/src/store.rs`, `crates/ecra-run/src/recovery.rs`. **FR-011–FR-012**
+- [x] T046 Implement `record_receipt` exact-binding store API. **Paths:** `crates/ecra-run/src/store.rs`, `crates/ecra-run/src/recovery.rs`. **FR-013**
+- [x] T047 Implement recovery scan + explicit recovery-boundary append before continued scheduling. **Paths:** `crates/ecra-run/src/recovery.rs`, `crates/ecra-run/tests/crash_recovery.rs`. **FR-014–FR-016, FR-043–FR-045**
+- [x] T048 Implement retry guard preserving ECR-001 idempotency/retry classes and blocking blind unresolved retries. **Paths:** `crates/ecra-run/src/recovery.rs`, `crates/ecra-run/tests/attempts.rs`. **FR-016, FR-044**
+- [x] T049 Add crash matrix A–D covering before-preparation, after-preparation, after simulated external effect/before receipt, and after receipt commit. **Path:** `crates/ecra-run/tests/crash_recovery.rs`. **SC-004**
+- [x] T050 Add multiple-attempt/one-action tests proving attempts remain distinct and receipts cannot cross-bind. **Path:** `crates/ecra-run/tests/attempts.rs`. **FR-012–FR-017**
+- [x] T051 Add two-connection expected-head concurrency test proving exactly one competing append succeeds. **Path:** `crates/ecra-run/tests/sqlite_store.rs`. **SC-005**
 
 ## Phase 7 — Deterministic `.ecra` archive
 

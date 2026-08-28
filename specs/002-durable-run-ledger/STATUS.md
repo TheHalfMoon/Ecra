@@ -92,6 +92,20 @@ The exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests
 
 Phase 5 establishes WAL + FULL SQLite configuration with read-back, deterministic STRICT schema v1 and append-only authoritative events, transactional schema handling, Immediate expected-head append, reducer-before-commit validation, strict authoritative replay, rebuildable projections, synthetic content-addressed blobs, mutation/corruption rejection, and process-crash durability evidence.
 
+## Phase 6 — VERIFIED_ON_BRANCH
+
+T045–T051 are complete on the exact verified Phase 6 head:
+
+```text
+exact head  04d51e913c88e38d2730950e711ab498a3b6e296
+CI run      33146742762 — SUCCESS
+job         run-ledger / 98769387841 — SUCCESS
+```
+
+The exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests, ECR-001 regression targets, explicit ECR-002 attempt/SQLite/crash-recovery targets, rustdoc, offline replay, and both boundary suites.
+
+Phase 6 establishes durable prepare-before-effect guards, exact-bound receipt persistence, recovery scanning plus explicit recovery boundaries, ECR-001-preserving retry refusal, crash matrix A–D with UNKNOWN/no-fabrication evidence, distinct attempts for one action, and two-connection expected-head concurrency where only one competing append succeeds.
+
 ## Current implementation position
 
 ```text
@@ -100,26 +114,23 @@ Phase 2 T009–T018  VERIFIED_ON_BRANCH
 Phase 3 T019–T026  VERIFIED_ON_BRANCH
 Phase 4 T027–T034  VERIFIED_ON_BRANCH
 Phase 5 T035–T044  VERIFIED_ON_BRANCH
-Phase 6 T045–T051  ACTIVE
-Phase 7 T052–T059  blocked by Phase 6 exact-head verification
-Phase 8 T060–T066  blocked
+Phase 6 T045–T051  VERIFIED_ON_BRANCH
+Phase 7 T052–T059  ACTIVE
+Phase 8 T060–T066  blocked by Phase 7 exact-head verification
 Phase 9 T067–T073  blocked
 ```
-
-Phase 6 semantic mutation starts only after a full exact-head ECR-002 gate passes on this Phase 5 ledger state.
-
-Phase 6 candidate implementation was materialized and passed its focused pre-commit gate at implementation commit `2105f1f4853b7c7b4f0a48484ba635d0eddbdd67`; T045–T051 remain ACTIVE until the permanent full exact-head gate passes on the candidate-plus-ledger head.
 
 Immediate work:
 
 ```text
-T045 durable prepare_attempt store API
-T046 exact-bound record_receipt store API
-T047 recovery scan + explicit recovery-boundary append
-T048 ECR-001-preserving retry guard + unresolved blind-retry block
-T049 crash matrix A–D
-T050 multiple-attempt/one-action distinctness + receipt cross-bind rejection
-T051 two-connection expected-head concurrency
+T052 strict archive manifest/path/metadata model + hard limits
+T053 deterministic Stored-only writer
+T054 archive reader safety/profile preflight
+T055 manifest whitelist + digest/event/ledger/reducer validation
+T056 deterministic export golden/hash
+T057 malicious archive corpus
+T058 malformed manifest/event/content/ledger failures
+T059 prove SQLite/WAL are never exported + synthetic-only fixtures
 ```
 
 ## Active implementation clarification
