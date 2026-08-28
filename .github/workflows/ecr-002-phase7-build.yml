@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-phase7:
-    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): diagnose phase7 duplicate parser error') }}"
+    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): reject phase7 duplicate central entries') }}"
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -40,23 +40,74 @@ jobs:
           repairs = [
               ('!file.extra_data().is_empty()', 'file.extra_data().is_some_and(|data| !data.is_empty())'),
               ('path.as_bytes().len() > MAX_PATH_BYTES', 'path.len() > MAX_PATH_BYTES'),
-              (
-                  '        ZipError::InvalidPassword => archive_feature("encrypted ZIP entries are unsupported"),',
-                  '\n'.join([
-                      '        ZipError::InvalidPassword => archive_feature("encrypted ZIP entries are unsupported"),',
-                      '        ZipError::InvalidArchive(message)',
-                      '            if message.starts_with("Duplicate filename:") =>',
-                      '        {',
-                      '            archive_duplicate(message)',
-                      '        }',
-                  ]),
-              ),
           ]
           for old, new in repairs:
               count = text.count(old)
               if count != 1:
                   raise SystemExit(f'expected exactly one archive repair site for {old[:64]!r}, found {count}')
               text = text.replace(old, new, 1)
+
+          old = '\n'.join([
+              'pub fn read_ecra(bytes: &[u8]) -> Result<ValidatedEcraArchive, RunError> {',
+              '    let mut archive = ZipArchive::new(Cursor::new(bytes)).map_err(map_zip_error)?;',
+          ])
+          new = '\n'.join([
+              'fn declared_archive_entry_count(bytes: &[u8]) -> Result<usize, RunError> {',
+              '    const EOCD_LEN: usize = 22;',
+              '    const EOCD_SIGNATURE: [u8; 4] = [0x50, 0x4b, 0x05, 0x06];',
+              '',
+              '    if bytes.len() < EOCD_LEN {',
+              '        return Err(archive_manifest("ZIP end-of-central-directory record is missing"));',
+              '    }',
+              '    let eocd = &bytes[bytes.len() - EOCD_LEN..];',
+              '    if eocd[..4] != EOCD_SIGNATURE {',
+              '        return Err(archive_feature(',
+              '            "ZIP comments, trailing bytes and non-canonical EOCD layout are unsupported",',
+              '        ));',
+              '    }',
+              '    let comment_len = u16::from_le_bytes([eocd[20], eocd[21]]);',
+              '    if comment_len != 0 {',
+              '        return Err(archive_feature("ZIP archive comments are unsupported"));',
+              '    }',
+              '    let entries_on_disk = u16::from_le_bytes([eocd[8], eocd[9]]);',
+              '    let total_entries = u16::from_le_bytes([eocd[10], eocd[11]]);',
+              '    if entries_on_disk != total_entries {',
+              '        return Err(archive_feature("multi-disk ZIP archives are unsupported"));',
+              '    }',
+              '    Ok(usize::from(total_entries))',
+              '}',
+              '',
+              'pub fn read_ecra(bytes: &[u8]) -> Result<ValidatedEcraArchive, RunError> {',
+              '    let mut archive = ZipArchive::new(Cursor::new(bytes)).map_err(map_zip_error)?;',
+          ])
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f'expected exactly one read_ecra insertion site, found {count}')
+          text = text.replace(old, new, 1)
+
+          old = '\n'.join([
+              '    if archive.len() > MAX_ARCHIVE_ENTRIES {',
+              '        return Err(archive_limit("archive exceeds MAX_ARCHIVE_ENTRIES"));',
+              '    }',
+          ])
+          new = '\n'.join([
+              '    let declared_entries = declared_archive_entry_count(bytes)?;',
+              '    if declared_entries > MAX_ARCHIVE_ENTRIES {',
+              '        return Err(archive_limit("archive exceeds MAX_ARCHIVE_ENTRIES"));',
+              '    }',
+              '    if declared_entries != archive.len() {',
+              '        return Err(archive_duplicate(',
+              '            "duplicate archive entry names collapsed during ZIP metadata parsing",',
+              '        ));',
+              '    }',
+              '    if archive.len() > MAX_ARCHIVE_ENTRIES {',
+              '        return Err(archive_limit("archive exceeds MAX_ARCHIVE_ENTRIES"));',
+              '    }',
+          ])
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f'expected exactly one archive-count validation site, found {count}')
+          text = text.replace(old, new, 1)
           source.write_text(text)
 
           test = Path('crates/ecra-run/tests/archive.rs')
@@ -90,13 +141,7 @@ jobs:
               '    }',
               '    assert_eq!(replacements, 2, "local and central ZIP names must both be patched");',
               '    let error = read_ecra(&duplicate).expect_err("duplicate entry must fail");',
-              '    assert_eq!(',
-              '        error.code(),',
-              '        RunErrorCode::ArchiveDuplicateEntry,',
-              '        "duplicate parser error: category={:?} message={:?}",',
-              '        error.category(),',
-              '        error.message()',
-              '    );',
+              '    assert_eq!(error.code(), RunErrorCode::ArchiveDuplicateEntry);',
           ])
           count = text.count(old)
           if count != 1:
