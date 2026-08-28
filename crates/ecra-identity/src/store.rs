@@ -7,6 +7,7 @@ use std::{
 
 use ecra_core::{SchemaVersion, to_jcs_vec};
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 
 use crate::backend::{SecureRandom, TrustBackend, TrustBackendSecretRef, TrustBackendStatus};
 use crate::envelope::{open_envelope, protect_envelope};
@@ -15,12 +16,14 @@ use crate::{
     EnvelopeKeyRef, IdentityError, IdentityErrorCategory, IdentityErrorCode, KeyPurpose,
     MAX_JSON_DEPTH, MAX_PROTECTED_ENVELOPE_WIRE_BYTES, ProtectedEnvelopeV1,
     ProtectedInformationClass, ProtectedObjectId, ProtectedPurpose, SensitiveBytes,
-    validate_ecr031_version, validate_json_limits,
+    TrustStateDigest, validate_ecr031_version, validate_json_limits,
 };
 
 const TRUST_STATE_PURPOSE: ProtectedPurpose = ProtectedPurpose::TrustState;
 const TRUST_STATE_INFORMATION_CLASS: ProtectedInformationClass =
     ProtectedInformationClass::Sensitive;
+const BOOTSTRAP_MARKER_BYTES: &[u8] =
+    br#"{"state":"in_progress","version":{"major":1,"minor":0}}"#;
 
 /// Authenticated protected trust state returned only after backend secret open,
 /// AEAD authentication and strict lifecycle validation all succeed.
@@ -30,12 +33,18 @@ const TRUST_STATE_INFORMATION_CLASS: ProtectedInformationClass =
 #[derive(Debug)]
 pub(crate) struct AuthenticatedTrustState {
     state: ProtectedTrustStateV1,
+    trust_state_digest: TrustStateDigest,
 }
 
 impl AuthenticatedTrustState {
     #[must_use]
     pub(crate) const fn state(&self) -> &ProtectedTrustStateV1 {
         &self.state
+    }
+
+    #[must_use]
+    pub(crate) const fn trust_state_digest(&self) -> TrustStateDigest {
+        self.trust_state_digest
     }
 
     #[must_use]
@@ -64,21 +73,66 @@ impl ProtectedTrustStateStore {
         Ok(Self { path, object_id })
     }
 
+    pub(crate) fn open_existing(
+        path: PathBuf,
+        backend: &impl TrustBackend,
+    ) -> Result<(Self, AuthenticatedTrustState), IdentityError> {
+        if path.file_name().is_none() {
+            return Err(store_input_error("trust_state_store_path"));
+        }
+        let wire = read_bounded_path(&path)?;
+        let envelope = ProtectedEnvelopeV1::from_json_slice(&wire)?;
+        if envelope.purpose() != TRUST_STATE_PURPOSE
+            || envelope.information_class() != TRUST_STATE_INFORMATION_CLASS
+        {
+            return Err(store_corruption_error("trust_state_envelope_role"));
+        }
+        let store = Self {
+            path,
+            object_id: envelope.object_id(),
+        };
+        let authenticated = store.open_authenticated(backend)?;
+        Ok((store, authenticated))
+    }
+
     #[must_use]
     pub(crate) fn path(&self) -> &Path {
         &self.path
     }
 
     pub(crate) fn exists(&self) -> Result<bool, IdentityError> {
-        match fs::symlink_metadata(&self.path) {
+        path_is_regular_file_if_present(&self.path, "trust_state_store_file_type")
+    }
+
+    pub(crate) fn bootstrap_marker_exists(path: &Path) -> Result<bool, IdentityError> {
+        let marker = bootstrap_marker_path(path)?;
+        path_is_regular_file_if_present(&marker, "bootstrap_marker_file_type")
+    }
+
+    pub(crate) fn write_bootstrap_marker(path: &Path) -> Result<(), IdentityError> {
+        if Self::bootstrap_marker_exists(path)? {
+            return Ok(());
+        }
+        let marker = bootstrap_marker_path(path)?;
+        atomic_replace_path(&marker, BOOTSTRAP_MARKER_BYTES)
+    }
+
+    pub(crate) fn clear_bootstrap_marker(path: &Path) -> Result<(), IdentityError> {
+        let marker = bootstrap_marker_path(path)?;
+        match fs::symlink_metadata(&marker) {
             Ok(metadata) => {
                 if metadata.file_type().is_symlink() || !metadata.is_file() {
-                    return Err(store_corruption_error("trust_state_store_file_type"));
+                    return Err(store_corruption_error("bootstrap_marker_file_type"));
                 }
-                Ok(true)
+                fs::remove_file(&marker)
+                    .map_err(|_| store_io_error("bootstrap_marker_remove"))?;
+                let parent = marker
+                    .parent()
+                    .ok_or_else(|| store_input_error("bootstrap_marker_parent"))?;
+                sync_parent_directory(parent)
             }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
-            Err(_) => Err(store_io_error("trust_state_store_metadata")),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(_) => Err(store_io_error("bootstrap_marker_metadata")),
         }
     }
 
@@ -194,106 +248,29 @@ impl ProtectedTrustStateStore {
             return Err(store_corruption_error("trust_state_key_binding"));
         }
 
-        Ok(AuthenticatedTrustState { state })
+        let canonical_state = to_jcs_vec(&state).map_err(|_| {
+            IdentityError::new(
+                IdentityErrorCategory::ProtectedStorage,
+                IdentityErrorCode::CanonicalizationFailed,
+                Some("authenticated_trust_state_jcs"),
+            )
+        })?;
+        let digest = Sha256::digest(&canonical_state);
+        let mut digest_bytes = [0_u8; 32];
+        digest_bytes.copy_from_slice(&digest);
+
+        Ok(AuthenticatedTrustState {
+            state,
+            trust_state_digest: TrustStateDigest::from_bytes(digest_bytes),
+        })
     }
 
     fn read_bounded(&self) -> Result<Vec<u8>, IdentityError> {
-        let metadata = fs::symlink_metadata(&self.path).map_err(|error| {
-            if error.kind() == std::io::ErrorKind::NotFound {
-                store_corruption_error("trust_state_store_missing")
-            } else {
-                store_io_error("trust_state_store_metadata")
-            }
-        })?;
-        if metadata.file_type().is_symlink() || !metadata.is_file() {
-            return Err(store_corruption_error("trust_state_store_file_type"));
-        }
-        let length = usize::try_from(metadata.len())
-            .map_err(|_| store_corruption_error("trust_state_store_length"))?;
-        if length == 0 || length > MAX_PROTECTED_ENVELOPE_WIRE_BYTES {
-            return Err(IdentityError::new(
-                IdentityErrorCategory::Corruption,
-                IdentityErrorCode::WireLimitExceeded,
-                Some("trust_state_store_wire"),
-            ));
-        }
-
-        let file = File::open(&self.path).map_err(|_| store_io_error("trust_state_store_open"))?;
-        let mut wire = Vec::with_capacity(length);
-        file.take((MAX_PROTECTED_ENVELOPE_WIRE_BYTES + 1) as u64)
-            .read_to_end(&mut wire)
-            .map_err(|_| store_io_error("trust_state_store_read"))?;
-        if wire.is_empty() || wire.len() > MAX_PROTECTED_ENVELOPE_WIRE_BYTES {
-            return Err(IdentityError::new(
-                IdentityErrorCategory::Corruption,
-                IdentityErrorCode::WireLimitExceeded,
-                Some("trust_state_store_wire"),
-            ));
-        }
-        Ok(wire)
+        read_bounded_path(&self.path)
     }
 
     fn atomic_replace(&self, bytes: &[u8]) -> Result<(), IdentityError> {
-        if bytes.is_empty() || bytes.len() > MAX_PROTECTED_ENVELOPE_WIRE_BYTES {
-            return Err(IdentityError::new(
-                IdentityErrorCategory::ProtectedStorage,
-                IdentityErrorCode::WireLimitExceeded,
-                Some("trust_state_store_atomic_write"),
-            ));
-        }
-        let parent = self
-            .path
-            .parent()
-            .ok_or_else(|| store_input_error("trust_state_store_parent"))?;
-        fs::create_dir_all(parent)
-            .map_err(|_| store_io_error("trust_state_store_create_parent"))?;
-
-        let temp_path = self.temp_path()?;
-        match fs::symlink_metadata(&temp_path) {
-            Ok(metadata) => {
-                if metadata.file_type().is_symlink() || !metadata.is_file() {
-                    return Err(store_corruption_error("trust_state_store_temp_file_type"));
-                }
-                fs::remove_file(&temp_path)
-                    .map_err(|_| store_io_error("trust_state_store_remove_stale_temp"))?;
-            }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-            Err(_) => return Err(store_io_error("trust_state_store_temp_metadata")),
-        }
-
-        let write_result = (|| -> Result<(), IdentityError> {
-            let mut file = OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&temp_path)
-                .map_err(|_| store_io_error("trust_state_store_create_temp"))?;
-            file.write_all(bytes)
-                .map_err(|_| store_io_error("trust_state_store_write_temp"))?;
-            file.sync_all()
-                .map_err(|_| store_io_error("trust_state_store_flush_temp"))?;
-            drop(file);
-
-            fs::rename(&temp_path, &self.path)
-                .map_err(|_| store_io_error("trust_state_store_atomic_rename"))?;
-            sync_parent_directory(parent)?;
-            Ok(())
-        })();
-
-        if write_result.is_err() {
-            let _ = fs::remove_file(&temp_path);
-        }
-        write_result
-    }
-
-    fn temp_path(&self) -> Result<PathBuf, IdentityError> {
-        let file_name = self
-            .path
-            .file_name()
-            .ok_or_else(|| store_input_error("trust_state_store_file_name"))?;
-        let mut temp_name = OsString::from(".");
-        temp_name.push(file_name);
-        temp_name.push(".tmp");
-        Ok(self.path.with_file_name(temp_name))
+        atomic_replace_path(&self.path, bytes)
     }
 }
 
@@ -322,6 +299,128 @@ fn ensure_backend_available(backend: &impl TrustBackend) -> Result<(), IdentityE
             Some("protected_trust_state_backend"),
         )),
     }
+}
+
+fn path_is_regular_file_if_present(
+    path: &Path,
+    context: &'static str,
+) -> Result<bool, IdentityError> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) => {
+            if metadata.file_type().is_symlink() || !metadata.is_file() {
+                return Err(store_corruption_error(context));
+            }
+            Ok(true)
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(_) => Err(store_io_error("trust_state_path_metadata")),
+    }
+}
+
+fn read_bounded_path(path: &Path) -> Result<Vec<u8>, IdentityError> {
+    let metadata = fs::symlink_metadata(path).map_err(|error| {
+        if error.kind() == std::io::ErrorKind::NotFound {
+            store_corruption_error("trust_state_store_missing")
+        } else {
+            store_io_error("trust_state_store_metadata")
+        }
+    })?;
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        return Err(store_corruption_error("trust_state_store_file_type"));
+    }
+    let length = usize::try_from(metadata.len())
+        .map_err(|_| store_corruption_error("trust_state_store_length"))?;
+    if length == 0 || length > MAX_PROTECTED_ENVELOPE_WIRE_BYTES {
+        return Err(IdentityError::new(
+            IdentityErrorCategory::Corruption,
+            IdentityErrorCode::WireLimitExceeded,
+            Some("trust_state_store_wire"),
+        ));
+    }
+
+    let file = File::open(path).map_err(|_| store_io_error("trust_state_store_open"))?;
+    let mut wire = Vec::with_capacity(length);
+    file.take((MAX_PROTECTED_ENVELOPE_WIRE_BYTES + 1) as u64)
+        .read_to_end(&mut wire)
+        .map_err(|_| store_io_error("trust_state_store_read"))?;
+    if wire.is_empty() || wire.len() > MAX_PROTECTED_ENVELOPE_WIRE_BYTES {
+        return Err(IdentityError::new(
+            IdentityErrorCategory::Corruption,
+            IdentityErrorCode::WireLimitExceeded,
+            Some("trust_state_store_wire"),
+        ));
+    }
+    Ok(wire)
+}
+
+fn atomic_replace_path(path: &Path, bytes: &[u8]) -> Result<(), IdentityError> {
+    if bytes.is_empty() || bytes.len() > MAX_PROTECTED_ENVELOPE_WIRE_BYTES {
+        return Err(IdentityError::new(
+            IdentityErrorCategory::ProtectedStorage,
+            IdentityErrorCode::WireLimitExceeded,
+            Some("trust_state_store_atomic_write"),
+        ));
+    }
+    let parent = path
+        .parent()
+        .ok_or_else(|| store_input_error("trust_state_store_parent"))?;
+    fs::create_dir_all(parent).map_err(|_| store_io_error("trust_state_store_create_parent"))?;
+
+    let temp_path = temp_path_for(path)?;
+    match fs::symlink_metadata(&temp_path) {
+        Ok(metadata) => {
+            if metadata.file_type().is_symlink() || !metadata.is_file() {
+                return Err(store_corruption_error("trust_state_store_temp_file_type"));
+            }
+            fs::remove_file(&temp_path)
+                .map_err(|_| store_io_error("trust_state_store_remove_stale_temp"))?;
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(_) => return Err(store_io_error("trust_state_store_temp_metadata")),
+    }
+
+    let write_result = (|| -> Result<(), IdentityError> {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temp_path)
+            .map_err(|_| store_io_error("trust_state_store_create_temp"))?;
+        file.write_all(bytes)
+            .map_err(|_| store_io_error("trust_state_store_write_temp"))?;
+        file.sync_all()
+            .map_err(|_| store_io_error("trust_state_store_flush_temp"))?;
+        drop(file);
+
+        fs::rename(&temp_path, path)
+            .map_err(|_| store_io_error("trust_state_store_atomic_rename"))?;
+        sync_parent_directory(parent)?;
+        Ok(())
+    })();
+
+    if write_result.is_err() {
+        let _ = fs::remove_file(&temp_path);
+    }
+    write_result
+}
+
+fn temp_path_for(path: &Path) -> Result<PathBuf, IdentityError> {
+    let file_name = path
+        .file_name()
+        .ok_or_else(|| store_input_error("trust_state_store_file_name"))?;
+    let mut temp_name = OsString::from(".");
+    temp_name.push(file_name);
+    temp_name.push(".tmp");
+    Ok(path.with_file_name(temp_name))
+}
+
+fn bootstrap_marker_path(path: &Path) -> Result<PathBuf, IdentityError> {
+    let file_name = path
+        .file_name()
+        .ok_or_else(|| store_input_error("bootstrap_marker_file_name"))?;
+    let mut marker_name = OsString::from(".");
+    marker_name.push(file_name);
+    marker_name.push(".bootstrap-in-progress");
+    Ok(path.with_file_name(marker_name))
 }
 
 fn store_input_error(context: &'static str) -> IdentityError {
@@ -518,7 +617,7 @@ mod tests {
         let second = state(2, 1_300);
         store.publish(&backend, &mut random, &second).unwrap();
         assert_eq!(store.open_authenticated(&backend).unwrap().state(), &second);
-        assert!(!store.temp_path().unwrap().exists());
+        assert!(!temp_path_for(store.path()).unwrap().exists());
 
         fs::remove_dir_all(directory).unwrap();
     }
@@ -567,6 +666,18 @@ mod tests {
         let error = store.open_authenticated(&backend).unwrap_err();
         assert_eq!(error.code(), IdentityErrorCode::UnsupportedVersion);
 
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn bootstrap_marker_is_durable_and_non_authoritative() {
+        let (directory, store) = test_store("bootstrap-marker");
+        assert!(!ProtectedTrustStateStore::bootstrap_marker_exists(store.path()).unwrap());
+        ProtectedTrustStateStore::write_bootstrap_marker(store.path()).unwrap();
+        assert!(ProtectedTrustStateStore::bootstrap_marker_exists(store.path()).unwrap());
+        assert!(!store.exists().unwrap());
+        ProtectedTrustStateStore::clear_bootstrap_marker(store.path()).unwrap();
+        assert!(!ProtectedTrustStateStore::bootstrap_marker_exists(store.path()).unwrap());
         fs::remove_dir_all(directory).unwrap();
     }
 }
