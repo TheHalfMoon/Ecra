@@ -23,7 +23,9 @@ jobs:
           set -euo pipefail
           git merge-base --is-ancestor 0289596bb7cdbb81d5f03c445fd324e985294143 HEAD
           helper_delta="$(git diff --name-only 0289596bb7cdbb81d5f03c445fd324e985294143..HEAD | sort)"
-          test "$helper_delta" = '.github/workflows/ecr-031-phase1-evidence.yml'
+          expected_delta="$(printf '%s\n' '.github/workflows/ecr-031-phase1-evidence.yml' 'specs/031-identity-trust-root/phase1-lock-sha256.txt' | sort)"
+          test "$helper_delta" = "$expected_delta"
+          test "$(cat specs/031-identity-trust-root/phase1-lock-sha256.txt)" = '5bd1b14d1643ff59492bafb7c6195b270cfc1424832788ad8078e62f22d907bc'
           cargo metadata --locked --format-version 1 --no-deps >/dev/null
           bash scripts/check-identity-unsafe.sh
           bash scripts/check-identity-deps.sh >/dev/null
@@ -38,6 +40,7 @@ jobs:
             LOCK_SHA="$(shasum -a 256 Cargo.lock | awk '{print $1}')"
           fi
           export LOCK_SHA
+          test "$LOCK_SHA" = "$(cat specs/031-identity-trust-root/phase1-lock-sha256.txt)"
           python3 - <<'PY'
           from pathlib import Path
           import os
