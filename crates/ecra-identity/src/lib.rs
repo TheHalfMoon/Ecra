@@ -95,7 +95,11 @@ pub use assertion::{
 };
 pub use backend::TrustBackendKind;
 pub use bootstrap::{EnrolledPrincipalHandle, EnrollmentKind, EnrollmentRecord};
-pub use envelope::{MAX_PROTECTED_ENVELOPE_WIRE_BYTES, ProtectedPurpose};
+pub use envelope::{
+    EnvelopeKeyRef, MAX_PROTECTED_ENVELOPE_WIRE_BYTES, PROTECTED_ENVELOPE_AAD_DOMAIN,
+    PROTECTED_ENVELOPE_NONCE_BYTES, PROTECTED_ENVELOPE_TAG_BYTES, ProtectedEnvelopeV1,
+    ProtectedInformationClass, ProtectedPurpose, SensitiveBytes,
+};
 pub use error::{IdentityError, IdentityErrorCategory, IdentityErrorCode};
 pub use ids::{
     AssertionNonceId, DelegationId, EnrollmentId, KeyId, ProtectedObjectId, TrustRootId,
