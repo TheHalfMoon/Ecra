@@ -64,15 +64,29 @@ The exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests
 
 Phase 3 establishes the pure deterministic reducer, exact v1 phase matrix, attempt/receipt binding, recovery-boundary UNKNOWN semantics, resume blockers, and 1,000x deterministic replay evidence.
 
+## Phase 4 — VERIFIED_ON_BRANCH
+
+T027–T034 are complete on the exact verified Phase 4 head:
+
+```text
+exact head  69f65ab5b07e6c8a0dbabec6681123c67ae01f5a
+CI run      33145231800 — SUCCESS
+job         run-ledger / 98764652133 — SUCCESS
+```
+
+The exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, explicit ECR-002 event/reducer/attempt/budget/portability targets, rustdoc, offline replay, and both boundary suites.
+
+Phase 4 establishes all 14 fixed budget dimensions, strict I-JSON-safe checked accounting, remaining-budget/preflight refusal, first-crossing soft evidence, exact hard-exhaustion evidence/suspension, deterministic hard stops, and preservation of unresolved-attempt truth.
+
 ## Current implementation position
 
 ```text
 Phase 1 T001–T008  VERIFIED_ON_BRANCH
 Phase 2 T009–T018  VERIFIED_ON_BRANCH
 Phase 3 T019–T026  VERIFIED_ON_BRANCH
-Phase 4 T027–T034  ACTIVE
-Phase 5 T035–T044  blocked by Phase 4 exact-head verification
-Phase 6 T045–T051  blocked
+Phase 4 T027–T034  VERIFIED_ON_BRANCH
+Phase 5 T035–T044  ACTIVE
+Phase 6 T045–T051  blocked by Phase 5 exact-head verification
 Phase 7 T052–T059  blocked
 Phase 8 T060–T066  blocked
 Phase 9 T067–T073  blocked
@@ -81,14 +95,16 @@ Phase 9 T067–T073  blocked
 Immediate work:
 
 ```text
-T027 exact BudgetUsage/RunBudget primitives
-T028 strict budget validation
-T029 checked cumulative accounting and remaining budget
-T030 known-upper-bound preflight refusal
-T031 first soft crossing + exact hard exhaustion evidence
-T032 all-dimension boundary/property coverage
-T033 deterministic hard-budget loop stop
-T034 preserve unresolved-attempt truth across exhaustion
+T035 SQLite open/configuration + pragma read-back
+T036 deterministic STRICT schema v1 + append-only triggers
+T037 schema-version create/reject/migration fixtures
+T038 ExpectedRunHead + Immediate atomic append
+T039 reducer validation before commit + atomic projection
+T040 strict ordered history load + chain verification
+T041 projection delete/rebuild equivalence
+T042 synthetic content-addressed blob put/get + storage hook
+T043 mutation/corruption rejection tests
+T044 process-crash persistence + WAL/FULL evidence
 ```
 
 ## Active implementation clarification

@@ -33,7 +33,9 @@ Phase 2 verified head: 2ab8d6d80f43bf7dd07ee43659555a573c47021b
 Phase 2 CI: 33107289499 — SUCCESS
 Phase 3 verified head: ac45fcc835674341ae6b9ad18484e6dacda36809
 Phase 3 CI: 33143735332 — SUCCESS
-Current phase: Phase 4 T027–T034
+Phase 4 verified head: 69f65ab5b07e6c8a0dbabec6681123c67ae01f5a
+Phase 4 CI: 33145231800 — SUCCESS
+Current phase: Phase 5 T035–T044
 PR: #2 OPEN / DRAFT / mergeable at last live check
 ```
 
@@ -88,17 +90,19 @@ hostile rewrite claim   not provided by plain hash chain
 ## Active task order
 
 ```text
-T027 exact BudgetUsage / BudgetLimit / RunBudget
-T028 malformed/duplicate/out-of-range rejection
-T029 checked accounting and remaining budget
-T030 known-upper-bound preflight refusal
-T031 first soft crossing and exact hard exhaustion semantics
-T032 all 14 dimensions boundary/property tests
-T033 deterministic recursive/tool-loop hard stop
-T034 preserve unresolved attempt/retry truth under exhaustion
+T035 SQLite open/configuration + verified pragmas
+T036 deterministic STRICT v1 schema and append-only triggers
+T037 user_version create/reject/migration fixtures
+T038 ExpectedRunHead + BEGIN IMMEDIATE atomic append
+T039 validate envelope/reducer before authoritative commit
+T040 ordered load + full ledger-chain verification
+T041 projection rebuild from authoritative events
+T042 synthetic content-addressed blobs + storage budget hook
+T043 mutation/corruption rejection
+T044 process-crash persistence with WAL + FULL assertion
 ```
 
-Phase 5 becomes eligible only after the complete ECR-002 exact-head gate verifies Phase 4.
+Phase 6 becomes eligible only after the complete ECR-002 exact-head gate verifies Phase 5.
 
 ## CI architecture
 

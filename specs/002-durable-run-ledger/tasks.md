@@ -44,14 +44,14 @@
 
 ## Phase 4 — Budgets and bounded execution
 
-- [ ] T027 Implement exact `BudgetDimension`, `BudgetLimit`, `RunBudget`, `BudgetUsage`. **Path:** `crates/ecra-run/src/budget.rs`. **FR-031–FR-039**
-- [ ] T028 Reject duplicate dimensions, soft>hard, malformed/negative/out-of-range values. **Paths:** `crates/ecra-run/src/budget.rs`, `crates/ecra-run/tests/budgets.rs`. **FR-032–FR-034**
-- [ ] T029 Implement checked cumulative accounting and remaining-budget calculation. **Paths:** `crates/ecra-run/src/budget.rs`, `crates/ecra-run/src/state.rs`. **FR-032, FR-035**
-- [ ] T030 Implement known-upper-bound preflight refusal. **Paths:** `crates/ecra-run/src/budget.rs`, `crates/ecra-run/tests/budgets.rs`. **FR-036**
-- [ ] T031 Implement soft-limit first-crossing validation and hard-exhaustion suspension semantics. **Paths:** `crates/ecra-run/src/budget.rs`, `crates/ecra-run/src/state.rs`, `crates/ecra-run/tests/budgets.rs`. **FR-037–FR-039**
-- [ ] T032 Add boundary/property tests for all 14 dimensions at zero/soft/hard/MAX_SAFE_INTEGER/overflow. **Path:** `crates/ecra-run/tests/budgets.rs`. **SC-009**
-- [ ] T033 Add recursive/tool-loop fixture stopped deterministically by hard budget with durable exhaustion evidence. **Path:** `crates/ecra-run/tests/budgets.rs`. **SC-010**
-- [ ] T034 Prove budget exhaustion never clears unresolved attempt or changes ECR-001 retry semantics. **Paths:** `crates/ecra-run/tests/budgets.rs`, `crates/ecra-run/tests/attempts.rs`. **FR-037–FR-039**
+- [x] T027 Implement exact `BudgetDimension`, `BudgetLimit`, `RunBudget`, `BudgetUsage`. **Path:** `crates/ecra-run/src/budget.rs`. **FR-031–FR-039**
+- [x] T028 Reject duplicate dimensions, soft>hard, malformed/negative/out-of-range values. **Paths:** `crates/ecra-run/src/budget.rs`, `crates/ecra-run/tests/budgets.rs`. **FR-032–FR-034**
+- [x] T029 Implement checked cumulative accounting and remaining-budget calculation. **Paths:** `crates/ecra-run/src/budget.rs`, `crates/ecra-run/src/state.rs`. **FR-032, FR-035**
+- [x] T030 Implement known-upper-bound preflight refusal. **Paths:** `crates/ecra-run/src/budget.rs`, `crates/ecra-run/tests/budgets.rs`. **FR-036**
+- [x] T031 Implement soft-limit first-crossing validation and hard-exhaustion suspension semantics. **Paths:** `crates/ecra-run/src/budget.rs`, `crates/ecra-run/src/state.rs`, `crates/ecra-run/tests/budgets.rs`. **FR-037–FR-039**
+- [x] T032 Add boundary/property tests for all 14 dimensions at zero/soft/hard/MAX_SAFE_INTEGER/overflow. **Path:** `crates/ecra-run/tests/budgets.rs`. **SC-009**
+- [x] T033 Add recursive/tool-loop fixture stopped deterministically by hard budget with durable exhaustion evidence. **Path:** `crates/ecra-run/tests/budgets.rs`. **SC-010**
+- [x] T034 Prove budget exhaustion never clears unresolved attempt or changes ECR-001 retry semantics. **Paths:** `crates/ecra-run/tests/budgets.rs`, `crates/ecra-run/tests/attempts.rs`. **FR-037–FR-039**
 
 ## Phase 5 — SQLite schema, migrations, append and projections
 
