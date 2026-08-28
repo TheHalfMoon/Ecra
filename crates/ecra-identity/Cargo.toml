@@ -10,6 +10,9 @@ workspace = true
 
 [dependencies]
 ecra-core = { path = "../ecra-core" }
+serde = { version = "=1.0.229", default-features = false, features = ["derive", "std"] }
+serde_json = { version = "=1.0.151", default-features = false, features = ["std"] }
+uuid = { version = "=1.26.0", default-features = false, features = ["serde"] }
 ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["fast", "zeroize"] }
 chacha20poly1305 = { version = "=0.11.0", default-features = false, features = ["alloc", "zeroize"] }
 hkdf = { version = "=0.13.0", default-features = false }

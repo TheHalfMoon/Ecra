@@ -9,7 +9,10 @@ expected_direct="$({
   printf '%s\n' ed25519-dalek
   printf '%s\n' getrandom
   printf '%s\n' hkdf
+  printf '%s\n' serde
+  printf '%s\n' serde_json
   printf '%s\n' sha2
+  printf '%s\n' uuid
   printf '%s\n' zeroize
 
   host="$(rustc -vV | sed -n 's/^host: //p')"

@@ -319,3 +319,11 @@ Rejected for this v1 dependency boundary:
 ### 23.6 T001 conclusion
 
 T001 dependency research is complete enough to authorize T002 and the bounded T003 manifest delta above. It does **not** authorize marking T003/T009/T010 complete until the exact generated lockfile, dependency tree, native boundary, CI and license/advisory evidence are committed and pass on the exact branch head.
+
+## 23. Phase 2 support dependency delta
+
+T011–T019 require the repository's existing typed UUID and strict JSON/Serde conventions. Reimplementing UUID parsing or JSON semantics inside `ecra-identity` would create a competing trusted primitive, so Phase 2 directly reuses the exact versions already locked and reviewed by ECR-001: `serde 1.0.229`, `serde_json 1.0.151`, and `uuid 1.26.0`. No new third-party package version is introduced into the workspace by this delta.
+
+Accepted features are minimal for the Phase 2 contract: Serde `derive+std`, serde_json `std`, and uuid `serde`, all with default features disabled. The repository-pinned Rust 1.98.0 exceeds the previously reviewed compatibility floor for these already-locked packages. The 2026-08-28 RustSec package/advisory review found no advisory entry naming these three packages; similarly named packages such as `serde-json-wasm` are not dependencies. The full resolved `ecra-identity` graph remains subject to the permanent dependency allowlist and exact-head CI before semantic Phase 2 work is accepted.
+
+No source is copied. The dependency APIs are used only for typed UUID representation and strict JSON/Serde wire handling. This delta does not widen native, network, browser, model, protocol, policy, process, telemetry, or platform-backend authority.

@@ -267,3 +267,15 @@ core-foundation-sys       0.8.7, transitive native/FFI boundary
 Any future dependency, feature, native-boundary, or platform-backend change requires a new review and exact-head evidence rather than inheriting this disposition.
 
 **T010 disposition:** `LOCKED_DEPENDENCY_FOR_ECR031_V1_PHASE1`.
+
+## ECR-031 Phase 2 Support Dependency Delta
+
+Phase 2 adds only direct access to packages already present in the committed workspace lock graph and already reviewed for ECR-001. This avoids a second UUID/JSON implementation inside the identity trust boundary.
+
+| Package | Exact locked version | License | Phase 2 role | Feature disposition |
+|---|---:|---|---|---|
+| `serde` | 1.0.229 | MIT OR Apache-2.0 | strict typed serialization/deserialization | `default-features=false`, `derive`, `std` |
+| `serde_json` | 1.0.151 | MIT OR Apache-2.0 | strict JSON parsing for ECR-031 wire fixtures/contracts | `default-features=false`, `std` |
+| `uuid` | 1.26.0 | Apache-2.0 OR MIT | repository-aligned 128-bit typed identifiers | `default-features=false`, `serde`; no generation feature |
+
+No package version is newly introduced to the workspace by this delta; only `ecra-identity`'s direct edge set changes. UUID randomness remains owned by the explicit `getrandom`/`SecureRandom` boundary rather than enabling uuid generation features. No donor source is copied or adapted. Any future direct dependency or feature change still requires its own reviewed delta and exact-head evidence.

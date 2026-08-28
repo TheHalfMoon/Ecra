@@ -244,7 +244,10 @@ dependencies = [
  "getrandom 0.4.3",
  "hkdf",
  "security-framework",
+ "serde",
+ "serde_json",
  "sha2",
+ "uuid",
  "zeroize",
 ]
 
