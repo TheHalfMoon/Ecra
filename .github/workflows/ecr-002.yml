@@ -75,3 +75,17 @@ jobs:
           bash scripts/check-run-unsafe.sh
           bash scripts/check-run-deps.sh
           cargo tree -p ecra-run
+      - name: ECR-002 dependency evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustc --version
+          cargo --version
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum Cargo.lock
+          else
+            shasum -a 256 Cargo.lock
+          fi
+          grep -F 'rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled"] }' crates/ecra-run/Cargo.toml
+          grep -F 'zip = { version = "=8.6.0", default-features = false }' crates/ecra-run/Cargo.toml
+          cargo tree -p ecra-run --edges normal --depth 1
