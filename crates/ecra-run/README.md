@@ -12,6 +12,42 @@
 - bounded local SQLite persistence and migrations;
 - deterministic synthetic/non-sensitive `.ecra` interchange.
 
+## Run architecture map
+
+```text
+untrusted caller/event bytes
+        |
+        v
+strict RunEventEnvelope parse + version/digest checks
+        |
+        v
+pure deterministic RunReducer
+        |
+        +-----------------------------+
+        |                             |
+        v                             v
+RunStore / SQLite                 derived RunState
+        |                             |
+        |                             +--> rebuildable projection only
+        |
+        +--> run_events    authoritative append-only run truth
+        +--> run_heads     rebuildable/non-authoritative projection
+        +--> artifact_blobs synthetic content-addressed local blobs
+        |
+        +--> logical events/blobs --> deterministic `.ecra` export
+
+attempt_prepared committed durably
+        |
+        v
+external effect boundary  <-- NOT implemented/authorized by ecra-run
+        |
+        +--> ActionReceipt observed --> receipt_recorded
+        |
+        `--> crash / missing receipt --> UNKNOWN + reconciliation required
+```
+
+The archive path serializes validated logical events/blobs only. It never copies a live SQLite database, WAL or SHM file into `.ecra`.
+
 ## Does not own
 
 - authentication, principal assertions, trust roots or protected keys;
