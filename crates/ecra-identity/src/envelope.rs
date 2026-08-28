@@ -196,8 +196,7 @@ impl ProtectedEnvelopeV1 {
     ) -> Result<Self, IdentityError> {
         validate_ecr031_version(version)?;
         let nonce = base64url_decode(&nonce_b64url, "nonce_encoding")?;
-        if nonce.len() != PROTECTED_ENVELOPE_NONCE_BYTES
-            || base64url_encode(&nonce) != nonce_b64url
+        if nonce.len() != PROTECTED_ENVELOPE_NONCE_BYTES || base64url_encode(&nonce) != nonce_b64url
         {
             return Err(protected_envelope_error("nonce_encoding"));
         }
@@ -219,6 +218,7 @@ impl ProtectedEnvelopeV1 {
         })
     }
 
+    #[allow(dead_code)]
     pub(crate) fn from_ciphertext(
         object_id: ProtectedObjectId,
         purpose: ProtectedPurpose,
