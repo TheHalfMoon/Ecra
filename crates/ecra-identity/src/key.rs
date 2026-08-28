@@ -428,6 +428,9 @@ impl ProtectedTrustStateV1 {
         }
 
         let mut seen = BTreeSet::new();
+        let mut active_identity_assertion_signing = None;
+        let mut active_protected_envelope_root = None;
+        let mut active_protected_anchor_signing = None;
         for key in &self.keys {
             if key.trust_root_id() != self.trust_root_id {
                 return Err(lifecycle_error("key_trust_root_mismatch"));
@@ -448,6 +451,18 @@ impl ProtectedTrustStateV1 {
             }
             if !seen.insert(key.key_id()) {
                 return Err(lifecycle_error("duplicate_key_id"));
+            }
+            if matches!(key.status(), KeyStatus::Active) {
+                let active_slot = match key.purpose() {
+                    KeyPurpose::IdentityAssertionSigning => {
+                        &mut active_identity_assertion_signing
+                    }
+                    KeyPurpose::ProtectedEnvelopeRoot => &mut active_protected_envelope_root,
+                    KeyPurpose::ProtectedAnchorSigning => &mut active_protected_anchor_signing,
+                };
+                if active_slot.replace(key.key_id()).is_some() {
+                    return Err(lifecycle_error("multiple_active_keys_for_purpose"));
+                }
             }
             let listed_revoked = self.revoked_key_ids.contains(&key.key_id());
             if listed_revoked != matches!(key.status(), KeyStatus::Revoked) {
@@ -483,6 +498,24 @@ impl ProtectedTrustStateV1 {
     #[must_use]
     pub fn keys(&self) -> &[KeyRecord] {
         &self.keys
+    }
+
+    pub fn active_key(&self, purpose: KeyPurpose) -> Result<&KeyRecord, IdentityError> {
+        let mut active = self
+            .keys
+            .iter()
+            .filter(|key| key.purpose() == purpose && matches!(key.status(), KeyStatus::Active));
+        let selected = active.next().ok_or_else(|| {
+            IdentityError::new(
+                IdentityErrorCategory::KeyState,
+                IdentityErrorCode::KeyNotActive,
+                Some("active_key_missing"),
+            )
+        })?;
+        if active.next().is_some() {
+            return Err(lifecycle_error("multiple_active_keys_for_purpose"));
+        }
+        Ok(selected)
     }
 
     #[must_use]
@@ -951,6 +984,7 @@ mod tests {
 
     const ROOT: &str = "00000000-0000-0000-0000-000000000002";
     const SIGNING_KEY: &str = "00000000-0000-0000-0000-000000000003";
+    const SIGNING_KEY_2: &str = "00000000-0000-0000-0000-000000000013";
     const ENVELOPE_KEY: &str = "00000000-0000-0000-0000-000000000011";
     const PRINCIPAL: &str = "00000000-0000-0000-0000-000000000004";
     const ENROLLMENT: &str = "00000000-0000-0000-0000-000000000030";
@@ -964,17 +998,26 @@ mod tests {
     }
 
     fn signing_record(status: KeyStatus) -> KeyRecord {
-        let signing_key = SigningKey::from_bytes(&[7u8; 32]);
+        signing_record_with(SIGNING_KEY, 1, status, 7)
+    }
+
+    fn signing_record_with(
+        key_id: &str,
+        generation: u64,
+        status: KeyStatus,
+        seed_byte: u8,
+    ) -> KeyRecord {
+        let signing_key = SigningKey::from_bytes(&[seed_byte; 32]);
         let (retired_at, revoked_at) = match status {
             KeyStatus::Active => (None, None),
             KeyStatus::RetiredVerifyOrDecryptOnly => (Some(timestamp(1_100)), None),
             KeyStatus::Revoked => (None, Some(timestamp(1_100))),
         };
         KeyRecord::new_ed25519(
-            KeyId::parse_str(SIGNING_KEY).unwrap(),
+            KeyId::parse_str(key_id).unwrap(),
             root_id(),
             KeyPurpose::IdentityAssertionSigning,
-            1,
+            generation,
             status,
             signing_key.verifying_key().to_bytes(),
             timestamp(900),
@@ -983,6 +1026,13 @@ mod tests {
             revoked_at,
         )
         .unwrap()
+    }
+
+    fn protected_enrollment() -> ProtectedEnrollmentV1 {
+        ProtectedEnrollmentV1::new(
+            EnrollmentId::parse_str(ENROLLMENT).unwrap(),
+            PrincipalId::parse_str(PRINCIPAL).unwrap(),
+        )
     }
 
     #[test]
@@ -1042,10 +1092,7 @@ mod tests {
 
     #[test]
     fn protected_state_rejects_wrong_root_duplicate_and_revocation_drift() {
-        let enrollment = ProtectedEnrollmentV1::new(
-            EnrollmentId::parse_str(ENROLLMENT).unwrap(),
-            PrincipalId::parse_str(PRINCIPAL).unwrap(),
-        );
+        let enrollment = protected_enrollment();
         let signing = signing_record(KeyStatus::Active);
         let state = ProtectedTrustStateV1::new(
             root_id(),
@@ -1114,10 +1161,7 @@ mod tests {
     fn protected_state_deserialization_rejects_duplicate_revoked_ids() {
         let revoked = signing_record(KeyStatus::Revoked);
         let revoked_id = revoked.key_id();
-        let enrollment = ProtectedEnrollmentV1::new(
-            EnrollmentId::parse_str(ENROLLMENT).unwrap(),
-            PrincipalId::parse_str(PRINCIPAL).unwrap(),
-        );
+        let enrollment = protected_enrollment();
         let state = ProtectedTrustStateV1::new(
             root_id(),
             enrollment,
@@ -1131,5 +1175,96 @@ mod tests {
         value["revoked_key_ids"] =
             serde_json::json!([revoked_id.to_string(), revoked_id.to_string()]);
         assert!(serde_json::from_value::<ProtectedTrustStateV1>(value).is_err());
+    }
+
+    #[test]
+    fn protected_state_allows_one_active_key_per_distinct_purpose() {
+        let envelope = KeyRecord::new_protected_envelope_root(
+            KeyId::parse_str(ENVELOPE_KEY).unwrap(),
+            root_id(),
+            1,
+            KeyStatus::Active,
+            timestamp(900),
+            timestamp(1_000),
+            None,
+            None,
+        )
+        .unwrap();
+        let state = ProtectedTrustStateV1::new(
+            root_id(),
+            protected_enrollment(),
+            1,
+            vec![signing_record(KeyStatus::Active), envelope],
+            BTreeSet::new(),
+            timestamp(1_200),
+        )
+        .unwrap();
+
+        assert_eq!(
+            state
+                .active_key(KeyPurpose::IdentityAssertionSigning)
+                .unwrap()
+                .key_id(),
+            KeyId::parse_str(SIGNING_KEY).unwrap()
+        );
+        assert_eq!(
+            state
+                .active_key(KeyPurpose::ProtectedEnvelopeRoot)
+                .unwrap()
+                .key_id(),
+            KeyId::parse_str(ENVELOPE_KEY).unwrap()
+        );
+    }
+
+    #[test]
+    fn protected_state_rejects_two_active_keys_for_same_purpose() {
+        let first = signing_record_with(SIGNING_KEY, 1, KeyStatus::Active, 7);
+        let second = signing_record_with(SIGNING_KEY_2, 2, KeyStatus::Active, 8);
+
+        let error = ProtectedTrustStateV1::new(
+            root_id(),
+            protected_enrollment(),
+            2,
+            vec![first, second],
+            BTreeSet::new(),
+            timestamp(1_200),
+        )
+        .unwrap_err();
+        assert_eq!(
+            error.code(),
+            IdentityErrorCode::TrustSnapshotLifecycleInvalid
+        );
+    }
+
+    #[test]
+    fn active_key_selects_active_generation_and_fails_closed_when_absent() {
+        let retired = signing_record_with(
+            SIGNING_KEY,
+            1,
+            KeyStatus::RetiredVerifyOrDecryptOnly,
+            7,
+        );
+        let active = signing_record_with(SIGNING_KEY_2, 2, KeyStatus::Active, 8);
+        let state = ProtectedTrustStateV1::new(
+            root_id(),
+            protected_enrollment(),
+            2,
+            vec![retired, active],
+            BTreeSet::new(),
+            timestamp(1_200),
+        )
+        .unwrap();
+
+        assert_eq!(
+            state
+                .active_key(KeyPurpose::IdentityAssertionSigning)
+                .unwrap()
+                .key_id(),
+            KeyId::parse_str(SIGNING_KEY_2).unwrap()
+        );
+        let missing = state
+            .active_key(KeyPurpose::ProtectedEnvelopeRoot)
+            .unwrap_err();
+        assert_eq!(missing.code(), IdentityErrorCode::KeyNotActive);
     }
 }
