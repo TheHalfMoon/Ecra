@@ -1,11 +1,11 @@
 # Tasks: Durable Run, Ledger & Budgets
 
 **Feature:** ECR-002  
-**Status:** PHASE_9_FINAL_READINESS  
+**Status:** CLOSED_CANONICAL  
 **Canonical inputs:** `spec.md`, `research.md`, `data-model.md`, `contracts/run-ledger-v1.md`, `threat-model.md`, `plan.md`, `quickstart.md`, `analyze.md`, `traceability-closure.md`, `post-implementation-analyze.md`  
 **Base:** canonical `main` after ECR-001 `CLOSED_CANONICAL`
 
-`[x]` means complete on the ECR-002 implementation branch with required evidence; it does not mean `CLOSED_CANONICAL`.
+`[x]` means the task has satisfied its required branch/canonical evidence. Final canonical closure evidence is recorded in `STATUS.md`; ECR-002 is `CLOSED_CANONICAL` only because the exact verified feature head was merged and canonical-main post-merge gates passed.
 
 ## Phase 1 — Workspace, crate and CI boundaries
 
@@ -84,7 +84,7 @@
 - [x] T055 Implement manifest-entry whitelist, ContentDigest/size checks, strict event parse, full ledger validation and reducer validation before import. **Paths:** `crates/ecra-run/src/archive.rs`, `crates/ecra-run/tests/archive.rs`. **FR-048–FR-051**
 - [x] T056 Add deterministic export golden/hash: identical logical content produces byte-identical archive bytes. **Paths:** `contracts/ecra-run-v1/expected/`, `crates/ecra-run/tests/archive.rs`. **SC-011**
 - [x] T057 Add malicious archive corpus: absolute/traversal/backslash/NUL/duplicate/symlink/unsupported compression/encryption/count/size breaches. **Path:** `crates/ecra-run/tests/archive.rs`. **SC-012**
-- [x] T058 Add malformed manifest/event/content/ledger digest mismatch import failures. **Path:** `crates/ecra-run/tests/archive.rs`. **SC-002, SC-012**
+- [x] T058 Add malformed manifest/event/content/ledger digest mismatch import failures. **Path:** `crates/ecra-run/src/archive.rs`, `crates/ecra-run/tests/archive.rs`. **SC-002, SC-012**
 - [x] T059 Prove archive never contains/exports live SQLite database/WAL files and import/export fixtures remain synthetic/non-sensitive. **Paths:** `crates/ecra-run/tests/archive.rs`, `crates/ecra-run/tests/boundaries.rs`. **FR-028, FR-030, FR-048, FR-052, SC-013**
 
 ## Phase 8 — Cross-cutting portability, security and documentation gates
@@ -103,9 +103,9 @@
 - [x] T068 Re-check constitution G1–G15 and platform risks R-006/R-019/R-033/R-039/R-042/R-052/R-053. **Path:** `specs/002-durable-run-ledger/traceability-closure.md`.
 - [x] T069 Run post-implementation analyze-equivalent consistency review; create convergence tasks for any MUST-level drift rather than hiding it. **Path:** `specs/002-durable-run-ledger/post-implementation-analyze.md`. **SC-016**
 - [x] T070 Converge spec/data-model/contract/plan/quickstart/tasks/status/EXECUTION with exact implementation truth. **Paths:** `specs/002-durable-run-ledger/*`, `EXECUTION.md`, platform status/roadmap as lifecycle changes. **Evidence:** exact convergence head `84d8cb5a8c0a28ab7adba42d2cd049e014c8f368`, CI `33153174953`, job `98789740534` — SUCCESS.
-- [ ] T071 Require complete exact-head CI on final feature head, clean review threads/checks, and no actionable blocker before merge. **SC-015**
-- [ ] T072 Merge with exact expected head using a non-rebase method; require post-merge canonical-main ECR-002 CI. **SC-015**
-- [ ] T073 Mark ECR-002 `CLOSED_CANONICAL` only after merge + post-merge evidence; update roadmap/platform status/EXECUTION and identify the next genuinely dependency-eligible slice.
+- [x] T071 Require complete exact-head CI on final feature head, clean review threads/checks, and no actionable blocker before merge. **SC-015** **Evidence:** head `87fd9fc560bf5ca21a07a4d25473f305b4c05f05`, CI `33153413462`, job `98790541842` — SUCCESS; CodeRabbit SUCCESS; zero review threads/inline findings.
+- [x] T072 Merge with exact expected head using a non-rebase method; require post-merge canonical-main ECR-002 CI. **SC-015** **Evidence:** merge commit `40efc8a64a9562f0f3eb2555b350cfa03d3e0675`, parent 2 `87fd9fc560bf5ca21a07a4d25473f305b4c05f05`; main ECR-002 CI `33154108410`, job `98792690359` — SUCCESS; ECR-001 regression CI `33154108397`, job `98792690901` — SUCCESS.
+- [x] T073 Mark ECR-002 `CLOSED_CANONICAL` only after merge + post-merge evidence; update roadmap/platform status/EXECUTION and identify the next genuinely dependency-eligible slice. **Evidence:** closure ledger in `STATUS.md`; ECR-031 and ECR-004 are planning-eligible, with ECR-031 selected as the next critical-path planning slice. Final closure-convergence main head must pass the permanent ECR-002 workflow before downstream implementation authorization.
 
 ## Dependency graph
 
@@ -128,4 +128,4 @@ T027–T034 budgets T035–T044 SQLite
             T067–T073 closure
 ```
 
-No ECR-031/ECR-004/ECR-003 implementation becomes eligible merely from partial ECR-002 progress; roadmap dependencies require ECR-002 `CLOSED_CANONICAL`.
+ECR-002 is `CLOSED_CANONICAL`. ECR-031 and ECR-004 are now dependency-eligible for bounded planning; ECR-003 remains blocked until ECR-031 is also `CLOSED_CANONICAL`. No downstream implementation is authorized solely by this task ledger.
