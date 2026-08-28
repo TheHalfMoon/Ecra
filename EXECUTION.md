@@ -23,23 +23,36 @@ ECR-001 closure-ledger head: 85e4bf657b6c33e3f88d83e92e7a35279d177349
 ECR-001 closure-ledger CI: 33099434232 — SUCCESS
 
 Active slice: ECR-002 — Durable Run, Ledger & Budgets
-Lifecycle: IMPLEMENTING
+Lifecycle: IMPLEMENTING / PHASE_9_PRE_MERGE_CONVERGENCE
 Branch: 002-durable-run-ledger
 Canonical planning base: 5caf5dc4e7f26d07fabac3333713a44f0af22ea1
-Planning/status CI: 33103802150 — SUCCESS
-Phase 1 verified head: 4577123486fcaf856a3640aeacb3b7dcee733cc3
-Phase 1 CI: 33105751992 — SUCCESS
-Phase 2 verified head: 2ab8d6d80f43bf7dd07ee43659555a573c47021b
-Phase 2 CI: 33107289499 — SUCCESS
-Phase 3 verified head: ac45fcc835674341ae6b9ad18484e6dacda36809
-Phase 3 CI: 33143735332 — SUCCESS
-Phase 4 verified head: 69f65ab5b07e6c8a0dbabec6681123c67ae01f5a
-Phase 4 CI: 33145231800 — SUCCESS
-Current phase: Phase 5 T035–T044
-PR: #2 OPEN / DRAFT / mergeable at last live check
+PR: #2 OPEN / DRAFT
+
+Phase 1 T001–T008: VERIFIED_ON_BRANCH
+Phase 2 T009–T018: VERIFIED_ON_BRANCH
+Phase 3 T019–T026: VERIFIED_ON_BRANCH
+Phase 4 T027–T034: VERIFIED_ON_BRANCH
+Phase 5 T035–T044: VERIFIED_ON_BRANCH
+Phase 6 T045–T051: VERIFIED_ON_BRANCH
+Phase 7 T052–T059: VERIFIED_ON_BRANCH
+Phase 8 T060–T066: VERIFIED_ON_BRANCH
+Phase 9 T067–T073: ACTIVE
+
+Phase 8 ledger head: e86e1822e621c0563f2764fe784902e3204b0085
+Phase 8 CI: 33152251783 — SUCCESS
+Convergence baseline head: 0dd8ef6efc8a61197d6520c94a54f661b07961a4
+Convergence baseline CI: 33152748423 — SUCCESS
+
+T067 traceability mapping: COMPLETE_ON_BRANCH
+T068 constitution/risk re-check: COMPLETE_ON_BRANCH
+T069 post-implementation analyze: COMPLETE_ON_BRANCH
+T070 convergence: ACTIVE
+T071 final exact-head readiness: BLOCKED_BY_T070
+T072 merge/post-merge main gate: BLOCKED_BY_T071
+T073 canonical closure: BLOCKED_BY_T072
 ```
 
-ECR-002 implementation is authorized only inside its local/synthetic/non-sensitive durability scope. Real sensitive persistence, authentication/trust roots, authorization/declassification, independent verification/reconciliation, provider execution, distributed workflow infrastructure and multi-device sync remain outside this slice.
+ECR-002 implementation remains authorized only inside its local/synthetic/non-sensitive durability scope. Real sensitive persistence, authentication/trust roots, authorization/declassification, independent verification/reconciliation, provider execution, distributed workflow infrastructure and multi-device sync remain outside this slice.
 
 ## ECR-002 package
 
@@ -57,19 +70,27 @@ specs/002-durable-run-ledger/plan.md
 specs/002-durable-run-ledger/tasks.md
 specs/002-durable-run-ledger/quickstart.md
 specs/002-durable-run-ledger/analyze.md
+specs/002-durable-run-ledger/traceability-closure.md
+specs/002-durable-run-ledger/post-implementation-analyze.md
 specs/002-durable-run-ledger/checklists/requirements.md
 ```
 
-Planning result remains:
+Current post-implementation result:
 
 ```text
-FR-001–FR-057 OWNED
-SC-001–SC-016 OWNED
-G1–G15 PASS / explicit N/A
-ZERO_BLOCKING_PLANNING_DRIFT_FOUND
+FR-001–FR-057 PASS
+SC-001–SC-014 PASS
+SC-015 PASS_BASELINE / FINAL_FEATURE_AND_POST_MERGE_MAIN_REQUIRED
+SC-016 PASS_TRACEABILITY / CONVERGENCE_ACTIVE
+G1–G15 PASS / explicit PASS-N/A
+UNOWNED_FR=0
+UNOWNED_SC=0
+FAILED_CONSTITUTION_GATES=0
+IMPLICITLY_ACCEPTED_CRITICAL_RISKS=0
+MUST_LEVEL_IMPLEMENTATION_DEFECTS_FOUND=0
 ```
 
-## Fixed architecture decisions
+## Fixed implementation decisions
 
 ```text
 authoritative truth     append-only RunEventEnvelope history
@@ -78,31 +99,46 @@ projection              rebuildable/non-authoritative RunState cache
 attempt safety          committed AttemptPrepared before provider invocation
 missing receipt         UNKNOWN / reconciliation-required
 integrity               domain-separated RFC8785 + SHA-256 LedgerDigest
-local store             SQLite via bounded rusqlite adapter
+local store             SQLite via rusqlite 0.40.2
+SQLite engine           bundled SQLite 3.53.2 via libsqlite3-sys 0.38.2
 SQLite durability       WAL + synchronous=FULL, asserted at open
 write transaction       Immediate + expected-head compare
-budget accounting       typed I-JSON-safe checked integers
-portable artifact       deterministic strict Stored-only ZIP `.ecra`
+budget accounting       typed checked I-JSON-safe integers
+portable artifact       deterministic strict Stored-only ZIP via zip 8.6.0
+ecra-run unsafe         forbidden in Ecra-authored Rust
 archive/store fixtures  synthetic/non-sensitive only
 hostile rewrite claim   not provided by plain hash chain
+Cargo.lock SHA-256      b720472bf40a554ab61afb74eae95dd625bc6b2604e47a632991faea630e42c6
 ```
 
 ## Active task order
 
 ```text
-T035 SQLite open/configuration + verified pragmas
-T036 deterministic STRICT v1 schema and append-only triggers
-T037 user_version create/reject/migration fixtures
-T038 ExpectedRunHead + BEGIN IMMEDIATE atomic append
-T039 validate envelope/reducer before authoritative commit
-T040 ordered load + full ledger-chain verification
-T041 projection rebuild from authoritative events
-T042 synthetic content-addressed blobs + storage budget hook
-T043 mutation/corruption rejection
-T044 process-crash persistence with WAL + FULL assertion
-```
+T070 finish convergence:
+  - keep C1 folded into data-model.md and contracts/run-ledger-v1.md
+  - keep implementation-clarifications.md historical/non-normative
+  - keep plan/research/quickstart at exact implementation truth
+  - converge EXECUTION.md, STATUS.md, tasks.md and post-implementation analyze state
+  - re-check spec.md and threat-model.md for semantic/security drift
+  - run complete exact-head CI on the final convergence head
 
-Phase 6 becomes eligible only after the complete ECR-002 exact-head gate verifies Phase 5.
+T071 after T070:
+  - require final feature-head full CI SUCCESS
+  - require PR head equals verified head
+  - require clean review comments/threads/checks
+  - require no actionable blocker
+  - only then move PR out of Draft if repository policy requires it
+
+T072 after T071:
+  - merge exact expected head using a non-rebase method
+  - require canonical-main ECR-002 CI SUCCESS
+
+T073 after T072:
+  - record exact merge/post-merge evidence
+  - mark ECR-002 CLOSED_CANONICAL
+  - converge roadmap/platform status/EXECUTION
+  - identify next genuinely dependency-eligible slice from canonical main
+```
 
 ## CI architecture
 
@@ -117,8 +153,6 @@ workflow_dispatch
 runs-on: self-hosted
 permissions: contents: read
 ```
-
-The workflow runs the full workspace gate, ECR-001 regression boundary and ECR-002 dedicated tests/checkers.
 
 ## Full target verification surface
 
@@ -148,11 +182,11 @@ cargo tree -p ecra-core
 cargo tree -p ecra-run
 ```
 
-Only targets that exist for the current implementation phase are invoked by the phase-specific ECR-002 workflow; later task-owned targets join the gate when their owning phase lands.
+The permanent workflow also records exact dependency/toolchain evidence and keeps explicit archive/boundaries/portability targets in the gate.
 
 ## Execution rule
 
-Continue T001–T073 in dependency order. Fix actual CI/review blockers and immediately resume. Do not weaken tests or boundaries to make a gate green. No force-push, rebase or destructive history rewriting.
+Continue T001–T073 in dependency order. Fix actual CI/review blockers and immediately resume. Do not weaken tests or boundaries to make a gate green. No force-push, rebase or destructive history rewriting. Never mark PASS, MERGED or `CLOSED_CANONICAL` without exact-head/post-merge evidence.
 
 ## Non-negotiable invariants
 
