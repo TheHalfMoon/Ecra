@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   push-tested-phase4:
-    if: startsWith(github.event.head_commit.message, 'ci(run): add phase4 tested-state pusher')
+    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): fix phase4 pusher condition') }}"
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
