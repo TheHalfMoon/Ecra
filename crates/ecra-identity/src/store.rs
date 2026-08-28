@@ -505,7 +505,10 @@ fn protect_rotated_secret(
     Ok(record)
 }
 
-fn revoked_key_record(record: &KeyRecord, revoked_at: EpochMillis) -> Result<KeyRecord, IdentityError> {
+fn revoked_key_record(
+    record: &KeyRecord,
+    revoked_at: EpochMillis,
+) -> Result<KeyRecord, IdentityError> {
     if matches!(record.status(), KeyStatus::Revoked) {
         return Err(IdentityError::new(
             IdentityErrorCategory::KeyState,
@@ -526,9 +529,9 @@ fn revoked_key_record(record: &KeyRecord, revoked_at: EpochMillis) -> Result<Key
             Some(revoked_at),
         ),
         KeyPurpose::IdentityAssertionSigning | KeyPurpose::ProtectedAnchorSigning => {
-            let public_key = record.ed25519_public_key()?.ok_or_else(|| {
-                revocation_error("revoked_signing_key_missing_public_material")
-            })?;
+            let public_key = record
+                .ed25519_public_key()?
+                .ok_or_else(|| revocation_error("revoked_signing_key_missing_public_material"))?;
             KeyRecord::new_ed25519(
                 record.key_id(),
                 record.trust_root_id(),
@@ -1303,12 +1306,7 @@ mod tests {
             .unwrap();
         let mut revoke_random = DeterministicSecureRandom::new(Vec::new());
         let error = store
-            .revoke_key(
-                &backend,
-                &mut revoke_random,
-                key_id(),
-                timestamp(1_300),
-            )
+            .revoke_key(&backend, &mut revoke_random, key_id(), timestamp(1_300))
             .unwrap_err();
         assert_eq!(error.code(), IdentityErrorCode::KeyNotActive);
         assert_eq!(backend.secrets.borrow().len(), before);
