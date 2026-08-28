@@ -292,6 +292,70 @@ pub(crate) fn protect_envelope(
     )
 }
 
+#[allow(dead_code, clippy::too_many_arguments)]
+pub(crate) fn open_envelope(
+    master_secret: &SensitiveBytes,
+    envelope: &ProtectedEnvelopeV1,
+    expected_object_id: ProtectedObjectId,
+    expected_purpose: ProtectedPurpose,
+    expected_information_class: ProtectedInformationClass,
+    expected_key_ref: EnvelopeKeyRef,
+) -> Result<SensitiveBytes, IdentityError> {
+    let expected_algorithm = AeadAlgorithm::ChaCha20Poly1305Rfc8439;
+    if envelope.version != ECR_031_CONTRACT_VERSION
+        || envelope.object_id != expected_object_id
+        || envelope.purpose != expected_purpose
+        || envelope.information_class != expected_information_class
+        || envelope.key_ref != expected_key_ref
+        || envelope.algorithm != expected_algorithm
+    {
+        return Err(protected_envelope_authentication_error());
+    }
+
+    let nonce = base64url_decode(&envelope.nonce_b64url, "nonce_encoding")
+        .map_err(|_| protected_envelope_authentication_error())?;
+    if nonce.len() != PROTECTED_ENVELOPE_NONCE_BYTES
+        || base64url_encode(&nonce) != envelope.nonce_b64url
+    {
+        return Err(protected_envelope_authentication_error());
+    }
+    let nonce: [u8; PROTECTED_ENVELOPE_NONCE_BYTES] = nonce
+        .try_into()
+        .map_err(|_| protected_envelope_authentication_error())?;
+
+    let ciphertext = base64url_decode(&envelope.ciphertext_b64url, "ciphertext_encoding")
+        .map_err(|_| protected_envelope_authentication_error())?;
+    if ciphertext.len() < PROTECTED_ENVELOPE_TAG_BYTES
+        || base64url_encode(&ciphertext) != envelope.ciphertext_b64url
+    {
+        return Err(protected_envelope_authentication_error());
+    }
+
+    let aad = envelope
+        .aad_bytes()
+        .map_err(|_| protected_envelope_authentication_error())?;
+    let key = derive_envelope_key(
+        master_secret,
+        expected_key_ref,
+        expected_purpose,
+        expected_algorithm,
+    )
+    .map_err(|_| protected_envelope_authentication_error())?;
+    let cipher = ChaCha20Poly1305::new_from_slice(key.as_bytes())
+        .map_err(|_| protected_envelope_authentication_error())?;
+    let plaintext = cipher
+        .decrypt(
+            &Array(nonce),
+            Payload {
+                msg: &ciphertext,
+                aad: &aad,
+            },
+        )
+        .map_err(|_| protected_envelope_authentication_error())?;
+
+    Ok(SensitiveBytes::new(plaintext))
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProtectedEnvelopeV1 {
@@ -500,6 +564,14 @@ fn protected_envelope_crypto_error(context: &'static str) -> IdentityError {
     )
 }
 
+fn protected_envelope_authentication_error() -> IdentityError {
+    IdentityError::new(
+        IdentityErrorCategory::CryptographicAuthentication,
+        IdentityErrorCode::AuthenticationFailed,
+        Some("protected_envelope_open"),
+    )
+}
+
 fn base64url_encode(input: &[u8]) -> String {
     const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     let mut output = String::with_capacity(input.len().div_ceil(3) * 4);
@@ -568,11 +640,12 @@ fn base64url_decode(input: &str, context: &'static str) -> Result<Vec<u8>, Ident
 #[cfg(test)]
 mod kdf_tests {
     use super::{
-        AeadAlgorithm, EnvelopeKeyRef, PROTECTED_ENVELOPE_HKDF_SALT_DOMAIN,
-        PROTECTED_ENVELOPE_KEY_DOMAIN, PROTECTED_ENVELOPE_NONCE_BYTES,
-        PROTECTED_ENVELOPE_TAG_BYTES, ProtectedInformationClass, ProtectedPurpose, SensitiveBytes,
-        base64url_decode, derive_envelope_key, envelope_hkdf_info, envelope_hkdf_salt,
-        protect_envelope,
+        AeadAlgorithm, EnvelopeKeyRef, IdentityErrorCategory, IdentityErrorCode,
+        PROTECTED_ENVELOPE_HKDF_SALT_DOMAIN, PROTECTED_ENVELOPE_KEY_DOMAIN,
+        PROTECTED_ENVELOPE_NONCE_BYTES, PROTECTED_ENVELOPE_TAG_BYTES,
+        ProtectedInformationClass, ProtectedPurpose, SensitiveBytes, base64url_decode,
+        base64url_encode, derive_envelope_key, envelope_hkdf_info, envelope_hkdf_salt,
+        open_envelope, protect_envelope,
     };
     use crate::backend::DeterministicSecureRandom;
     use crate::{KeyId, ProtectedObjectId, TrustRootId};
@@ -593,6 +666,19 @@ mod kdf_tests {
 
     fn object_id() -> ProtectedObjectId {
         ProtectedObjectId::parse_str("00000000-0000-0000-0000-000000000010").unwrap()
+    }
+
+    fn other_object_id() -> ProtectedObjectId {
+        ProtectedObjectId::parse_str("00000000-0000-0000-0000-000000000012").unwrap()
+    }
+
+    fn assert_authentication_failure(error: crate::IdentityError) {
+        assert_eq!(
+            error.category(),
+            IdentityErrorCategory::CryptographicAuthentication
+        );
+        assert_eq!(error.code(), IdentityErrorCode::AuthenticationFailed);
+        assert_eq!(error.safe_context(), Some("protected_envelope_open"));
     }
 
     #[test]
@@ -726,5 +812,113 @@ mod kdf_tests {
             )
             .unwrap();
         assert_eq!(recovered, plaintext_bytes);
+    }
+
+    #[test]
+    fn authenticated_open_returns_plaintext_only_after_successful_authentication() {
+        let master = SensitiveBytes::new(vec![0x42; 32]);
+        let plaintext_bytes = b"ecra-t048-authenticated-open";
+        let plaintext = SensitiveBytes::new(plaintext_bytes.to_vec());
+        let mut random =
+            DeterministicSecureRandom::new(vec![0x33; PROTECTED_ENVELOPE_NONCE_BYTES]);
+        let envelope = protect_envelope(
+            &master,
+            &mut random,
+            object_id(),
+            ProtectedPurpose::IdentityState,
+            ProtectedInformationClass::Secret,
+            key_ref(1),
+            &plaintext,
+        )
+        .unwrap();
+
+        let opened = open_envelope(
+            &master,
+            &envelope,
+            object_id(),
+            ProtectedPurpose::IdentityState,
+            ProtectedInformationClass::Secret,
+            key_ref(1),
+        )
+        .unwrap();
+        assert_eq!(opened.0.as_slice(), plaintext_bytes);
+    }
+
+    #[test]
+    fn authenticated_open_failures_are_uniform_and_return_no_plaintext() {
+        let master = SensitiveBytes::new(vec![0x42; 32]);
+        let wrong_master = SensitiveBytes::new(vec![0x24; 32]);
+        let sentinel = b"ecra-t048-no-plaintext-on-failure";
+        let plaintext = SensitiveBytes::new(sentinel.to_vec());
+        let mut random =
+            DeterministicSecureRandom::new(vec![0x44; PROTECTED_ENVELOPE_NONCE_BYTES]);
+        let envelope = protect_envelope(
+            &master,
+            &mut random,
+            object_id(),
+            ProtectedPurpose::IdentityState,
+            ProtectedInformationClass::Sensitive,
+            key_ref(1),
+            &plaintext,
+        )
+        .unwrap();
+
+        let wrong_object = open_envelope(
+            &master,
+            &envelope,
+            other_object_id(),
+            ProtectedPurpose::IdentityState,
+            ProtectedInformationClass::Sensitive,
+            key_ref(1),
+        )
+        .unwrap_err();
+        assert_authentication_failure(wrong_object);
+
+        let wrong_key_ref = open_envelope(
+            &master,
+            &envelope,
+            object_id(),
+            ProtectedPurpose::IdentityState,
+            ProtectedInformationClass::Sensitive,
+            key_ref(2),
+        )
+        .unwrap_err();
+        assert_authentication_failure(wrong_key_ref);
+
+        let wrong_key_material = open_envelope(
+            &wrong_master,
+            &envelope,
+            object_id(),
+            ProtectedPurpose::IdentityState,
+            ProtectedInformationClass::Sensitive,
+            key_ref(1),
+        )
+        .unwrap_err();
+        assert_authentication_failure(wrong_key_material);
+
+        let mut tampered = envelope.clone();
+        let mut ciphertext =
+            base64url_decode(tampered.ciphertext_b64url(), "test_ciphertext").unwrap();
+        let last = ciphertext.len() - 1;
+        ciphertext[last] ^= 0x01;
+        tampered.ciphertext_b64url = base64url_encode(&ciphertext);
+        let tampered_tag = open_envelope(
+            &master,
+            &tampered,
+            object_id(),
+            ProtectedPurpose::IdentityState,
+            ProtectedInformationClass::Sensitive,
+            key_ref(1),
+        )
+        .unwrap_err();
+        assert_authentication_failure(tampered_tag);
+
+        for error in [wrong_object, wrong_key_ref, wrong_key_material, tampered_tag] {
+            let debug = format!("{error:?}");
+            let display = error.to_string();
+            let sentinel_text = std::str::from_utf8(sentinel).unwrap();
+            assert!(!debug.contains(sentinel_text));
+            assert!(!display.contains(sentinel_text));
+        }
     }
 }
