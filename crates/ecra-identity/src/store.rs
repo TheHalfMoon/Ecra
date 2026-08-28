@@ -218,8 +218,7 @@ impl ProtectedTrustStateStore {
             ));
         }
 
-        let file =
-            File::open(&self.path).map_err(|_| store_io_error("trust_state_store_open"))?;
+        let file = File::open(&self.path).map_err(|_| store_io_error("trust_state_store_open"))?;
         let mut wire = Vec::with_capacity(length);
         file.take((MAX_PROTECTED_ENVELOPE_WIRE_BYTES + 1) as u64)
             .read_to_end(&mut wire)
