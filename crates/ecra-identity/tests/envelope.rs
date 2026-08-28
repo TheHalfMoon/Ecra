@@ -86,6 +86,35 @@ fn base64url_encode(input: &[u8]) -> String {
     output
 }
 
+fn canonical_envelope_fixture() -> (ProtectedEnvelopeV1, [u8; 32], [u8; 12], Vec<u8>) {
+    let envelope = ProtectedEnvelopeV1::from_json_slice(
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../contracts/ecra-identity-v1/expected/protected-envelope-v1.json"
+        ))
+        .as_bytes(),
+    )
+    .unwrap();
+    let key: [u8; 32] = decode_hex(
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../contracts/ecra-identity-v1/expected/protected-envelope-dek.hex"
+        ))
+        .trim(),
+    )
+    .try_into()
+    .unwrap();
+    let nonce: [u8; 12] = decode_hex("000102030405060708090a0b").try_into().unwrap();
+    let ciphertext_with_tag = decode_hex(
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../contracts/ecra-identity-v1/expected/protected-envelope-ciphertext-tag.hex"
+        ))
+        .trim(),
+    );
+    (envelope, key, nonce, ciphertext_with_tag)
+}
+
 #[test]
 fn strict_envelope_parses_and_aad_matches_frozen_contract() {
     let envelope = ProtectedEnvelopeV1::from_json_slice(VALID_ENVELOPE.as_bytes()).unwrap();
@@ -271,4 +300,154 @@ fn ecra_canonical_hkdf_and_envelope_goldens_match_frozen_contract() {
         envelope.ciphertext_b64url(),
         base64url_encode(&ciphertext_with_tag)
     );
+}
+
+#[test]
+fn every_authenticated_byte_mutation_fails_aead_authentication() {
+    let (envelope, key, nonce, ciphertext_with_tag) = canonical_envelope_fixture();
+    let aad = envelope.aad_bytes().unwrap();
+    let baseline_cipher = ChaCha20Poly1305::new_from_slice(&key).unwrap();
+    let baseline_plaintext = baseline_cipher
+        .decrypt(
+            &Array(nonce),
+            Payload {
+                msg: &ciphertext_with_tag,
+                aad: &aad,
+            },
+        )
+        .unwrap();
+    assert_eq!(baseline_plaintext, b"ecra-t049-canonical-envelope");
+
+    for index in 0..key.len() {
+        let mut mutated_key = key;
+        mutated_key[index] ^= 0x01;
+        let cipher = ChaCha20Poly1305::new_from_slice(&mutated_key).unwrap();
+        assert!(
+            cipher
+                .decrypt(
+                    &Array(nonce),
+                    Payload {
+                        msg: &ciphertext_with_tag,
+                        aad: &aad,
+                    },
+                )
+                .is_err(),
+            "wrong key byte {index} must fail authentication"
+        );
+    }
+
+    for index in 0..nonce.len() {
+        let mut mutated_nonce = nonce;
+        mutated_nonce[index] ^= 0x01;
+        assert!(
+            baseline_cipher
+                .decrypt(
+                    &Array(mutated_nonce),
+                    Payload {
+                        msg: &ciphertext_with_tag,
+                        aad: &aad,
+                    },
+                )
+                .is_err(),
+            "nonce byte {index} mutation must fail authentication"
+        );
+    }
+
+    for index in 0..aad.len() {
+        let mut mutated_aad = aad.clone();
+        mutated_aad[index] ^= 0x01;
+        assert!(
+            baseline_cipher
+                .decrypt(
+                    &Array(nonce),
+                    Payload {
+                        msg: &ciphertext_with_tag,
+                        aad: &mutated_aad,
+                    },
+                )
+                .is_err(),
+            "AAD byte {index} mutation must fail authentication"
+        );
+    }
+
+    for index in 0..ciphertext_with_tag.len() {
+        let mut mutated_ciphertext = ciphertext_with_tag.clone();
+        mutated_ciphertext[index] ^= 0x01;
+        assert!(
+            baseline_cipher
+                .decrypt(
+                    &Array(nonce),
+                    Payload {
+                        msg: &mutated_ciphertext,
+                        aad: &aad,
+                    },
+                )
+                .is_err(),
+            "ciphertext/tag byte {index} mutation must fail authentication"
+        );
+    }
+}
+
+#[test]
+fn metadata_mutation_corpus_is_bound_or_rejected_fail_closed() {
+    let golden_json = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../contracts/ecra-identity-v1/expected/protected-envelope-v1.json"
+    ));
+    let (baseline, key, nonce, ciphertext_with_tag) = canonical_envelope_fixture();
+    let baseline_aad = baseline.aad_bytes().unwrap();
+    let cipher = ChaCha20Poly1305::new_from_slice(&key).unwrap();
+
+    for (label, needle, replacement) in [
+        (
+            "object_id",
+            "00000000-0000-0000-0000-000000000010",
+            "00000000-0000-0000-0000-000000000012",
+        ),
+        ("purpose", "identity_state", "trust_state"),
+        ("information_class", "\"sensitive\"", "\"secret\""),
+        (
+            "trust_root_id",
+            "00000000-0000-0000-0000-000000000002",
+            "00000000-0000-0000-0000-000000000004",
+        ),
+        (
+            "key_id",
+            "00000000-0000-0000-0000-000000000011",
+            "00000000-0000-0000-0000-000000000013",
+        ),
+        ("generation", "\"generation\":1", "\"generation\":2"),
+    ] {
+        let mutated_json = golden_json.replace(needle, replacement);
+        let mutated = ProtectedEnvelopeV1::from_json_slice(mutated_json.as_bytes()).unwrap();
+        let mutated_aad = mutated.aad_bytes().unwrap();
+        assert_ne!(mutated_aad, baseline_aad, "{label} must be authenticated");
+        assert!(
+            cipher
+                .decrypt(
+                    &Array(nonce),
+                    Payload {
+                        msg: &ciphertext_with_tag,
+                        aad: &mutated_aad,
+                    },
+                )
+                .is_err(),
+            "{label} mutation must fail authentication"
+        );
+    }
+
+    for (label, needle, replacement) in [
+        ("version", "\"major\":1", "\"major\":2"),
+        (
+            "algorithm",
+            "chacha20_poly1305_rfc8439",
+            "unsupported_aead",
+        ),
+    ] {
+        let mutated_json = golden_json.replace(needle, replacement);
+        assert!(
+            ProtectedEnvelopeV1::from_json_slice(mutated_json.as_bytes()).is_err(),
+            "{label} mutation must be rejected before authentication"
+        );
+    }
 }
