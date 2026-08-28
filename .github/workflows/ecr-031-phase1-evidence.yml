@@ -1,0 +1,165 @@
+name: ECR-031 Phase 1 Evidence Finalization
+
+on:
+  push:
+    branches:
+      - 031-identity-trust-root
+
+permissions:
+  contents: write
+
+jobs:
+  finalize-phase1-evidence:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify evidence base
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "0289596bb7cdbb81d5f03c445fd324e985294143"
+          cargo metadata --locked --format-version 1 --no-deps >/dev/null
+          bash scripts/check-identity-unsafe.sh
+          bash scripts/check-identity-deps.sh >/dev/null
+
+      - name: Converge Phase 1 evidence ledger
+        shell: bash
+        env:
+          VERIFIED_HEAD: 0289596bb7cdbb81d5f03c445fd324e985294143
+          VERIFIED_RUN: 33161529028
+          VERIFIED_JOB: 98816955646
+        run: |
+          set -euo pipefail
+          if command -v sha256sum >/dev/null 2>&1; then
+            LOCK_SHA="$(sha256sum Cargo.lock | awk '{print $1}')"
+          else
+            LOCK_SHA="$(shasum -a 256 Cargo.lock | awk '{print $1}')"
+          fi
+          export LOCK_SHA
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+
+          verified_head = os.environ["VERIFIED_HEAD"]
+          verified_run = os.environ["VERIFIED_RUN"]
+          verified_job = os.environ["VERIFIED_JOB"]
+          lock_sha = os.environ["LOCK_SHA"]
+
+          tasks_path = Path("specs/031-identity-trust-root/tasks.md")
+          tasks = tasks_path.read_text()
+          for n in range(1, 11):
+              old = f"- [ ] **T{n:03d}**"
+              new = f"- [x] **T{n:03d}**"
+              if old not in tasks:
+                  raise SystemExit(f"missing expected task marker: {old}")
+              tasks = tasks.replace(old, new, 1)
+          tasks_path.write_text(tasks)
+
+          status_path = Path("specs/031-identity-trust-root/STATUS.md")
+          status = status_path.read_text()
+          old = """T009  PENDING exact-head permanent ECR-031 CI
+T010  PENDING exact-head dependency/license/native-boundary disposition after T009"""
+          new = f"""T009  COMPLETE — exact-head ECR-031 CI {verified_run} / job {verified_job} SUCCESS on {verified_head}
+T010  COMPLETE — locked dependency/license/native-boundary disposition recorded; Cargo.lock SHA-256 {lock_sha}"""
+          if old not in status:
+              raise SystemExit("STATUS Phase 1 pending block not found")
+          status = status.replace(old, new, 1)
+          old_frontier = """1. require the permanent `.github/workflows/ecr-031.yml` to run and succeed on the exact current branch head with build/fmt/strict Clippy/workspace tests/rustdoc/offline, ECR-001/ECR-002 regressions, ECR-031 boundaries and dependency/toolchain evidence;
+2. if the run fails, repair the exact failing step without weakening a gate;
+3. after exact-head success, complete T009 and record T010 locked dependency/license/native-boundary evidence in this status and `research/donor-license-ledger.md`;
+4. synchronize `tasks.md` Phase 1 checkboxes only to evidence actually satisfied;
+5. immediately begin T011 and continue Phase 2 in dependency order."""
+          new_frontier = """1. Phase 1 T001–T010 is complete with exact-head CI and locked dependency evidence;
+2. run permanent ECR-031 CI on this Phase 1 ledger-convergence head before semantic implementation;
+3. after that exact-head gate succeeds, begin T011 and continue Phase 2 strictly in dependency order;
+4. do not add new dependencies or platform backends without a new reviewed dependency disposition."""
+          if old_frontier not in status:
+              raise SystemExit("STATUS frontier block not found")
+          status = status.replace(old_frontier, new_frontier, 1)
+          evidence = f"""
+
+## Phase 1 verified closure evidence
+
+```text
+VERIFIED_PHASE1_HEAD      {verified_head}
+ECR031_CI_RUN             {verified_run}
+ECR031_CI_JOB             {verified_job}
+ECR031_CI_RESULT          SUCCESS
+CARGO_LOCK_SHA256         {lock_sha}
+RUST_TOOLCHAIN            1.98.0
+DIRECT_V1_DEPENDENCIES    ecra-core, ed25519-dalek=3.0.0, chacha20poly1305=0.11.0, hkdf=0.13.0, sha2=0.11.0, zeroize=1.9.0, getrandom=0.4.3
+MACOS_NATIVE_DEPENDENCY   security-framework=3.7.0, target-specific, default-features=false, OSX_10_15
+WINDOWS_LINUX_BACKENDS    not adopted / not verified
+```
+
+The exact-head run passed stale-lock rejection, locked workspace build, rustfmt, strict Clippy, workspace tests, ECR-001/ECR-002 regressions, ECR-031 phase hooks, rustdoc, offline replay, core/run/identity boundary scripts, and dependency/toolchain evidence. This evidence closes only Phase 1; it does not claim any semantic identity, cryptographic-envelope, key-lifecycle, or native Keychain feature is implemented yet.
+"""
+          if "## Phase 1 verified closure evidence" in status:
+              raise SystemExit("Phase 1 closure evidence already present")
+          status_path.write_text(status.rstrip() + evidence + "\n")
+
+          donor_path = Path("research/donor-license-ledger.md")
+          donor = donor_path.read_text()
+          if "## ECR-031 Phase 1 Locked Dependency Evidence" in donor:
+              raise SystemExit("donor Phase 1 locked evidence already present")
+          donor_evidence = f"""
+
+## ECR-031 Phase 1 Locked Dependency Evidence
+
+The accepted T001 candidates were promoted to the ECR-031 v1 Phase 1 locked dependency set only after Cargo generated the committed lock graph and the permanent workflow passed on exact head `{verified_head}` in ECR-031 CI run `{verified_run}`, job `{verified_job}`.
+
+```text
+Cargo.lock SHA-256        {lock_sha}
+rustc / cargo             repository-pinned 1.98.0
+ed25519-dalek             =3.0.0, default-features=false, fast+zeroize
+chacha20poly1305          =0.11.0, default-features=false, alloc+zeroize
+hkdf                      =0.13.0, default-features=false
+sha2                      =0.11.0, default-features=false
+zeroize                   =1.9.0, default-features=false, alloc
+getrandom                 =0.4.3, default-features=false
+security-framework        =3.7.0, macOS target only, default-features=false, OSX_10_15
+```
+
+`security-framework` / `security-framework-sys` remain the reviewed dependency-owned Apple Security.framework/CoreFoundation FFI boundary; Ecra-authored `ecra-identity` Rust remains `#![forbid(unsafe_code)]`. No Windows DPAPI or Linux Secret Service backend dependency was adopted, and no model/browser/network/protocol/policy/process framework entered the direct or permitted runtime surface. Any future dependency, feature, native-boundary, or platform-backend change requires a new review and exact-head evidence rather than inheriting this disposition.
+
+**T010 disposition:** `LOCKED_DEPENDENCY_FOR_ECR031_V1_PHASE1`.
+"""
+          donor_path.write_text(donor.rstrip() + donor_evidence + "\n")
+
+          execution_path = Path("EXECUTION.md")
+          execution = execution_path.read_text()
+          marker = "ECR-031 current phase: Phase 1 — T001–T010 workspace/dependency/CI boundaries"
+          replacement = f"ECR-031 current phase: Phase 2 — T011–T020 strict primitives/contracts\nPhase 1 verified head: {verified_head}\nPhase 1 ECR-031 CI: {verified_run} / job {verified_job} — SUCCESS\nPhase 1 Cargo.lock SHA-256: {lock_sha}"
+          if marker not in execution:
+              raise SystemExit("EXECUTION Phase 1 marker not found")
+          execution = execution.replace(marker, replacement, 1)
+          execution_path.write_text(execution)
+          PY
+
+      - name: Commit evidence and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/ecr-031-phase1-evidence.yml
+          git add \
+            .github/workflows/ecr-031-phase1-evidence.yml \
+            EXECUTION.md \
+            research/donor-license-ledger.md \
+            specs/031-identity-trust-root/STATUS.md \
+            specs/031-identity-trust-root/tasks.md
+          changed="$(git diff --cached --name-only | sort)"
+          expected="$(printf '%s\n' \
+            '.github/workflows/ecr-031-phase1-evidence.yml' \
+            'EXECUTION.md' \
+            'research/donor-license-ledger.md' \
+            'specs/031-identity-trust-root/STATUS.md' \
+            'specs/031-identity-trust-root/tasks.md' | sort)"
+          test "$changed" = "$expected"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'docs(identity): close Phase 1 evidence ledger'
+          git push origin HEAD:031-identity-trust-root
