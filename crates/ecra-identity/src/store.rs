@@ -22,8 +22,7 @@ use crate::{
 const TRUST_STATE_PURPOSE: ProtectedPurpose = ProtectedPurpose::TrustState;
 const TRUST_STATE_INFORMATION_CLASS: ProtectedInformationClass =
     ProtectedInformationClass::Sensitive;
-const BOOTSTRAP_MARKER_BYTES: &[u8] =
-    br#"{"state":"in_progress","version":{"major":1,"minor":0}}"#;
+const BOOTSTRAP_MARKER_BYTES: &[u8] = br#"{"state":"in_progress","version":{"major":1,"minor":0}}"#;
 
 /// Filesystem location owned by the protected store boundary rather than by
 /// identity bootstrap logic. The location is operational metadata only and can
@@ -150,8 +149,7 @@ impl ProtectedTrustStateStore {
                 if metadata.file_type().is_symlink() || !metadata.is_file() {
                     return Err(store_corruption_error("bootstrap_marker_file_type"));
                 }
-                fs::remove_file(&marker)
-                    .map_err(|_| store_io_error("bootstrap_marker_remove"))?;
+                fs::remove_file(&marker).map_err(|_| store_io_error("bootstrap_marker_remove"))?;
                 let parent = marker
                     .parent()
                     .ok_or_else(|| store_input_error("bootstrap_marker_parent"))?;

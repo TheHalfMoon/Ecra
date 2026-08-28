@@ -16,8 +16,11 @@ use crate::{
     validate_ecr031_version,
 };
 
+#[allow(dead_code)]
 const INITIAL_KEY_GENERATION: u64 = 1;
+#[allow(dead_code)]
 const INITIAL_TRUST_STATE_GENERATION: u64 = 1;
+#[allow(dead_code)]
 const SOFTWARE_SECRET_BYTES: usize = 32;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -144,6 +147,7 @@ pub struct EnrolledPrincipalHandle {
 
 impl EnrolledPrincipalHandle {
     // Protected-state authentication is the only production construction path.
+    #[allow(dead_code)]
     pub(crate) fn from_verified_snapshot(snapshot: &VerifiedTrustSnapshot) -> Self {
         Self {
             principal: snapshot.principal(),
@@ -187,6 +191,7 @@ impl EnrolledPrincipalHandle {
 /// marker is written before any backend material is created. If protected state
 /// is absent while that marker remains, the transaction fails as
 /// `incomplete_bootstrap` and never silently mints a replacement identity.
+#[allow(dead_code)]
 pub(crate) fn bootstrap_or_reopen_local_principal(
     location: &BootstrapStoreLocation,
     backend: &impl TrustBackend,
@@ -282,6 +287,7 @@ pub(crate) fn bootstrap_or_reopen_local_principal(
     Ok(handle)
 }
 
+#[allow(dead_code)]
 fn enrolled_handle_from_authenticated(
     authenticated: &AuthenticatedTrustState,
 ) -> Result<EnrolledPrincipalHandle, IdentityError> {
@@ -326,6 +332,7 @@ fn enrolled_handle_from_authenticated(
     Ok(EnrolledPrincipalHandle::from_verified_snapshot(&snapshot))
 }
 
+#[allow(dead_code)]
 fn random_uuid_v4(random: &mut impl SecureRandom) -> Result<Uuid, IdentityError> {
     let mut bytes = [0_u8; 16];
     random.fill(&mut bytes)?;
@@ -334,6 +341,7 @@ fn random_uuid_v4(random: &mut impl SecureRandom) -> Result<Uuid, IdentityError>
     Ok(Uuid::from_bytes(bytes))
 }
 
+#[allow(dead_code)]
 fn ensure_bootstrap_backend_available(backend: &impl TrustBackend) -> Result<(), IdentityError> {
     match backend.status()? {
         TrustBackendStatus::Available => Ok(()),
@@ -350,6 +358,7 @@ fn ensure_bootstrap_backend_available(backend: &impl TrustBackend) -> Result<(),
     }
 }
 
+#[allow(dead_code)]
 fn incomplete_bootstrap_error() -> IdentityError {
     IdentityError::new(
         IdentityErrorCategory::Bootstrap,
@@ -360,19 +369,11 @@ fn incomplete_bootstrap_error() -> IdentityError {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        cell::RefCell,
-        collections::HashMap,
-        env, fs,
-        path::PathBuf,
-        process,
-    };
+    use std::{cell::RefCell, collections::HashMap, env, fs, path::PathBuf, process};
 
     use ecra_core::{EpochMillis, PrincipalId};
 
-    use super::{
-        EnrollmentRecord, ProtectedEnrollmentV1, bootstrap_or_reopen_local_principal,
-    };
+    use super::{EnrollmentRecord, ProtectedEnrollmentV1, bootstrap_or_reopen_local_principal};
     use crate::backend::{
         DeterministicSecureRandom, TrustBackend, TrustBackendCapabilities, TrustBackendKind,
         TrustBackendSecretRef, TrustBackendStatus,
@@ -462,10 +463,8 @@ mod tests {
     }
 
     fn test_location(name: &str) -> (PathBuf, BootstrapStoreLocation) {
-        let directory = env::temp_dir().join(format!(
-            "ecra-identity-t041a-{}-{name}",
-            process::id()
-        ));
+        let directory =
+            env::temp_dir().join(format!("ecra-identity-t041a-{}-{name}", process::id()));
         let _ = fs::remove_dir_all(&directory);
         fs::create_dir_all(&directory).unwrap();
         let location =
@@ -523,13 +522,9 @@ mod tests {
         let (directory, location) = test_location("complete-reopen");
         let backend = TestBackend::available();
         let mut random = deterministic_random();
-        let first = bootstrap_or_reopen_local_principal(
-            &location,
-            &backend,
-            &mut random,
-            timestamp(1_000),
-        )
-        .unwrap();
+        let first =
+            bootstrap_or_reopen_local_principal(&location, &backend, &mut random, timestamp(1_000))
+                .unwrap();
         assert_eq!(backend.secrets.borrow().len(), 2);
         assert!(ProtectedTrustStateStore::store_exists(location.path()).unwrap());
         assert!(!ProtectedTrustStateStore::bootstrap_marker_exists(location.path()).unwrap());
@@ -545,10 +540,7 @@ mod tests {
         assert_eq!(reopened.principal(), first.principal());
         assert_eq!(reopened.enrollment_id(), first.enrollment_id());
         assert_eq!(reopened.trust_root_id(), first.trust_root_id());
-        assert_eq!(
-            reopened.trust_state_digest(),
-            first.trust_state_digest()
-        );
+        assert_eq!(reopened.trust_state_digest(), first.trust_state_digest());
         assert_eq!(backend.secrets.borrow().len(), 2);
 
         fs::remove_dir_all(directory).unwrap();
@@ -560,14 +552,10 @@ mod tests {
         ProtectedTrustStateStore::write_bootstrap_marker(location.path()).unwrap();
         let backend = TestBackend::available();
         let mut random = deterministic_random();
-        let error = bootstrap_or_reopen_local_principal(
-            &location,
-            &backend,
-            &mut random,
-            timestamp(1_000),
-        )
-        .err()
-        .unwrap();
+        let error =
+            bootstrap_or_reopen_local_principal(&location, &backend, &mut random, timestamp(1_000))
+                .err()
+                .unwrap();
         assert_eq!(error.category(), IdentityErrorCategory::Bootstrap);
         assert_eq!(error.code(), IdentityErrorCode::BootstrapIncomplete);
         assert_eq!(error.safe_context(), Some("incomplete_bootstrap"));
@@ -582,14 +570,10 @@ mod tests {
         let (directory, location) = test_location("backend-unavailable");
         let backend = TestBackend::unavailable();
         let mut random = deterministic_random();
-        let error = bootstrap_or_reopen_local_principal(
-            &location,
-            &backend,
-            &mut random,
-            timestamp(1_000),
-        )
-        .err()
-        .unwrap();
+        let error =
+            bootstrap_or_reopen_local_principal(&location, &backend, &mut random, timestamp(1_000))
+                .err()
+                .unwrap();
         assert_eq!(error.code(), IdentityErrorCode::TrustRootUnavailable);
         assert!(!ProtectedTrustStateStore::bootstrap_marker_exists(location.path()).unwrap());
         assert!(!ProtectedTrustStateStore::store_exists(location.path()).unwrap());
