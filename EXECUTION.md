@@ -1,6 +1,6 @@
 # Ecra Execution Guide
 
-> **Operational start-here document.** Recover live work from this file, platform roadmap/status, the selected planning slice package, and exact GitHub truth; do not depend on private chat state.
+> **Operational start-here document.** Recover live work from this file, platform roadmap/status, the active slice package, and exact GitHub truth; do not depend on private chat state.
 
 ## Source-of-truth order
 
@@ -10,7 +10,7 @@
 4. `specs/000-ecra-platform/STATUS.md`
 5. relevant platform architecture/threat/gap/risk/benchmark/decision artifacts
 6. `specs/README.md`
-7. selected slice package, once created
+7. active slice package
 8. exact live branch/head, PR, CI, reviews and changed files
 
 Stale prose must be updated to live evidence, never the reverse.
@@ -19,141 +19,130 @@ Stale prose must be updated to live evidence, never the reverse.
 
 ```text
 ECR-001 — Trusted Domain Kernel: CLOSED_CANONICAL
-ECR-001 closure-ledger head: 85e4bf657b6c33e3f88d83e92e7a35279d177349
-ECR-001 closure-ledger CI: 33099434232 — SUCCESS
+Closure ledger head: 85e4bf657b6c33e3f88d83e92e7a35279d177349
+Closure CI: 33099434232 — SUCCESS
 
-ECR-002 — Durable Run, Ledger & Budgets: CANONICAL_CLOSURE_CONVERGENCE
+ECR-002 — Durable Run, Ledger & Budgets: CLOSED_CANONICAL
 Final feature head: 87fd9fc560bf5ca21a07a4d25473f305b4c05f05
-Final feature CI: 33153413462 / job 98790541842 — SUCCESS
-PR: #2 — MERGED
 Merge commit: 40efc8a64a9562f0f3eb2555b350cfa03d3e0675
-Post-merge ECR-002 CI: 33154108410 / job 98792690359 — SUCCESS
-Post-merge ECR-001 CI: 33154108397 / job 98792690901 — SUCCESS
-Review: CodeRabbit SUCCESS; no review threads or inline findings
+Final closure-convergence main head: aadc19c972e619222d426674d7542dd9c00dbe44
+ECR-002 closure-head CI: 33155302100 — SUCCESS
+ECR-001 regression on closure head: 33155302026 — SUCCESS
 
-T001–T070: COMPLETE
-T071: COMPLETE — exact-head CI/review/readiness satisfied
-T072: COMPLETE — exact verified head merged non-rebase + main CI passed
-T073: ACTIVE — canonical closure/index convergence + final closure-head CI
+Selected active slice: ECR-031 — Identity, Trust Root & Sensitive Storage Foundations
+Lifecycle: TASKS_READY_PENDING_EXACT_GREEN_HEAD
+Analyze Pass 1: 44e85aa9ccd28e185a5761889aa12b50459f286e — PLANNING_REWORK_REQUIRED
+Analyze Pass 2: a3c7d563c139c65886f169f9181c07a997038f1f — ZERO_BLOCKING_PLANNING_DRIFT_FOUND
+Requirements checklist: PASS_FOR_ANALYZE_PASS_2
+Implementation branch: NOT YET CREATED
+Implementation PR: NOT YET CREATED
 ```
 
-`CLOSED_CANONICAL` is not considered finally sealed until the last T073 documentation-convergence head itself passes the complete permanent ECR-002 workflow on `main`.
+ECR-031 implementation becomes authorized only after the final planning/lifecycle-convergence `main` head passes both permanent ECR-001 and ECR-002 workflows. The implementation branch MUST be created from that exact green SHA.
 
-## ECR-002 canonical package
+## ECR-031 package
+
+Read in order:
 
 ```text
-specs/002-durable-run-ledger/STATUS.md
-specs/002-durable-run-ledger/spec.md
-specs/002-durable-run-ledger/research.md
-specs/002-durable-run-ledger/data-model.md
-specs/002-durable-run-ledger/contracts/run-ledger-v1.md
-specs/002-durable-run-ledger/implementation-clarifications.md  # historical/non-normative
-specs/002-durable-run-ledger/threat-model.md
-specs/002-durable-run-ledger/plan.md
-specs/002-durable-run-ledger/tasks.md
-specs/002-durable-run-ledger/quickstart.md
-specs/002-durable-run-ledger/analyze.md
-specs/002-durable-run-ledger/traceability-closure.md
-specs/002-durable-run-ledger/post-implementation-analyze.md
-specs/002-durable-run-ledger/checklists/requirements.md
+specs/031-identity-trust-root/STATUS.md
+specs/031-identity-trust-root/spec.md
+specs/031-identity-trust-root/research.md
+specs/031-identity-trust-root/data-model.md
+specs/031-identity-trust-root/contracts/identity-trust-v1.md
+specs/031-identity-trust-root/threat-model.md
+specs/031-identity-trust-root/plan.md
+specs/031-identity-trust-root/tasks.md
+specs/031-identity-trust-root/quickstart.md
+specs/031-identity-trust-root/analyze.md
+specs/031-identity-trust-root/checklists/requirements.md
 ```
 
-Final ECR-002 result:
+Planning result:
 
 ```text
-FR-001–FR-057 PASS
-SC-001–SC-016 PASS with feature-head and post-merge evidence
+FR-001–FR-058 OWNED
+SC-001–SC-016 OWNED
 G1–G15 PASS / explicit PASS-N/A
 UNOWNED_FR=0
 UNOWNED_SC=0
+MUST_LEVEL_PLANNING_GAPS=0
 FAILED_CONSTITUTION_GATES=0
-IMPLICITLY_ACCEPTED_CRITICAL_RISKS=0
-MUST_LEVEL_IMPLEMENTATION_DEFECTS_FOUND=0
-CONVERGENCE_DRIFT_FOUND=4
-CONVERGENCE_DRIFT_REMEDIATED=4
+PASS_1_BLOCKERS_FOUND=4
+PASS_1_BLOCKERS_REMEDIATED=4
 ```
 
-## Closed trusted-substrate invariants
+## Frozen ECR-031 v1 security decisions
+
+### Local identity bootstrap
 
 ```text
-Actor != authenticated Principal
-CapabilityRequest != CapabilityGrant
-classification != permission
-InformationUse != authorization
-ActionDigest != signature/approval
-ActionIntent != ActionAttemptRef != ActionReceipt != VerificationReceipt
-executor_observed_success != verified
-UNKNOWN remains UNKNOWN
-projection != authoritative event history
-LedgerDigest != authentication/signature/MAC/VerificationReceipt
-budget != authority
-`.ecra` != protected secret container
+Ecra-local PrincipalId only
+!= OS username/email/display name
+!= legal/external identity proofing
+!= NIST IAL/AAL/FAL certification
 ```
 
-ECR-002 additionally freezes:
+Bootstrap returns no usable enrolled identity until native protected material and `ProtectedTrustStateV1` are durably published and successfully reopened/authenticated. A partial crash yields `incomplete_bootstrap`; it never silently mints a second principal/root.
+
+### Authoritative lifecycle state
+
+`ProtectedTrustStateV1` is the authenticated authority for enrollment, active key generation, retirement and revocation. Ordinary DB/file metadata is rebuildable/non-authoritative. Only authenticated protected state can produce `VerifiedTrustSnapshot` for validation or issuance.
+
+V1 does not claim universal monotonic rollback resistance against restoration of an older valid protected state together with equivalent authorized OS trust-store state.
+
+### Non-ambient issuance
+
+No `issue(arbitrary_principal_id, ...)` production API exists. `EnrolledPrincipalHandle` + current `VerifiedTrustSnapshot` create a non-serializable process-local `IssuerSession` fixed to one principal/root/signing key. Caller-selected subject substitution is rejected. No ECR-031 IPC/network assertion issuer exists.
+
+### Portable v1 crypto custody
 
 ```text
-authoritative run truth     append-only ordered RunEventEnvelope history
-attempt before effect       durable AttemptPrepared commit required
-missing receipt             UNKNOWN / reconciliation-required
-local store                 SQLite via rusqlite 0.40.2
-SQLite engine               bundled SQLite 3.53.2 via libsqlite3-sys 0.38.2
-SQLite durability           WAL + synchronous=FULL, asserted at open
-write transaction           Immediate + expected-head compare
-budget accounting           typed checked I-JSON-safe integers
-portable artifact           deterministic strict Stored-only ZIP via zip 8.6.0
-real sensitive persistence  NOT AUTHORIZED by ECR-002
-provider/network execution  NOT IN ECR-002
-hostile rewrite claim       not provided by plain hash chain
+assertion signing       Ed25519 software key
+protected-anchor sign   Ed25519 software key, purpose-separated
+key at rest             protected by native TrustBackend
+bounded key use         redacted/zeroizing process materialization
+protected envelope      ChaCha20-Poly1305 + HKDF-SHA-256 direction
+macOS v1 claim          Data Protection Keychain custody at rest
+NOT claimed             Secure Enclave signing / hardware-backed / non-exportable signing
 ```
 
-## Next genuinely dependency-eligible planning
+Exact dependency versions/features/licenses/advisories/MSRV remain T001 and must be re-verified immediately before adoption.
 
-Once the T073 closure-head CI is green, ECR-002 is a closed dependency and two slices become dependency-eligible for bounded planning:
+## Hard slice boundaries
+
+ECR-031 MUST NOT absorb:
+- general authorization/declassification/approval/secret-use policy — ECR-003;
+- independent action outcome verification/reconciliation — ECR-004;
+- protocol auth/token mapping — ECR-016;
+- browser/model/tool/provider/process execution;
+- local-model gateway — ECR-021;
+- multi-device sync/recovery — ECR-022;
+- privacy/telemetry product controls — ECR-025;
+- general portability/export — ECR-029.
+
+Identity evidence answers **who / on whose behalf**. It never means **what is authorized**.
+
+## Next exact execution order
 
 ```text
-ECR-031 — Identity, Trust Root & Sensitive Storage Foundations
-  depends on ECR-001 + ECR-002
-
-ECR-004 — Verification & Reconciliation
-  depends on ECR-001 + ECR-002
+1. Converge roadmap/platform status/spec indexes/tasks header to ECR-031 TASKS_READY planning truth.
+2. Freeze resulting canonical main SHA.
+3. Require ECR-001 and ECR-002 permanent workflows SUCCESS on that exact SHA.
+4. Create branch 031-identity-trust-root from that exact SHA.
+5. Create Draft ECR-031 implementation PR.
+6. Execute T001 dependency/license/advisory/MSRV re-verification.
+7. Continue T002–T082 strictly in tasks.md dependency order.
 ```
 
-### Selected next slice: ECR-031
-
-ECR-031 is selected as the next critical-path planning package because:
-
-1. ECR-003 additionally depends on ECR-031;
-2. real sensitive persistence remains blocked until protected storage/trust-root semantics exist;
-3. authenticated Principal/IdentityAssertion/on-behalf-of semantics must precede privileged policy/execution;
-4. ECR-004 remains independently planning-eligible in parallel and must not be counterfeited inside ECR-031.
-
-There is currently no canonical `specs/031-identity-trust-root/` package. Create it only after ECR-002's final closure-convergence head is green. Planning must proceed through specify → research/plan/data-model/contracts → checklist → tasks → analyze before any ECR-031 implementation branch/PR exists.
-
-## ECR-031 scope boundary to preserve
-
-Roadmap-owned outcome:
-
-```text
-identity/principal assertions and on-behalf-of binding
-device/user-local trust root
-key lifecycle and revocation
-protected sensitive-storage/authenticity envelope semantics
-```
-
-Do not smuggle into ECR-031:
-- general authorization/declassification/approval policy (ECR-003);
-- independent verification/reconciliation decisions (ECR-004);
-- browser/provider/model/tool execution;
-- local-model gateway work (ECR-021);
-- broad sync/telemetry/portability product behavior.
+ECR-004 remains independently planning-eligible but must remain a separate slice. ECR-003 remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`.
 
 ## CI architecture
 
 The repository-scoped self-hosted macOS runner `macbook` remains the trusted execution oracle. Persistent personal runners must not execute untrusted fork PR code.
 
-Closed ECR-001 and ECR-002 workflows remain push gates on `main` so new trusted-substrate changes cannot silently regress either contract.
+Closed ECR-001/ECR-002 workflows remain push gates on `main`. ECR-031 implementation will add its own trusted push-only branch/main workflow with explicit bootstrap, validation, issuance, trust-state, envelope, anchor, redaction, boundaries and live macOS targets.
 
 ## Execution rule
 
-Finish T073 exact-head closure verification first. Then re-read canonical main and start ECR-031 planning from that exact state. Do not implement ECR-003, ECR-004, browser, search, local models, or other later surfaces out of dependency order. No force-push, rebase or destructive history rewriting. Never mark PASS, MERGED or `CLOSED_CANONICAL` without exact-head/post-merge evidence.
+Follow T001–T082 in dependency order after exact-head planning authorization. Fix actual CI/review blockers and immediately resume. Do not weaken tests/security boundaries to make gates green. No force-push, rebase or destructive history rewriting. Never mark PASS, MERGED or `CLOSED_CANONICAL` without exact-head/post-merge evidence.
