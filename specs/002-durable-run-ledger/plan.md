@@ -1,7 +1,7 @@
 # Implementation Plan: Durable Run, Ledger & Budgets
 
 **Feature:** ECR-002  
-**Target lifecycle:** TASKS_READY  
+**Lifecycle:** IMPLEMENTED_PENDING_CLOSURE  
 **Base dependency:** ECR-001 `CLOSED_CANONICAL`  
 **Language:** Rust 1.98 / Edition 2024
 
@@ -9,7 +9,7 @@
 
 Implement a bounded local-first durable execution substrate that owns run history, attempt preparation/recovery, resource budgets, SQLite persistence, and deterministic `.ecra` fixture portability while preserving all ECR-001 trust boundaries.
 
-## 2. Planned repository structure
+## 2. Implemented repository structure
 
 ```text
 crates/ecra-run/
@@ -77,23 +77,22 @@ Does not own:
 - independent verification/reconciliation decision logic;
 - encryption/secret storage.
 
-## 4. Dependency plan
+## 4. Locked dependency state
 
-Implementation candidates, subject to exact lock/advisory/license review before first implementation PR readiness:
+Exact implemented runtime boundary:
 
 ```text
 path dependency: ecra-core
-serde / serde_json / serde_jcs / sha2 / thiserror (workspace-aligned)
-rusqlite = 0.40.1, features = ["bundled"], default features minimized
+serde / serde_json / serde_jcs / sha2 / thiserror (workspace-aligned lock)
+rusqlite = 0.40.2, default-features = false, features = ["bundled"]
+libsqlite3-sys = 0.38.2 (transitive native boundary)
+bundled SQLite = 3.53.2
 zip = 8.6.0, default-features = false
 ```
 
-Dev-only candidate:
+Dev-only locked dependencies include `tempfile 3.27.0` and workspace-aligned `proptest 1.11.0`.
 
-```text
-tempfile (exact locked version selected during implementation)
-proptest (workspace-aligned where useful)
-```
+The implementation-time exact dependency evidence is recorded in `research/donor-license-ledger.md` and verified by `.github/workflows/ecr-002.yml`. `Cargo.lock` SHA-256 at the Phase 8 verified baseline is `b720472bf40a554ab61afb74eae95dd625bc6b2604e47a632991faea630e42c6`.
 
 Why SQLite rather than redb:
 - direct schema/check/unique constraints;
@@ -212,7 +211,7 @@ C after simulated external effect before receipt commit
 D after receipt commit
 ```
 
-A child integration-test process will be used where process termination is needed. Test-only process execution is allowed; production `ecra-run` contains no process/provider execution.
+A child integration-test process is used where process termination is needed. Test-only process execution is allowed; production `ecra-run` contains no process/provider execution.
 
 Recovery assertions:
 - A: no durable attempt;
@@ -239,11 +238,11 @@ Profile:
 
 Reader validates names/features/count/size before materialization, then manifest digests, then event chain/reducer.
 
-No generic extraction-to-directory API is planned; the reader returns validated in-memory/streamed logical entries or imports through the bounded store interface.
+No generic extraction-to-directory API exists; the reader returns validated logical content through the bounded archive/store interface.
 
 ## 13. Migration strategy
 
-Initial DB schema v1 is represented by explicit migration code and a fixed empty-v1/schema fixture. Future migrations must:
+Initial DB schema v1 is represented by explicit migration code and fixed migration fixtures. Future migrations must:
 - run transactionally;
 - reject newer unsupported schema;
 - preserve authoritative event bytes/meaning unless an explicit event migration exists;
@@ -263,23 +262,23 @@ Initial DB schema v1 is represented by explicit migration code and a fixed empty
 
 ## 15. Constitution gates G1–G15
 
-| Gate | Plan disposition |
+| Gate | Implementation disposition |
 |---|---|
 | G1 Domain coherence | PASS — reuses ECR-001 types; new run-only types have single owner |
 | G2 Authority | PASS — no authorization/grant synthesis; persistence does not grant execution |
 | G3 Provenance | PASS/N/A — execution history preserves typed refs/receipts; no new Fact truth model |
 | G4 Side effects | PASS — durable attempt-before-effect, UNKNOWN and retry guard explicit |
 | G5 Verification | PASS — execution_completed/receipt never equal verified; no verifier implementation |
-| G6 Durability | PASS — event replay, crash recovery, migrations, projections defined |
+| G6 Durability | PASS — event replay, crash recovery, migrations, projections defined and tested |
 | G7 Privacy/secrets | PASS — synthetic/non-sensitive v1 gate; no protected-storage claims |
 | G8 Local-first | PASS — local SQLite/archive only; no cloud dependency |
 | G9 Interoperability | PASS — `.ecra` contract is bounded; no protocol/auth mapping |
-| G10 Donor/license | PASS subject to exact implementation lock review; no source reuse |
+| G10 Donor/license | PASS — exact implementation lock/license/native-boundary evidence recorded |
 | G11 Upstream/browser | N/A — no browser patch/bridge |
 | G12 Benchmarks | PASS — deterministic/replay/crash/concurrency/archive criteria are reproducible |
 | G13 Information flow/egress | PASS — no network/remote sink; persistence does not authorize future disclosure |
 | G14 Identity/principal | PASS — Actor retained as attribution only; ECR-031 remains owner |
-| G15 Bounded execution | PASS — typed budgets and parser limits are core requirements |
+| G15 Bounded execution | PASS — typed budgets and parser limits are binding and tested |
 
 No constitutional gate is knowingly failed.
 
@@ -300,15 +299,15 @@ Simpler alternative: mutable current-state rows only. Rejected because it cannot
 ## 17. Implementation phases
 
 ```text
-P1 workspace/crate/dependencies/CI boundaries
-P2 typed event/error/digest primitives
-P3 reducer/state-machine + fixtures
-P4 budgets/accounting
-P5 SQLite schema/store/expected-head/projection rebuild
-P6 attempt preparation/recovery/crash/concurrency
-P7 deterministic .ecra archive/import/export
-P8 migration/portability/security/dependency gates
-P9 traceability/analyze/convergence/review/merge/post-merge closure
+P1 workspace/crate/dependencies/CI boundaries                  VERIFIED_ON_BRANCH
+P2 typed event/error/digest primitives                         VERIFIED_ON_BRANCH
+P3 reducer/state-machine + fixtures                            VERIFIED_ON_BRANCH
+P4 budgets/accounting                                          VERIFIED_ON_BRANCH
+P5 SQLite schema/store/expected-head/projection rebuild        VERIFIED_ON_BRANCH
+P6 attempt preparation/recovery/crash/concurrency              VERIFIED_ON_BRANCH
+P7 deterministic .ecra archive/import/export                   VERIFIED_ON_BRANCH
+P8 cross-cutting portability/security/documentation gates      VERIFIED_ON_BRANCH
+P9 traceability/analyze/convergence/review/merge/closure        ACTIVE
 ```
 
-Each phase requires exact-head CI evidence before later high-risk phases are considered verified.
+Every implemented phase received exact-head CI evidence before the next semantic phase was authorized. T071–T073 retain the final exact-head, merge and post-merge closure gates.
