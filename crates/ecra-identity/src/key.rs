@@ -4,12 +4,12 @@ use ecra_core::{EpochMillis, PrincipalRef, SchemaVersion};
 use ed25519_dalek::VerifyingKey;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
+use crate::bootstrap::ProtectedEnrollmentV1;
 use crate::{
     ECR_031_CONTRACT_VERSION, EnrollmentId, IdentityError, IdentityErrorCategory,
     IdentityErrorCode, KeyId, SignatureAlgorithm, TrustBackendKind, TrustRootId,
     validate_ecr031_version,
 };
-use crate::bootstrap::ProtectedEnrollmentV1;
 
 pub const MAX_PROTECTED_TRUST_STATE_KEYS: usize = 128;
 pub const MAX_REVOKED_KEY_IDS: usize = 128;
@@ -254,13 +254,7 @@ impl KeyRecord {
             algorithm,
             public_material_b64url.as_deref(),
         )?;
-        validate_lifecycle_timestamps(
-            status,
-            created_at,
-            activated_at,
-            retired_at,
-            revoked_at,
-        )?;
+        validate_lifecycle_timestamps(status, created_at, activated_at, retired_at, revoked_at)?;
         Ok(Self {
             version,
             key_id,
@@ -525,7 +519,11 @@ impl<'de> Deserialize<'de> for ProtectedTrustStateV1 {
                 "trust_state_revocation_count",
             )));
         }
-        let revoked_key_ids = wire.revoked_key_ids.iter().copied().collect::<BTreeSet<_>>();
+        let revoked_key_ids = wire
+            .revoked_key_ids
+            .iter()
+            .copied()
+            .collect::<BTreeSet<_>>();
         if revoked_key_ids.len() != wire.revoked_key_ids.len() {
             return Err(de::Error::custom(lifecycle_error(
                 "duplicate_revoked_key_id",
@@ -540,7 +538,9 @@ impl<'de> Deserialize<'de> for ProtectedTrustStateV1 {
             revoked_key_ids,
             updated_at: wire.updated_at,
         };
-        state.validate_schema_invariants().map_err(de::Error::custom)?;
+        state
+            .validate_schema_invariants()
+            .map_err(de::Error::custom)?;
         Ok(state)
     }
 }
@@ -700,10 +700,7 @@ impl VerifiedTrustSnapshot {
         if active_count > 1 {
             return Err(lifecycle_error("multiple_active_assertion_keys"));
         }
-        if revoked_key_ids
-            .iter()
-            .any(|key_id| !seen.contains(key_id))
-        {
+        if revoked_key_ids.iter().any(|key_id| !seen.contains(key_id)) {
             return Err(lifecycle_error("unknown_revoked_key"));
         }
 
@@ -841,14 +838,12 @@ fn decode_ed25519_public_key(input: &str) -> Result<[u8; 32], IdentityError> {
     if base64url_encode(&bytes) != input {
         return Err(key_record_error("ed25519_public_material_encoding"));
     }
-    VerifyingKey::from_bytes(&bytes)
-        .map_err(|_| key_record_error("ed25519_public_material"))?;
+    VerifyingKey::from_bytes(&bytes).map_err(|_| key_record_error("ed25519_public_material"))?;
     Ok(bytes)
 }
 
 fn base64url_encode(input: &[u8]) -> String {
-    const ALPHABET: &[u8; 64] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     let mut output = String::with_capacity(input.len().div_ceil(3) * 4);
     let mut index = 0usize;
     while index + 3 <= input.len() {
@@ -951,10 +946,8 @@ mod tests {
         KeyPurpose, KeyRecord, KeyRecordAlgorithm, KeyStatus, ProtectedTrustStateV1,
         TrustRootRecord, TrustRootStatus,
     };
-    use crate::{
-        EnrollmentId, IdentityErrorCode, KeyId, TrustBackendKind, TrustRootId,
-    };
     use crate::bootstrap::ProtectedEnrollmentV1;
+    use crate::{EnrollmentId, IdentityErrorCode, KeyId, TrustBackendKind, TrustRootId};
 
     const ROOT: &str = "00000000-0000-0000-0000-000000000002";
     const SIGNING_KEY: &str = "00000000-0000-0000-0000-000000000003";
@@ -1079,8 +1072,7 @@ mod tests {
             IdentityErrorCode::TrustSnapshotLifecycleInvalid
         );
 
-        let other_root =
-            TrustRootId::parse_str("00000000-0000-0000-0000-000000000012").unwrap();
+        let other_root = TrustRootId::parse_str("00000000-0000-0000-0000-000000000012").unwrap();
         let wrong_root_key = KeyRecord::new_protected_envelope_root(
             KeyId::parse_str(ENVELOPE_KEY).unwrap(),
             other_root,
