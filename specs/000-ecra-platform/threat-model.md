@@ -2,14 +2,14 @@
 
 **Status:** CANONICAL_PLANNING  
 **Date:** 2026-08-27  
-**Updated after:** pre-implementation architecture review  
+**Updated after:** 2026-08-28 local-model world gateway review  
 **Constitution:** v1.1.0
 
 Each privileged/exposed slice MUST refine this model with implementation-specific assets, boundaries, abuse cases and tests.
 
 ## 1. Security Objective
 
-Allow humans/agents to find, understand and act across digital systems without granting models, web content, plugins, repositories, browser extensions, external protocols or local processes ambient authority over the user's identity, browser, secrets, information or OS.
+Allow humans/agents to find, understand and act across digital systems without granting models, web content, plugins, repositories, browser extensions, external protocols, sandbox backends or local processes ambient authority over the user's identity, browser, secrets, information or OS.
 
 Security is defined by:
 
@@ -26,6 +26,8 @@ authenticated identity where required
 
 Prompt-injection detection is defense-in-depth, not the authority boundary.
 
+For high-assurance local-agent profiles, Ecra may additionally deny direct world access and expose current information/actions through bounded gateway APIs. This strengthens containment only when bypass paths are tested; it does not make the model or sandbox trusted.
+
 ## 2. High-Value Assets
 
 - authenticated browser sessions/cookies;
@@ -34,6 +36,7 @@ Prompt-injection detection is defense-in-depth, not the authority boundary.
 - user files/workspace/private search context;
 - browser history/bookmarks/tabs/containers;
 - long-term memory and derived indexes/summaries;
+- evidence packs, context projections and their source/classification metadata;
 - repositories/source/build credentials;
 - terminal/process/filesystem/network authority;
 - database/data/analytics sources;
@@ -42,7 +45,8 @@ Prompt-injection detection is defense-in-depth, not the authority boundary.
 - local trust-root/key material and protected storage metadata;
 - update/signing keys/binaries/SBOM/provenance;
 - plugin/registry/extension trust metadata;
-- local/cloud model artifacts, provider credentials and context.
+- local/cloud model artifacts, provider credentials and context;
+- sandbox/egress/credential-mediation policy projections.
 
 ## 3. Adversaries / Failure Sources
 
@@ -55,9 +59,11 @@ Prompt-injection detection is defense-in-depth, not the authority boundary.
 - untrusted local process under the same user session;
 - untrusted repository build/test/install script;
 - malicious parser input/archive/PDF/media;
-- supply-chain compromise in Rust/Firefox/model/plugin dependencies;
+- supply-chain compromise in Rust/Firefox/model/plugin/sandbox dependencies;
+- malicious or misconfigured sandbox/egress backend;
 - malicious update/build artifact;
 - adversarial evidence intended to capture verifier;
+- adversarial tool/schema proliferation intended to overwhelm or misroute a weaker model;
 - user mistake/approval fatigue/UI spoofing;
 - crash/network/race faults producing UNKNOWN external outcome;
 - resource-exhaustion/recursive-agent/tool loops.
@@ -100,14 +106,16 @@ Threats:
 - secret data → logs/telemetry/plugin;
 - cross-origin browser exfiltration;
 - derived summary silently declassified;
-- memory/retrieval crossing workspace/model scope.
+- memory/retrieval crossing workspace/model scope;
+- context compiler mixing disallowed sources into an otherwise allowed local/remote prompt.
 
 Controls:
 - InformationClassification/lineage;
 - InformationUse declaration;
 - source-to-sink ECR-003 policy/declassification;
 - redaction/minimization;
-- egress benchmark fixtures.
+- egress benchmark fixtures;
+- context-projection tests preserving source/classification lineage.
 
 ### TB-4 Web Content ↔ Browser/Agent
 
@@ -152,17 +160,17 @@ Controls: extension trust tiers, compatibility restrictions, labeling of extensi
 
 Model output is untrusted proposal.
 
-Threats: fabricated success, tool bypass, secret solicitation, malformed structured output, endless planning.
+Threats: fabricated success, tool bypass, secret solicitation, malformed structured output, endless planning, attempts to request ambient network/filesystem access.
 
-Controls: schemas; concrete ActionRef before policy; independent authorization/verification; no raw secrets by default; budgets.
+Controls: schemas; concrete ActionRef before policy; independent authorization/verification; no raw secrets by default; budgets; model-facing capabilities remain bounded adapters over Ecra semantics.
 
 ### TB-9 External Protocol ↔ Gateway
 
-MCP/ACP/A2A callers/servers may be untrusted.
+MCP/ACP/A2A/OpenAI-compatible callers/servers may be untrusted.
 
-Threats: state exposure, token passthrough/confused deputy, identity/audience mismatch, capability escalation.
+Threats: state exposure, token passthrough/confused deputy, identity/audience mismatch, capability escalation, protocol downgrade that strips provenance/verification semantics.
 
-Controls: version-pinned protocol research; external auth mapped to Ecra identity assertions/capabilities; audience/resource binding; no token passthrough as ambient authority; least-authority views.
+Controls: version-pinned protocol research; external auth mapped to Ecra identity assertions/capabilities; audience/resource binding; no token passthrough as ambient authority; least-authority views; Ecra-specific semantics remain authoritative when compatibility protocols are less expressive.
 
 ### TB-10 Plugin / Parser / Untrusted Code ↔ Core/OS
 
@@ -184,15 +192,65 @@ Controls:
 
 ### TB-12 Search/Retrieval ↔ Context/Memory
 
-Threats: SEO/source manipulation, stale citations, source-copy laundering, changed sources, cross-workspace leakage, private query egress, parser attacks, silent memory promotion.
+Threats: SEO/source manipulation, stale citations, source-copy laundering, changed sources, cross-workspace leakage, private query egress, parser attacks, silent memory promotion, over-compression that changes claim meaning.
 
-Controls: source identity/lineage/independence, captured hash/as-of, source policy, information-flow authorization before remote query, scoped retrieval, candidate-memory transition, parser/resource isolation.
+Controls: source identity/lineage/independence, captured hash/as-of, source policy, information-flow authorization before remote query, scoped retrieval, `EvidencePack`/`ContextProjection` lineage, candidate-memory transition, parser/resource isolation.
 
 ### TB-13 Local Model Artifacts ↔ Runtime
 
 Threats: malicious executable loader/custom code, tokenizer/template manipulation, unsafe native libraries, resource/GPU exhaustion, license/provenance ambiguity.
 
 Controls: ECR-021 artifact provenance/hash/license/trust policy; ECR-017/024 containment/supply-chain controls; bounded runtime; no `trust_remote_code`-equivalent default without explicit authorization.
+
+### TB-14 WebMCP / Structured Site Capability ↔ Ecra Action Resolution
+
+Threats:
+- structured malicious tool treated as trusted because schema is machine-readable;
+- origin/schema changes after approval;
+- tool description smuggles prompt instructions;
+- tool parameters/effects differ from the action authorized by Ecra.
+
+Controls:
+- structured site capability is an origin-bound `CapabilityOffer`, never a grant;
+- concrete parameterized ActionRef before authorization;
+- schema/version/origin binding where material;
+- same information-flow/effect/verification gates as lower-level routes;
+- fallback route cannot bypass a denied semantic operation.
+
+### TB-15 Local Model World Access ↔ Ecra Gateway
+
+Threats:
+- model or spawned process bypasses Ecra through direct network egress;
+- unrestricted filesystem/process access creates an alternate tool channel;
+- raw credentials enter the model/sandbox and bypass mediation;
+- context/tool aperture accidentally exposes cross-scope information or excessive tools;
+- high-assurance isolation is marketed without bypass evidence.
+
+Controls owned across ECR-003/ECR-005/ECR-017/ECR-021/ECR-031:
+- explicit high-assurance runtime profile;
+- default-deny direct egress where enforceable;
+- bounded IPC/API path to Ecra;
+- exact filesystem/process/resource policy;
+- secret handles and narrowly scoped outbound credential injection where supported;
+- bypass/adversarial tests;
+- context/tool aperture tests;
+- honest host/kernel boundary documentation.
+
+### TB-16 Sandbox Backend ↔ Ecra Policy/Secrets
+
+Threats:
+- sandbox network rule becomes a second authorization truth;
+- stale policy projection remains after Ecra revocation;
+- credential injection targets the wrong audience/path/method;
+- sandbox escape or sidecar failure creates broader access than declared.
+
+Controls:
+- sandbox backend treated as replaceable enforcement mechanism;
+- Ecra decision IDs/version/expiry bound into enforcement projection where applicable;
+- fail-closed update/revocation behavior for high-assurance profiles;
+- narrow destination/audience/operation binding for credential mediation;
+- sandbox-specific conformance and bypass tests;
+- no claim that container/Wasm alone provides hostile containment.
 
 ## 5. High-Priority Attack Classes
 
@@ -238,6 +296,18 @@ Invariant: page content cannot impersonate native approval/agent-authority/takeo
 ### A14 Untrusted Repo / Parser Execution
 Invariant: inspection does not imply executing build hooks/parsers with ambient host authority.
 
+### A15 Structured Capability Authority Confusion
+Invariant: WebMCP/native schema is a capability offer; origin/structure never self-authorize.
+
+### A16 Local World-Access Bypass
+Invariant: a claimed high-assurance profile proves direct network/credential/ambient-tool bypass is denied, not merely undocumented.
+
+### A17 Context / Tool Aperture Poisoning
+Invariant: model-aware narrowing preserves source/classification lineage and cannot grant authority or silently expose out-of-scope tools/data.
+
+### A18 Credential-Mediation Confusion
+Invariant: injected credentials bind the intended destination/audience/operation and do not become retrievable workload state.
+
 ## 6. Side-Effect Model
 
 Policy must treat these dimensions independently:
@@ -274,6 +344,12 @@ A browser click or shell command is not inherently low risk; policy evaluates ca
 17. Resource budgets are explicit for recursive/executable surfaces.
 18. Stored local bytes are validated; hostile-tamper claims require protected trust root.
 19. Security updates outrank feature velocity.
+20. Structured site tools are `CapabilityOffer`s, not grants.
+21. Model context is an information sink even when the model is local.
+22. Adaptive tool/context narrowing is never authorization.
+23. Sandbox/network policy is enforcement projection, not canonical authority truth.
+24. A high-assurance mediated-world-access claim requires direct bypass tests.
+25. Supported credential mediation keeps raw secret material out of generic model/workload context and binds injection to the intended destination/use.
 
 ## 8. Required Security Evidence
 
@@ -281,6 +357,7 @@ As slices mature, retain locally inspectable records for:
 - validated identity/assertion references;
 - authorization/disclosure decisions;
 - denied capability/egress attempts;
+- model-context source/classification decisions where material;
 - origin transitions;
 - approval/takeover events;
 - ActionRef/Attempt/Receipt;
@@ -288,6 +365,8 @@ As slices mature, retain locally inspectable records for:
 - UNKNOWN/reconciliation;
 - budget exhaustion/cancellation;
 - plugin/sandbox violations;
+- direct-egress bypass tests for claimed high-assurance profiles;
+- credential-mediation binding/revocation tests without logging secret values;
 - schema/integrity failures;
 - benchmark attack results.
 
@@ -302,17 +381,22 @@ Local logging does not authorize remote telemetry.
 - hidden telemetry;
 - derived memory/index surviving deletion;
 - cross-workspace context assembly;
+- local model context receiving information outside its current principal/workspace/use scope;
+- sandbox diagnostics/sidecars logging sensitive request material;
 - optional sync metadata leakage.
 
-Owners: ECR-003/ECR-009/ECR-010/ECR-021/ECR-022/ECR-025/ECR-027/ECR-029/ECR-031.
+Owners: ECR-003/ECR-009/ECR-010/ECR-017/ECR-021/ECR-022/ECR-025/ECR-027/ECR-029/ECR-031.
 
 ## 10. Open Research With Named Owners
 
 - browser IPC/process topology and extension trust tiers → ECR-007;
 - browser special permission/presence semantics → ECR-003/ECR-006/ECR-008;
 - identity assertions/trust root/key management/sensitive storage → ECR-031;
-- WebMCP principal/tool binding → ECR-011/ECR-016;
-- OS-specific sandbox tiers → ECR-017;
+- WebMCP principal/tool/schema/origin binding → ECR-011/ECR-016;
+- EvidencePack/ContextProjection canonical representation → ECR-009;
+- model profiles/context compiler/adaptive tool aperture → ECR-021;
+- OS-specific sandbox tiers/default-deny egress/credential mediation → ECR-017/ECR-003/ECR-031;
+- Effective Intelligence Gain + bypass/security benchmark families → ECR-005/ECR-028;
 - plugin/skill signing/registry reputation → ECR-023;
 - encrypted multi-device sync/key recovery → ECR-022;
 - team/multi-principal governance → future roadmap amendment.
@@ -329,6 +413,9 @@ Update this threat model for any new:
 - plugin/native/parser/repository execution path;
 - browser privileged patch/permission;
 - local-model executable artifact path;
+- model-facing context/tool compilation mechanism;
+- sandbox/egress/credential-mediation backend;
+- high-assurance mediated-world-access claim;
 - cross-workspace/team/sync feature;
 - consequential action;
 - public security/privacy/tamper claim.
