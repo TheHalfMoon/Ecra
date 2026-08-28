@@ -45,6 +45,22 @@
 //! let principal = PrincipalId::parse_str("00000000-0000-0000-0000-000000000004").unwrap();
 //! requires_trust_root(principal);
 //! ```
+//!
+//! Issuer sessions are process-local capabilities rather than reusable wire
+//! tokens:
+//!
+//! ```compile_fail
+//! fn requires_serialize<T: serde::Serialize>() {}
+//! requires_serialize::<ecra_identity::IssuerSession>();
+//! ```
+//!
+//! Verified trust snapshots cannot be fabricated by deserializing ordinary
+//! metadata:
+//!
+//! ```compile_fail
+//! fn requires_deserialize<T: serde::de::DeserializeOwned>() {}
+//! requires_deserialize::<ecra_identity::VerifiedTrustSnapshot>();
+//! ```
 
 pub mod algorithm;
 pub mod anchor;
@@ -57,6 +73,9 @@ pub mod ids;
 pub mod issuance;
 pub mod key;
 pub mod validation;
+
+#[cfg(test)]
+mod phase3_tests;
 
 use ecra_core::SchemaVersion;
 

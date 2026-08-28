@@ -1,5 +1,7 @@
 use ecra_core::{IdentityAssertionId, PrincipalId, SchemaVersion, to_jcs_vec};
-use ecra_identity::{canonical_assertion_signing_input, identity_assertion_digest_bytes};
+use ecra_identity::{
+    IdentityAssertionV1, canonical_assertion_signing_input, identity_assertion_digest_bytes,
+};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -43,4 +45,18 @@ fn assertion_payload_and_digest_match_fixed_goldens() {
         hex(&digest),
         include_str!("../../../contracts/ecra-identity-v1/expected/assertion-digest.sha256").trim()
     );
+}
+
+#[test]
+fn phase3_invalid_wire_corpus_fails_before_identity_context_creation() {
+    for fixture in [
+        include_bytes!("../../../contracts/ecra-identity-v1/invalid/assertion-unknown-field.json")
+            .as_slice(),
+        include_bytes!("../../../contracts/ecra-identity-v1/invalid/assertion-unsupported-version.json")
+            .as_slice(),
+        include_bytes!("../../../contracts/ecra-identity-v1/invalid/assertion-malformed-signature.json")
+            .as_slice(),
+    ] {
+        assert!(IdentityAssertionV1::from_json_slice(fixture).is_err());
+    }
 }
