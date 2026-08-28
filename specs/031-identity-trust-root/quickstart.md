@@ -1,6 +1,6 @@
 # ECR-031 Quickstart / Verification Guide
 
-**Status:** PLANNING_VERIFICATION_CONTRACT  
+**Status:** PLANNING_VERIFICATION_CONTRACT / PASS_1_REMEDIATED  
 **Target:** exact implementation head only; branch success is not canonical closure.
 
 ## 1. Preconditions
@@ -10,7 +10,8 @@ Before implementation verification:
 - implementation is on the bounded ECR-031 branch/PR;
 - exact `Cargo.lock` and donor/license delta are reviewed;
 - no unresolved MUST-level implementation clarification exists;
-- test fixtures are synthetic/non-sensitive.
+- test fixtures are synthetic/non-sensitive;
+- no test backend can be selected through production configuration.
 
 ## 2. Baseline workspace regression
 
@@ -50,7 +51,21 @@ Required properties:
 - only reviewed crypto/native platform dependencies;
 - native FFI remains in external reviewed bindings, not Ecra-authored unsafe blocks.
 
-## 5. Contract and validation targets
+## 5. Bootstrap / enrollment target
+
+```bash
+cargo test -p ecra-identity --test bootstrap --locked
+```
+
+Must prove:
+- initial `PrincipalId`, `TrustRootId`, enrollment and key IDs are generated as opaque Ecra-local IDs rather than derived from username/email/Actor labels;
+- v1 claims only an Ecra-local installation principal, not external/legal/NIST identity proofing;
+- bootstrap creates backend secret material + authenticated `ProtectedTrustStateV1` and is complete only after durable publish + authenticated reopen;
+- crash before protected-state publication yields typed `incomplete_bootstrap` and never silently creates a second principal/root;
+- orphan backend material is not accepted as enrollment identity;
+- `EnrolledPrincipalHandle` can be obtained only from authenticated local enrollment state.
+
+## 6. Contract and validation targets
 
 ```bash
 cargo test -p ecra-identity --test assertion_contract --locked
@@ -63,24 +78,59 @@ Must prove:
 - canonical JCS payload bytes and fixed digest/signature fixture;
 - actor/principal/audience/on-behalf-of/time/replay mismatch rejection;
 - revoked/unknown/wrong signing key rejection;
+- validation accepts only `VerifiedTrustSnapshot`, not ordinary unsigned lifecycle metadata;
+- stale/unsigned/replaced metadata cannot reactivate/unrevoke a key;
 - 1,000-run deterministic validation output;
 - validated context contains no authority semantics.
 
-## 6. Key lifecycle target
+## 7. Assertion issuance target
+
+```bash
+cargo test -p ecra-identity --test issuance --locked
+```
+
+Must prove:
+- no public production API issues assertions from caller-provided arbitrary `PrincipalId`;
+- `IssuerSession` requires an authenticated `EnrolledPrincipalHandle` plus current `VerifiedTrustSnapshot`;
+- session subject principal/root are immutable and non-serializable;
+- caller may request actor/audience binding but cannot substitute subject principal;
+- v1 on-behalf-of issuance cannot mint a different principal;
+- retired/revoked signing key cannot issue;
+- no ECR-031 IPC/network assertion-minting service exists;
+- `IssuerSession` is identity issuance context, not CapabilityGrant/authorization.
+
+## 8. Key lifecycle / authoritative trust-state target
 
 ```bash
 cargo test -p ecra-identity --test key_lifecycle --locked
+cargo test -p ecra-identity --test migration --locked
 ```
 
 Must prove exhaustive v1 transition table:
-- one active key per purpose;
-- rotate activates next generation;
+- one active key per purpose in authenticated protected state;
+- rotate activates next generation and atomically publishes new protected trust state;
 - retired key cannot create new material;
 - revoked assertion signing key rejects current assertions;
 - unavailable/destroyed is not fabricated revocation;
-- no accidental reactivation.
+- ordinary DB/file metadata cannot activate/unrevoke a key;
+- trust-state authentication failure returns no `VerifiedTrustSnapshot`;
+- unsupported/corrupt trust-state versions fail closed;
+- no accidental reactivation;
+- restoring an older valid protected state is documented as outside universal monotonic rollback resistance rather than falsely detected by an unsigned counter.
 
-## 7. Protected-envelope target
+## 9. Portable v1 signing custody target
+
+The v1 assertion/protected-anchor suite is Ed25519 software signing with key material protected at rest by the selected native backend.
+
+Tests must prove:
+- Ed25519 seed/key generated through approved production CSPRNG;
+- ordinary persisted metadata contains public material only;
+- software signing secret is opened only through the backend and wrapped in redacted/zeroizing sensitive bytes for bounded use;
+- formatted errors/logging do not expose it;
+- portable v1 capability metadata does **not** claim Secure Enclave, hardware-backed signing or non-exportability;
+- any future native non-exportable signing path must be a separately versioned/evidenced algorithm suite.
+
+## 10. Protected-envelope target
 
 ```bash
 cargo test -p ecra-identity --test envelope --locked
@@ -94,9 +144,10 @@ Must prove:
 - nonce length/uniqueness ownership contract;
 - parser byte/depth/count limits;
 - deterministic test vectors only via injected test randomness;
-- production path sources randomness through approved CSPRNG boundary.
+- production path sources randomness through approved CSPRNG boundary;
+- native-backend-protected master secret uses bounded/redacted process materialization and is not described as hardware non-exportable.
 
-## 8. Protected-anchor target
+## 11. Protected-anchor target
 
 ```bash
 cargo test -p ecra-identity --test anchor --locked
@@ -106,9 +157,10 @@ Must prove:
 - exact domain separation;
 - key/purpose/payload mutation rejection;
 - type distinction from `ContentDigest`, `ActionDigest`, `LedgerDigest`, and `VerificationReceipt`;
-- no ECR-004 outcome-verification claim.
+- no ECR-004 outcome-verification claim;
+- v1 Ed25519 signing custody follows the same native-backend-protected software-key rule.
 
-## 9. Secret/redaction target
+## 12. Secret/redaction target
 
 ```bash
 cargo test -p ecra-identity --test redaction --locked
@@ -118,13 +170,13 @@ Use unique synthetic sentinel bytes and prove they do not appear in:
 - `Debug`/`Display` of secret wrappers;
 - formatted public/internal errors intended for logging;
 - backend capability output;
-- persisted metadata;
+- persisted ordinary metadata;
 - ordinary run artifacts;
 - fixture files except intentional source/input literals explicitly audited by the test.
 
 Zeroization tests may prove wrapper/drop behavior under the selected dependency, but documentation MUST NOT claim complete memory erasure against a compromised process/OS.
 
-## 10. Backend-boundary target
+## 13. Backend-boundary target
 
 ```bash
 cargo test -p ecra-identity --test backend_boundaries --locked
@@ -134,10 +186,11 @@ Must prove:
 - production backend selection contains no memory/plaintext/environment/file-key fallback;
 - unavailable/locked native backend returns typed failure;
 - test backend cannot be selected by ordinary production configuration;
-- capabilities are data/assurance metadata, not authority;
-- platform SDK/native types do not leak into canonical assertion/envelope types.
+- capabilities are assurance metadata, not authority;
+- platform SDK/native types do not leak into canonical assertion/envelope types;
+- portable Ed25519 v1 reports `hardware_backed_private_operations=false` and `non_exportable_private_key=false` unless a different versioned native suite is explicitly selected and evidenced.
 
-## 11. macOS native live acceptance
+## 14. macOS native live acceptance
 
 On the trusted repository-scoped macOS runner:
 
@@ -146,51 +199,52 @@ cargo test -p ecra-identity --test macos_backend --locked
 ```
 
 Live test fixture requirements:
-- use a unique test namespace/item;
-- create/store/open/delete protected synthetic root/blob through the selected Data Protection Keychain path;
+- unique test namespace/item;
+- create/store/open/delete protected synthetic root/master/Ed25519 seed through Data Protection Keychain;
 - assert local-only/non-synchronizing configuration used by v1;
 - verify unavailable/lookup/deletion behavior;
-- if Secure Enclave/user-presence signing is implemented, test and report it separately from ordinary Keychain protection;
+- verify backend protection of portable software-key material at rest;
+- do **not** describe this as Secure Enclave signing;
 - clean up test items even on recoverable failure where possible.
 
 Do not run persistent personal self-hosted native-key tests on untrusted fork PR code.
 
-## 12. Windows/Linux acceptance truth
+## 15. Windows/Linux acceptance truth
 
-ECR-031 v1 planning does not permit a blanket `VERIFIED` claim for Windows/Linux without native evidence.
+ECR-031 v1 does not permit a blanket `VERIFIED` claim for Windows/Linux without native evidence.
 
 If an implementation is included:
-- Windows: compile/fixture tests plus native DPAPI test evidence are required before marking Windows backend verified.
-- Linux: compile/fixture tests plus live Secret Service test evidence are required before marking Linux backend verified.
+- Windows: compile/fixture tests plus native DPAPI test evidence are required before verified status.
+- Linux: compile/fixture tests plus live Secret Service test evidence are required before verified status.
 
-Without such evidence, the runtime/backend capability status must be explicit `unsupported` or `unverified` according to the frozen implementation contract; it MUST NOT silently fall back.
+Without such evidence, runtime/backend status is explicit `unsupported` or `unverified`; it MUST NOT silently fall back.
 
-## 13. At-rest plaintext scan
+## 16. At-rest plaintext scan
 
-For a synthetic known secret written through a protected envelope/native store, inspect the ECR-031-owned ordinary persisted bytes/files/SQLite fixtures and prove the plaintext sentinel is absent.
+For synthetic known secrets written through protected trust state/envelopes/native store, inspect ECR-031-owned ordinary persisted bytes and prove plaintext sentinels are absent.
 
-This does not claim resistance to process-memory/kernel compromise.
+This does not claim resistance to process-memory/kernel compromise or monotonic rollback resistance.
 
-## 14. Hostile-input/fuzz/property gate
+## 17. Hostile-input/fuzz/property gate
 
 Required before closure:
-- assertion/envelope JSON parser property tests;
+- assertion/envelope/trust-state JSON parser property tests;
 - malformed base64/length/depth/count corpus;
-- signature/envelope byte mutation corpus;
+- signature/envelope/trust-state byte mutation corpus;
 - no panic on arbitrary bounded input;
 - no allocation/crypto work before configured gross input limits where practical.
 
-## 15. Platform-source policy test
+## 18. Platform-source policy test
 
-Linux backend test must explicitly reject attempts to place synthetic secret sentinel values in Secret Service lookup attributes.
+Linux backend test must reject attempts to place synthetic secret sentinel values in Secret Service lookup attributes.
 
-Windows backend docs/tests must not represent default DPAPI as cross-machine protection.
+Windows docs/tests must not represent default DPAPI as cross-machine protection.
 
-macOS capability tests must not set hardware-backed/non-exportable flags true unless the exact live key path proves those properties.
+macOS capability tests must not mark portable software Ed25519 signing as Secure Enclave/hardware-backed/non-exportable.
 
-## 16. Dependency/provenance evidence
+## 19. Dependency/provenance evidence
 
-Record exact versions/features/licenses and `Cargo.lock` digest in the ECR-031 status/closure ledger.
+Record exact versions/features/licenses/advisories and `Cargo.lock` digest in ECR-031 status/closure ledger.
 
 Candidate research versions as of 2026-08-28, to verify again immediately before adoption:
 
@@ -206,25 +260,26 @@ windows              0.62.2      Windows candidate, only if implemented
 secret-service       5.1.0       Linux candidate, only if implemented
 ```
 
-These are candidates, not authorization to add every dependency. Minimize features and omit platform crates not implemented in v1.
+These are candidates, not authorization to add every dependency. T001 re-verifies current truth before adoption.
 
-## 17. Review/convergence gate
+## 20. Review/convergence gate
 
 Before merge:
 1. map FR-001–FR-058 and SC-001–SC-016 to implementation/tests/contracts;
-2. re-run G1–G15;
-3. run post-implementation analyze-equivalent review;
-4. fold all implementation clarifications into primary spec/data model/contract/plan;
-5. update `STATUS.md`, `EXECUTION.md`, platform status/roadmap, donor ledger;
-6. run this entire quickstart on the exact converged feature head;
-7. process all actionable PR review threads/checks;
-8. only then mark PR Ready.
+2. explicitly map C1 bootstrap, C2 authoritative trust snapshot/rollback, C3 issuance boundary and C4 software-signing custody to evidence;
+3. re-run G1–G15;
+4. run post-implementation analyze-equivalent review;
+5. fold all implementation clarifications into primary spec/data model/contract/plan;
+6. update `STATUS.md`, `EXECUTION.md`, platform status/roadmap, donor ledger;
+7. run this entire quickstart on exact converged feature head;
+8. process all actionable PR review threads/checks;
+9. only then mark PR Ready.
 
-## 18. Canonical closure gate
+## 21. Canonical closure gate
 
 `CLOSED_CANONICAL` requires:
 - exact expected feature head merged using non-rebase method;
 - complete ECR-031 workflow success on canonical `main` merge state;
 - ECR-001/ECR-002 regression workflows green;
 - exact merge/post-merge evidence in closure ledger;
-- no overclaim of unsupported platform backend assurance.
+- no overclaim of unsupported platform backend assurance, external identity proofing, or rollback resistance.
