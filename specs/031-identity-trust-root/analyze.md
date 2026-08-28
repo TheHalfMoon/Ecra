@@ -1,9 +1,9 @@
 # ECR-031 Planning Analyze
 
-**Pass:** 1  
+**Pass:** 2  
 **Date:** 2026-08-28  
-**Result:** `PLANNING_REWORK_REQUIRED`  
-**Implementation:** FORBIDDEN until blocking findings are remediated and this analysis is rerun.
+**Result:** `ZERO_BLOCKING_PLANNING_DRIFT_FOUND`  
+**Implementation:** eligible only after lifecycle/status convergence to `TASKS_READY` on an exact green planning head.
 
 ## 1. Inputs reviewed
 
@@ -15,133 +15,172 @@
 - ECR-002 closed durability/run semantics
 - `specs/031-identity-trust-root/{STATUS,spec,research,data-model,threat-model,plan,quickstart,tasks}.md`
 - `specs/031-identity-trust-root/contracts/identity-trust-v1.md`
-- requirements checklist
+- requirements checklist Pass 2
 - primary NIST/Apple/Microsoft/Freedesktop/RFC references recorded in research
 
 ## 2. Coverage snapshot
 
 ```text
-FR-001–FR-058: named in spec
-SC-001–SC-016: named in spec
-Tasks T001–T082: executable candidate
-G1–G15: addressed in plan
-Checklist: PASS_FOR_ANALYZE
+FR-001–FR-058: owned in spec/contract/plan/tasks
+SC-001–SC-016: owned in spec/quickstart/tasks
+Tasks T001–T082: executable candidate with exact paths
+G1–G15: PASS / explicit PASS-N/A
+Checklist: PASS_FOR_ANALYZE_PASS_2
+PASS_1_BLOCKERS_FOUND=4
+PASS_1_BLOCKERS_REMEDIATED=4
 ```
 
-The package is structurally strong, but four MUST-level planning gaps prevent implementation authorization.
+## 3. Pass-1 remediation verification
 
-## 3. Blocking findings
+### C1 — Local principal bootstrap/enrollment — REMEDIATED
 
-### A1 — BLOCKING — local principal/trust-root bootstrap is underspecified
+Primary ownership:
+- `spec.md`: Ecra-local principal bootstrap/non-claim requirements and success criteria;
+- `data-model.md`: `LocalPrincipalEnrollmentV1`, `EnrolledPrincipalHandle`, `IssuerSession`;
+- `contracts/identity-trust-v1.md`: bootstrap/enrollment wire and incomplete-bootstrap rules;
+- `threat-model.md`: T19/T20;
+- `plan.md`: Workstream B;
+- `quickstart.md`: bootstrap crash/non-claim target;
+- `tasks.md`: T021/T035/T040/T064/T073.
 
-**Conflict:** The package validates a `PrincipalId` and local trust root but does not define how the first local principal/trust root becomes enrolled or what identity claim that bootstrap is allowed to make.
+Result:
+- PrincipalId is generated opaque local identity, not username/email/Actor label;
+- bootstrap does not claim external/legal/NIST identity proofing;
+- bootstrap completes only after protected-state durable publish + authenticated reopen;
+- orphan backend material cannot silently become enrollment or trigger a second mint.
 
-**Risk:** Implementers may equate the OS username, device account, Actor label or mere possession of a newly generated key with a proofed real-world human identity. That violates G14/D-035 and overclaims NIST-style identity proofing.
+### C2 — Authoritative protected trust snapshot / rollback boundary — REMEDIATED
 
-**Required remediation:**
-- define a local installation principal bootstrap/enrollment record;
-- state that v1 establishes an **Ecra-local principal under the current protected local installation/user context**, not a legally/externally proofed human identity;
-- prohibit importing OS username/email/display name as canonical `PrincipalId`;
-- define trust-root creation/first-key activation atomicity and crash behavior;
-- add bootstrap fixtures/tests/tasks and explicit non-claim.
+Primary ownership:
+- `data-model.md`: `ProtectedTrustStateV1` and `VerifiedTrustSnapshot`;
+- contract: authoritative protected-state and verified-snapshot construction;
+- plan: Workstream C and lifecycle workstream;
+- threat model: T21;
+- quickstart: trust-state/lifecycle/migration tests;
+- tasks: T025/T031/T035–T041/T069.
 
-### A2 — BLOCKING — authoritative lifecycle state / rollback boundary is unclear
+Result:
+- ordinary unsigned metadata is not lifecycle/revocation authority;
+- validation/issuance consume only `VerifiedTrustSnapshot` produced after protected-state authentication/invariant validation;
+- lifecycle mutations republish authenticated state;
+- stale ordinary metadata cannot reactivate/unrevoke a key;
+- v1 explicitly does not claim universal monotonic rollback resistance against restoration of older valid protected state plus equivalent authorized keystore state.
 
-**Conflict:** Data model says key lifecycle may be persisted, but does not freeze whether ordinary app metadata or native protected state is authoritative for current generation/revocation.
+The exact ordinary projection encoding may still be chosen during implementation, but that choice cannot change the protected-state authority rule and therefore is not a security ambiguity.
 
-**Risk:** A filesystem attacker could restore stale ordinary metadata and make a retired/revoked key appear active if the validator trusts that metadata. This directly affects R-053 and assertion validity.
+### C3 — Non-ambient assertion issuance — REMEDIATED
 
-**Required remediation:**
-- freeze authoritative trust snapshot ownership: security-critical current-generation/revocation state must be protected/authenticated under the trust backend/root, not trusted from ordinary unsigned metadata;
-- ordinary DB/files may be rebuildable/audit projections only unless wrapped/authenticated by the protected state contract;
-- validation must consume a verified `TrustSnapshot` produced only after protected-state authentication;
-- explicitly state v1 rollback guarantee boundaries: no universal monotonic rollback resistance is claimed without a backend monotonic/external anchor; restoring the entire authorized OS trust store is outside the filesystem-only adversary guarantee;
-- add stale-snapshot/rollback negative tests.
+Primary ownership:
+- spec: no arbitrary-principal mint and no ECR-031 issuance service;
+- data model: opaque `EnrolledPrincipalHandle` / `IssuerSession`;
+- contract: issuer-session creation and subject immutability;
+- plan: Workstream D issuance;
+- threat model: T22;
+- quickstart: issuance misuse target;
+- tasks: T021/T026/T028/T031/T033/T071.
 
-### A3 — BLOCKING — assertion issuance authority boundary is underspecified
+Result:
+- no production `issue(arbitrary_principal_id, ...)` contract exists;
+- caller cannot substitute session subject principal;
+- v1 on-behalf-of issuance is bounded to the enrolled local principal;
+- `IssuerSession` is identity issuance context, not CapabilityGrant/authorization;
+- no network/IPC minting service is introduced.
 
-**Conflict:** Validation is carefully separated from authorization, but the package has no normative rule for who may invoke assertion issuance/signing. A generic public `issue_on_behalf_of(principal, actor)` API would let any caller manufacture identity evidence even before ECR-003 exists.
+### C4 — Frozen v1 signing custody — REMEDIATED
 
-**Risk:** ECR-031 could become an ambient identity mint, counterfeiting the exact authority boundary it is meant to protect.
+Primary ownership:
+- research R8;
+- data model signature/custody section;
+- contract v1 signing custody;
+- plan Workstream E;
+- threat model T13/T23;
+- quickstart portable-signing/backend tests;
+- tasks T014/T026/T043/T055/T061/T063/T064/T067.
 
-**Required remediation:**
-- ECR-031 v1 library must not expose arbitrary principal/on-behalf-of minting from caller-provided IDs;
-- issuance must require an opaque `IssuerSession`/`EnrolledPrincipalHandle` obtained from the authenticated/protected local bootstrap path or an already validated parent identity context according to a frozen bounded rule;
-- caller may request actor binding but cannot select another principal merely by ID;
-- no IPC/network issuance service is part of ECR-031;
-- future broader delegation authorization remains ECR-003.
+Result:
+- canonical v1 assertion/protected-anchor algorithm is Ed25519;
+- private signing material is a software key protected at rest by native backend and materialized only for bounded redacted/zeroizing signing use;
+- portable path does not claim Secure Enclave/hardware-backed/non-exportable signing;
+- future native non-exportable signing requires a versioned suite and separate evidence.
 
-### A4 — BLOCKING — signing key custody vs algorithm portability needs a frozen v1 path
+## 4. Requirement / task consistency
 
-**Conflict:** Research correctly notes Secure Enclave may not support Ed25519, while contracts use Ed25519 examples and the plan leaves software-wrapped vs native signing unresolved.
+No functional requirement or success criterion is left without a concrete implementation/test/convergence task family.
 
-**Risk:** Implementation could either extract a key that was claimed non-exportable/hardware-backed or introduce platform-specific assertion wire algorithms without a stable acceptance baseline.
-
-**Required remediation:** freeze a v1 signing strategy before implementation. Recommended bounded strategy:
-1. canonical assertion/protected-anchor v1 portable software signing algorithm is Ed25519;
-2. Ed25519 private signing key is generated from CSPRNG and stored only as an ECR-031 protected secret wrapped/protected by the native trust backend; it is zeroized after bounded use;
-3. this path MUST NOT claim non-exportable or Secure Enclave-backed signing;
-4. Secure Enclave/native non-exportable signing is a future algorithm-suite extension only after a versioned contract adds/accepts the native algorithm and evidence;
-5. macOS v1 trust-root acceptance therefore proves Keychain protection of the wrapped signing/master secret, not universal hardware signing.
-
-This keeps one portable v1 wire while preserving honest platform claims.
-
-## 4. Non-blocking observations
-
-### N1 — Windows/Linux product support is honestly bounded
-The package does not claim native verification without evidence. Keep this limitation explicit through closure.
-
-### N2 — Secret Service draft status is correctly stated
-No change required; retain exact upstream draft caveat.
-
-### N3 — Protected anchor distinction is strong
-Types/contracts preserve `ProtectedAnchor != LedgerDigest != VerificationReceipt`.
-
-### N4 — ECR-003/ECR-004 boundaries are strong
-No general authorization or independent outcome verification is pulled into ECR-031.
-
-## 5. Constitution gate effect
+Key mappings:
 
 ```text
-G1  PASS
-G2  FAIL_PENDING_A3
-G3  PASS
-G4  PASS
-G5  PASS
-G6  FAIL_PENDING_A1_A2
-G7  PASS
-G8  PASS
-G9  PASS
-G10 PASS_FOR_PLANNING / implementation dependency adoption still gated
-G11 PASS-N/A
-G12 PASS
-G13 PASS
-G14 FAIL_PENDING_A1_A3
-G15 PASS
+identity/assertion FR-001–FR-014 -> T011–T034
+trust/key lifecycle FR-015–FR-025 -> T011/T014/T021/T025/T026/T035–T044/T059–T068
+protected storage FR-026–FR-035 -> T043–T053/T059–T074
+protected anchor FR-036–FR-040 -> T018/T019/T023/T054–T058
+platform/backends FR-041–FR-048 -> T002–T010/T059–T074
+errors/versioning/provenance FR-049–FR-058 -> T001–T019/T031/T043/T052/T069–T082
+SC-001–SC-016 -> explicit CI/fixture/closure targets across T007/T017/T019/T031–T034/T040/T049–T053/T056–T058/T064–T082
 ```
 
-Because G2/G6/G14 have unresolved MUST-level planning gaps, the package MUST NOT be marked `TASKS_READY` yet.
-
-## 6. Required convergence work
-
-Append/fold these planning fixes before Pass 2:
-
-- **C1** Local principal bootstrap/enrollment semantics + non-claim.
-- **C2** Protected authoritative `TrustSnapshot` lifecycle/revocation ownership + rollback boundary.
-- **C3** Non-ambient assertion issuance through `EnrolledPrincipalHandle`/`IssuerSession`; no caller-selected arbitrary principal mint.
-- **C4** Freeze v1 Ed25519 signing key as native-backend-protected wrapped software secret; no Secure Enclave signing claim in v1.
-- **C5** Add FR/SC/tasks/fixtures for bootstrap, stale trust snapshot and issuance misuse.
-- **C6** Re-run checklist and analyze; zero failed constitution gates required.
-
-## 7. Pass-1 conclusion
+## 5. Constitution gates
 
 ```text
-UNOWNED_EXISTING_FR=0
-UNOWNED_EXISTING_SC=0
-MUST_LEVEL_PLANNING_GAPS=4
-FAILED_CONSTITUTION_GATES=3
+G1  PASS — ECR-001 Actor/Principal/IdentityAssertion types reused
+G2  PASS — no authority output; issuance is enrolled/session-bound
+G3  PASS — enrollment/issuer/root/key/digest provenance explicit
+G4  PASS — bootstrap/key/state mutations have crash/atomicity tests
+G5  PASS — crypto authentication != ECR-004 outcome verification
+G6  PASS — authoritative protected state, incomplete bootstrap and rollback boundary explicit
+G7  PASS — no plaintext fallback; bounded/redacted secret materialization
+G8  PASS — local-first, no cloud identity requirement
+G9  PASS — native/protocol systems remain adapters
+G10 PASS_FOR_PLANNING — exact dependency/license/advisory lock is mandatory T001 before adoption
+G11 PASS-N/A — no browser patch/bridge
+G12 PASS — reproducible scoped security acceptance, no superiority claim
+G13 PASS — no remote egress; later disclosure remains ECR-003
+G14 PASS — bootstrap/principal/on-behalf-of/issuer-session semantics have explicit owner
+G15 PASS — parser/state bounds and no recursive execution loops
+```
+
+No failed constitutional gate remains.
+
+## 6. Risk review
+
+Relevant platform risks remain owned without implicit acceptance:
+
+```text
+R-018 protocol identity/audience mapping      -> ECR-031 + ECR-016; no token passthrough here
+R-036 Actor mistaken for Principal            -> C1 + validation/type boundaries
+R-052 hash-chain authenticity overclaim       -> ProtectedAnchor remains distinct
+R-053 sensitive state before protection       -> protected trust state/backend/no fallback
+R-054 protocol confused deputy                -> future ECR-016; no protocol service in ECR-031
+```
+
+Additional discovered planning risks are now explicit in the slice threat model:
+- bootstrap identity overclaim;
+- incomplete bootstrap;
+- unsigned lifecycle metadata rollback/unrevocation;
+- ambient assertion mint;
+- software-signing hardware-assurance overclaim.
+
+## 7. Non-blocking implementation gates
+
+These are deliberately deferred to ordered tasks, not unresolved planning ambiguity:
+
+- T001 must re-verify current dependency versions/licenses/advisories/MSRV before any dependency adoption;
+- Windows/Linux remain unsupported/unverified unless native evidence is added;
+- ordinary protected-state projection encoding may be finalized during implementation so long as `ProtectedTrustStateV1` remains the authenticated authority;
+- single-use assertion nonce persistence is required only if a single-use assertion class is actually enabled; the pure replay contract remains explicit either way.
+
+If T001 or implementation evidence invalidates a frozen MUST-level assumption, implementation stops and creates an implementation clarification/convergence task rather than weakening the requirement.
+
+## 8. Pass-2 conclusion
+
+```text
+UNOWNED_FR=0
+UNOWNED_SC=0
+MUST_LEVEL_PLANNING_GAPS=0
+FAILED_CONSTITUTION_GATES=0
 IMPLICIT_CRITICAL_RISK_ACCEPTANCE=0
-RESULT=PLANNING_REWORK_REQUIRED
+PASS_1_BLOCKERS_FOUND=4
+PASS_1_BLOCKERS_REMEDIATED=4
+RESULT=ZERO_BLOCKING_PLANNING_DRIFT_FOUND
+NEXT=CONVERGE_LIFECYCLE_TO_TASKS_READY_AND_REQUIRE_EXACT_GREEN_PLANNING_HEAD
 ```
-
-Do not start code or create the ECR-031 implementation branch until Pass 2 is clean.
