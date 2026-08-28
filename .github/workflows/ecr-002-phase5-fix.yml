@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   repair-phase5:
-    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): repair phase5 sha256 encoding') }}"
+    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): permit phase5 rustfmt delta') }}"
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -74,6 +74,7 @@ jobs:
           import subprocess
           allowed = {
               '.github/workflows/ecr-002-phase5-fix.yml',
+              'crates/ecra-run/src/sqlite.rs',
               'crates/ecra-run/src/store.rs',
               'crates/ecra-run/tests/sqlite_store.rs',
           }
