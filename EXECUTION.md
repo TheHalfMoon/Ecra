@@ -40,26 +40,29 @@ Phase 4 closure record: 217934d1f2c334b943349af87bcf40a4ad44b889
 Phase 4 closure CI: 33196312711 / job 98934231597 — SUCCESS
 Phase 5 verified ledger head: bd066fa501476ff4f7fe43d0f4153de1e8d2fc60
 Phase 5 CI: 33198508505 / job 98941727727 — SUCCESS
+Phase 6 semantic verified head: a668df317d1718008c8008ee35a40ebb83c038a4
+Phase 6 semantic CI: 33200534586 / job 98948594548 — SUCCESS
 
-Current task frontier: T054 after current Phase 5 closure-record head is exact-green
+Current task frontier: T058 — Phase 6 ledger gate
 ```
 
 ## Current implementation state
 
-IC-001 prerequisite wave T043–T050/T059–T060 and the corrected Phase 4 chain T035–T042 are complete and exact-head verified.
+IC-001 prerequisite wave T043–T050/T059–T060 and the corrected Phase 4 chain T035–T042 remain complete and exact-head verified.
 
-Phase 5 is now verified through T053. It provides:
+Phase 5 remains verified through T053.
 
-- zeroizing/redacted sensitive-byte ownership;
-- system CSPRNG with test-only deterministic provider;
-- strict authenticated protected envelope with exact AAD;
-- HKDF-SHA-256 derived key separation;
-- ChaCha20-Poly1305 RFC 8439 protection and fail-closed open;
-- frozen RFC/Ecra vectors plus authenticated-component mutation tests;
-- committed-fixture at-rest secret sentinel scanning;
-- signing/master/private/secret sentinel exclusion from debug/display, errors/log-style rendering, backend capability structure and persisted envelope metadata.
+Phase 6 semantic work T054–T057 is exact-head verified and provides:
 
-The current lifecycle-documentation closure record must itself pass the permanent ECR-031 workflow before T054 starts. Historical green evidence cannot be reused after a content change.
+- strict bounded `ProtectedAnchorV1` wire with closed purpose/algorithm values and strict SHA-256 payload digest parsing;
+- domain-separated canonical protected-anchor signing input matching the frozen contract;
+- Ed25519 protected-anchor signing through an active purpose-specific key and backend-opened secret material copied into bounded zeroizing memory;
+- verification bound to exact trust root, key ID, purpose, algorithm, lifecycle state and signature;
+- mutation coverage for payload digest, purpose, key ID and signature;
+- type-level distinction between protected anchors, generic content digests and ECR-004 verification receipts;
+- bounded reuse of the exact ECR-002 run-created ledger digest fixture without adding an `ecra-run` dependency or changing ledger bytes/store semantics.
+
+T058 owns the Phase 6 status gate. The current ledger-convergence record must itself pass permanent exact-head ECR-031 CI before Phase 6 can close and T061 can begin.
 
 ## Frozen ECR-031 v1 security decisions
 
@@ -81,7 +84,7 @@ Identity evidence answers **who / on whose behalf**, never **what is authorized*
 ## Current exact execution order
 
 ```text
-T054 → T055 → T056 → T057 → T058
+T058
   ↓
 T061 → T062 → T063 → T064 → T065 → T066 → T067 → T068
   ↓
@@ -94,7 +97,9 @@ T061 owns the concrete macOS Data Protection Keychain backend. T065/T066 may exp
 
 ## CI architecture
 
-The repository-scoped self-hosted macOS runner `macbook` is the trusted ECR-031 oracle. Every asserted exact head must pass stale-lock rejection, locked build, rustfmt, strict Clippy, workspace tests, ECR-001/ECR-002 regressions, explicit ECR-031 targets, rustdoc, offline replay, boundary scripts and dependency/toolchain evidence.
+The repository-scoped self-hosted macOS runner `macbook` is the trusted ECR-031 oracle. Every asserted exact head must pass stale-lock rejection, locked build, rustfmt, strict Clippy, workspace tests, ECR-001 and ECR-002 regressions, explicit ECR-031 targets, rustdoc, offline replay, boundary scripts and dependency/toolchain evidence.
+
+Historical success cannot be reused after a content change to claim current-head PASS.
 
 ## Execution rule
 

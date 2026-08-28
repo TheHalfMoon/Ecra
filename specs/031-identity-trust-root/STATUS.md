@@ -12,47 +12,50 @@ ECR-031 remains branch-only and non-canonical. `CLOSED_CANONICAL` is forbidden u
 
 ## Current execution frontier
 
-Phase 5 is exact-head verified on ledger head `bd066fa501476ff4f7fe43d0f4153de1e8d2fc60` by permanent ECR-031 CI run `33198508505`, job `98941727727`, result `SUCCESS`. Every required gate completed successfully.
+Phase 6 semantic work T054–T057 is exact-head verified on `a668df317d1718008c8008ee35a40ebb83c038a4` by permanent ECR-031 CI run `33200534586`, job `98948594548`, result `SUCCESS`. Locked build, rustfmt, strict Clippy, workspace tests, ECR-001/ECR-002 regressions, explicit ECR-031 targets, rustdoc, offline replay, all boundary checks and dependency/toolchain evidence succeeded on that exact head.
 
-This closure record marks T053 complete and moves the canonical frontier to T054. Because this record changes lifecycle documentation after the verified Phase 5 ledger head, begin T054 only after the permanent ECR-031 workflow also completes `SUCCESS` on the exact closure-record head containing this text.
+T058 is the current task. This ledger-convergence record must itself pass the permanent ECR-031 workflow before T058 can be closed and the frontier can move to T061.
 
 ```text
-CURRENT_TASK               T054_AFTER_PHASE5_CLOSURE_RECORD_GREEN
-NEXT_PHASE6_ORDER           T054 → T055 → T056 → T057 → T058
+CURRENT_TASK               T058_LEDGER_GATE
+NEXT_PHASE7_ORDER           T061 → T062 → T063 → T064 → T065 → T066 → T067 → T068
 FEATURE_BRANCH              031-identity-trust-root
 DRAFT_PR                    #4
 CANONICAL_MAIN_BASE         f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0
-T051_VERIFIED_HEAD          2e16ec209e082d5964d176a9c79a95e7ddc907a4
-T051_ECR031_CI_RUN          33197753549
-T051_ECR031_CI_JOB          98939130739
-T052_VERIFIED_HEAD          16aac463d225a66c8b156e72ada9c74c30a4bf63
-T052_ECR031_CI_RUN          33198215480
-T052_ECR031_CI_JOB          98940733505
 PHASE5_VERIFIED_HEAD        bd066fa501476ff4f7fe43d0f4153de1e8d2fc60
 PHASE5_ECR031_CI_RUN        33198508505
 PHASE5_ECR031_CI_JOB        98941727727
 PHASE5_ECR031_CI_RESULT     SUCCESS
-T053_RESULT                 COMPLETE_ON_VERIFIED_LEDGER_HEAD
+T054_T055_VERIFIED_HEAD     11628134acbe91bbb81e0c3073bc0462ff22ecc9
+T054_T055_ECR031_CI_RUN     33199925996
+T054_T055_ECR031_CI_JOB     98946520761
+T056_T057_VERIFIED_HEAD     a668df317d1718008c8008ee35a40ebb83c038a4
+T056_T057_ECR031_CI_RUN     33200534586
+T056_T057_ECR031_CI_JOB     98948594548
+T056_T057_ECR031_RESULT     SUCCESS
 ```
+
+## Phase 6 verified semantic behavior
+
+```text
+T054 → T055 → T056 → T057
+```
+
+Verified behavior includes:
+
+- strict bounded `ProtectedAnchorV1` wire with closed purpose/algorithm values and strict lowercase SHA-256 payload digest representation;
+- domain-separated canonical protected-anchor signing input matching the frozen v1 contract;
+- Ed25519 protected-anchor signing through the purpose-specific active `KeyRecord` and bounded backend-opened seed material copied into zeroizing memory;
+- no public raw signing-secret export API and no hardware/non-exportability overclaim;
+- verification bound to exact trust root, key ID, purpose, algorithm, lifecycle state and signature;
+- new signing denied for retired/revoked keys; historical verification follows the explicit lifecycle contract;
+- deterministic signed mutation corpus covering digest, purpose, key and signature changes;
+- type-level distinction between `ProtectedAnchorV1`, generic `ContentDigest`, and ECR-004 `VerificationReceipt`;
+- ECR-002 `run-created-golden.sha256` reused byte-for-byte as a bounded ledger-head anchor payload example without adding an `ecra-run` dependency or changing `LedgerDigest`/store semantics.
 
 ## Phase 5 verified closure
 
-```text
-T043 → T044 → T045 → T046 → T047 → T048 → T049 → T050 → T051 → T052 → T053
-```
-
-Verified Phase 5 behavior includes:
-
-- redacted/zeroizing `SensitiveBytes` with explicit memory-secrecy non-claims;
-- production CSPRNG/test-isolated deterministic randomness;
-- strict protected-envelope schema, closed purpose/classification and exact AAD;
-- HKDF-SHA-256 domain-separated derived envelope keys;
-- ChaCha20-Poly1305 RFC 8439 protection and fail-closed authenticated open;
-- frozen RFC/Ecra vectors and authenticated-component mutation coverage;
-- recursive synthetic at-rest sentinel scan over committed ECR-031 persisted fixtures;
-- signing/master/private/secret sentinel exclusion from Debug/Display, parser-error/log-style rendering, backend capability structure and persisted protected-envelope metadata.
-
-No native-backend acceptance claim is implied. T061–T068 still own concrete native backend/macOS verification.
+Phase 5 remains verified through T053 and provides protected-envelope cryptography, redacted/zeroizing sensitive-byte handling, deterministic vectors/mutation coverage, and committed-fixture secret sentinel scanning. T061–T068 still own concrete native backend/macOS acceptance.
 
 ## Earlier phase checkpoints
 
@@ -61,9 +64,8 @@ PHASE1_HEAD           0289596bb7cdbb81d5f03c445fd324e985294143  CI 33161529028  
 PHASE2_HEAD           4ddb6da267ebc90647e27fde382385a9d2529452  CI 33163366128  SUCCESS
 PHASE3_CLOSURE_HEAD   7eaede3f9f10461c307c8900c021273a4dbffa03  CI 33165941748  SUCCESS
 PHASE4_CLOSURE_RECORD 217934d1f2c334b943349af87bcf40a4ad44b889  CI 33196312711  SUCCESS
+PHASE5_LEDGER_HEAD    bd066fa501476ff4f7fe43d0f4153de1e8d2fc60  CI 33198508505  SUCCESS
 ```
-
-IC-001 prerequisite tasks T043–T050 and T059–T060 were executed before T035 as required and reconciled into the Phase 4 ledger.
 
 ## Security and assurance boundaries
 
@@ -79,7 +81,7 @@ IC-001 prerequisite tasks T043–T050 and T059–T060 were executed before T035 
 ## Remaining canonical order
 
 ```text
-T054 → T055 → T056 → T057 → T058
+T058
   ↓
 T061 → T062 → T063 → T064 → T065 → T066 → T067 → T068
   ↓
