@@ -438,11 +438,7 @@ fn metadata_mutation_corpus_is_bound_or_rejected_fail_closed() {
 
     for (label, needle, replacement) in [
         ("version", "\"major\":1", "\"major\":2"),
-        (
-            "algorithm",
-            "chacha20_poly1305_rfc8439",
-            "unsupported_aead",
-        ),
+        ("algorithm", "chacha20_poly1305_rfc8439", "unsupported_aead"),
     ] {
         let mutated_json = golden_json.replace(needle, replacement);
         assert!(
