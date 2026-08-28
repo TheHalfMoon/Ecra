@@ -218,8 +218,8 @@ impl ProtectedTrustStateStore {
             ));
         }
 
-        let mut file = File::open(&self.path)
-            .map_err(|_| store_io_error("trust_state_store_open"))?;
+        let file =
+            File::open(&self.path).map_err(|_| store_io_error("trust_state_store_open"))?;
         let mut wire = Vec::with_capacity(length);
         file.take((MAX_PROTECTED_ENVELOPE_WIRE_BYTES + 1) as u64)
             .read_to_end(&mut wire)
@@ -492,10 +492,8 @@ mod tests {
     }
 
     fn test_store(name: &str) -> (PathBuf, ProtectedTrustStateStore) {
-        let directory = env::temp_dir().join(format!(
-            "ecra-identity-t041-{}-{name}",
-            process::id()
-        ));
+        let directory =
+            env::temp_dir().join(format!("ecra-identity-t041-{}-{name}", process::id()));
         let _ = fs::remove_dir_all(&directory);
         fs::create_dir_all(&directory).unwrap();
         let path = directory.join("protected-trust-state.json");
@@ -516,17 +514,11 @@ mod tests {
         let disk_text = String::from_utf8(disk).unwrap();
         assert!(!disk_text.contains("principal_id"));
         assert!(!disk_text.contains("ecra_local_installation_principal"));
-        assert_eq!(
-            store.open_authenticated(&backend).unwrap().state(),
-            &first
-        );
+        assert_eq!(store.open_authenticated(&backend).unwrap().state(), &first);
 
         let second = state(2, 1_300);
         store.publish(&backend, &mut random, &second).unwrap();
-        assert_eq!(
-            store.open_authenticated(&backend).unwrap().state(),
-            &second
-        );
+        assert_eq!(store.open_authenticated(&backend).unwrap().state(), &second);
         assert!(!store.temp_path().unwrap().exists());
 
         fs::remove_dir_all(directory).unwrap();
@@ -542,7 +534,10 @@ mod tests {
 
         fs::write(store.path(), b"{\"version\":").unwrap();
         let corrupted = store.open_authenticated(&backend).unwrap_err();
-        assert_eq!(corrupted.code(), IdentityErrorCode::ProtectedEnvelopeInvalid);
+        assert_eq!(
+            corrupted.code(),
+            IdentityErrorCode::ProtectedEnvelopeInvalid
+        );
 
         fs::remove_dir_all(directory).unwrap();
     }
@@ -566,7 +561,9 @@ mod tests {
             &future_plaintext,
         )
         .unwrap();
-        store.atomic_replace(&to_jcs_vec(&envelope).unwrap()).unwrap();
+        store
+            .atomic_replace(&to_jcs_vec(&envelope).unwrap())
+            .unwrap();
 
         let error = store.open_authenticated(&backend).unwrap_err();
         assert_eq!(error.code(), IdentityErrorCode::UnsupportedVersion);
