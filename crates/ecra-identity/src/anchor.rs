@@ -7,7 +7,7 @@ use sha2::{Digest, Sha256};
 use zeroize::Zeroizing;
 
 use crate::backend::{TrustBackend, TrustBackendSecretRef, TrustBackendStatus};
-use crate::key::{KeyRecord, KeyRecordAlgorithm, KeyPurpose};
+use crate::key::{KeyPurpose, KeyRecord, KeyRecordAlgorithm};
 use crate::{
     ECR_031_CONTRACT_VERSION, IdentityError, IdentityErrorCategory, IdentityErrorCode, KeyId,
     MAX_JSON_DEPTH, ProtectedObjectId, SignatureAlgorithm, TrustRootId, validate_ecr031_version,
@@ -263,9 +263,7 @@ impl ProtectedAnchorV1 {
         }
     }
 
-    pub(crate) fn decoded_signature(
-        &self,
-    ) -> Result<[u8; ED25519_SIGNATURE_BYTES], IdentityError> {
+    pub(crate) fn decoded_signature(&self) -> Result<[u8; ED25519_SIGNATURE_BYTES], IdentityError> {
         base64url_decode(&self.signature_or_mac_b64url)?
             .try_into()
             .map_err(|_| anchor_wire_error())
@@ -539,16 +537,15 @@ mod tests {
     }
 
     fn fixture(status: KeyStatus) -> (AnchorBackend, KeyRecord) {
-        let trust_root_id =
-            TrustRootId::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
+        let trust_root_id = TrustRootId::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
         let key_id = KeyId::parse_str("00000000-0000-0000-0000-000000000021").unwrap();
         let seed = [7_u8; ED25519_SEED_BYTES];
         let signing_key = SigningKey::from_bytes(&seed);
         let created = EpochMillis::new(1_000).unwrap();
         let retired_at = matches!(status, KeyStatus::RetiredVerifyOrDecryptOnly)
             .then(|| EpochMillis::new(2_000).unwrap());
-        let revoked_at = matches!(status, KeyStatus::Revoked)
-            .then(|| EpochMillis::new(2_000).unwrap());
+        let revoked_at =
+            matches!(status, KeyStatus::Revoked).then(|| EpochMillis::new(2_000).unwrap());
         let record = KeyRecord::new_ed25519(
             key_id,
             trust_root_id,
@@ -596,7 +593,10 @@ mod tests {
     #[test]
     fn retired_and_revoked_anchor_keys_cannot_create_new_anchor() {
         for (status, expected) in [
-            (KeyStatus::RetiredVerifyOrDecryptOnly, IdentityErrorCode::KeyNotActive),
+            (
+                KeyStatus::RetiredVerifyOrDecryptOnly,
+                IdentityErrorCode::KeyNotActive,
+            ),
             (KeyStatus::Revoked, IdentityErrorCode::KeyRevoked),
         ] {
             let (backend, record) = fixture(status);
