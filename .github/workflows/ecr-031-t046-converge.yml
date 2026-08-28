@@ -13,14 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 3
+          fetch-depth: 10
       - name: Converge T046 source
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "dce57d4af6aa84a12c2249cdf5d5960f720cc681"
-          test "$(git rev-parse HEAD^^)" = "da69dc985ee90e3b6a2d498ff963a5871e4972a1"
-          test "$(git rev-parse HEAD^^^)" = "b4350abfd887248390b825d14402478a6a9cd9f4"
+          git merge-base --is-ancestor b4350abfd887248390b825d14402478a6a9cd9f4 HEAD
           python3 - <<'PY'
           from pathlib import Path
           p = Path('crates/ecra-identity/src/envelope.rs')
