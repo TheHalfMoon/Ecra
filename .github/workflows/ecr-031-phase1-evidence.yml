@@ -20,17 +20,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "0289596bb7cdbb81d5f03c445fd324e985294143"
+          git merge-base --is-ancestor 0289596bb7cdbb81d5f03c445fd324e985294143 HEAD
+          helper_delta="$(git diff --name-only 0289596bb7cdbb81d5f03c445fd324e985294143..HEAD | sort)"
+          test "$helper_delta" = '.github/workflows/ecr-031-phase1-evidence.yml'
           cargo metadata --locked --format-version 1 --no-deps >/dev/null
           bash scripts/check-identity-unsafe.sh
           bash scripts/check-identity-deps.sh >/dev/null
 
       - name: Converge Phase 1 evidence ledger
         shell: bash
-        env:
-          VERIFIED_HEAD: 0289596bb7cdbb81d5f03c445fd324e985294143
-          VERIFIED_RUN: 33161529028
-          VERIFIED_JOB: 98816955646
         run: |
           set -euo pipefail
           if command -v sha256sum >/dev/null 2>&1; then
@@ -44,9 +42,9 @@ jobs:
           from pathlib import Path
           import os
 
-          verified_head = os.environ["VERIFIED_HEAD"]
-          verified_run = os.environ["VERIFIED_RUN"]
-          verified_job = os.environ["VERIFIED_JOB"]
+          verified_head = "0289596bb7cdbb81d5f03c445fd324e985294143"
+          verified_run = "33161529028"
+          verified_job = "98816955646"
           lock_sha = os.environ["LOCK_SHA"]
 
           tasks_path = Path("specs/031-identity-trust-root/tasks.md")
