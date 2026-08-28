@@ -1,7 +1,8 @@
 # Ecra Platform Decision Log
 
 **Status:** CANONICAL_PLANNING_V2  
-**Date:** 2026-08-27
+**Date:** 2026-08-27  
+**Updated:** 2026-08-28 — local-model world gateway decisions
 
 This is a compact architecture decision index. It is not a substitute for owning specs/research. Once referenced by implementation, a change requires evidence, affected-slice review and compatibility/migration analysis where applicable.
 
@@ -60,6 +61,11 @@ This is a compact architecture decision index. It is not a substitute for owning
 | D-051 | Plain append-only/hash chaining is not described as hostile tamper resistance without a protected trust anchor | ACCEPTED | attacker able to rewrite whole store can recompute chain | protected anchor/signature design may justify stronger scoped claim |
 | D-052 | Trusted approval/authority/takeover UI must be distinguishable from page content | ACCEPTED_DIRECTION | web pages can spoof agent/security prompts | ECR-008 UX research can refine trusted chrome |
 | D-053 | Derived memory indexes/caches/summaries are deletion-aware and preferably rebuildable/non-authoritative | ACCEPTED_DIRECTION | deletion cannot leave retrievable hidden copy | storage design may refine exact projection model |
+| D-054 | High-assurance local-model/agent profiles use Ecra-mediated world access instead of ambient network/credential/tool authority | ACCEPTED_DIRECTION | makes Ecra the enforceable information/action gateway and reduces model compromise blast radius | ECR-017/021 experiments show material unsupported platform constraints |
+| D-055 | WebMCP/site-native structured tools are origin-bound `CapabilityOffer`s, never `CapabilityGrant`s | ACCEPTED | structured semantics improve resolution but a page cannot authorize itself | standards change only if equivalent authority separation remains |
+| D-056 | ECR-021 owns model-aware context compilation and adaptive tool aperture; narrowing context/tools never substitutes for policy | ACCEPTED_DIRECTION | small/local models benefit from progressive disclosure and bounded tool sets | ECR-021/028 evidence shows no measurable reliability/resource benefit |
+| D-057 | Sandbox backends are replaceable enforcement mechanisms; Ecra owns identity, information flow, authorization, action/receipt and verification truth | ACCEPTED | prevents container/network policy from becoming a second trust model | constitution-level trust-model revision only |
+| D-058 | Local-model value claims use reproducible Effective Intelligence Gain comparisons against the same-model baseline | ACCEPTED_DIRECTION | measures augmentation rather than marketing model size/provider narratives | ECR-028 may refine metrics while preserving reproducibility/same-model baseline |
 
 ## Decision Change Process
 
