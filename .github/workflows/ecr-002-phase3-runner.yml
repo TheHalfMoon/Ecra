@@ -79,6 +79,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf target
           rm .github/workflows/ecr-002-phase3-materializer.yml
           rm .github/workflows/ecr-002-phase3-runner.yml
           python3 - <<'PY'
