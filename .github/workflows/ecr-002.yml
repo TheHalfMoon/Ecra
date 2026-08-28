@@ -51,6 +51,10 @@ jobs:
       - name: ECR-002 contract targets
         run: |
           cargo test -p ecra-run --test event_contract --locked
+          cargo test -p ecra-run --test reducer --locked
+          cargo test -p ecra-run --test attempts --locked
+          cargo test -p ecra-run --test budgets --locked
+          cargo test -p ecra-run --test portability --locked
           cargo test -p ecra-run --locked
       - name: Rustdoc tests
         run: cargo test --doc --workspace --locked
