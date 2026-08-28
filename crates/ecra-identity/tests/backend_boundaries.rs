@@ -115,3 +115,50 @@ fn free_form_metadata_cannot_become_principal_identity() {
         }
     }
 }
+
+#[test]
+fn production_backend_selection_has_no_plaintext_or_test_fallback_variant() {
+    let source = include_str!("../src/backend.rs");
+    let kinds = block(
+        source,
+        "pub enum TrustBackendKind {",
+        "pub fn production_trust_backend_kind",
+    );
+    for forbidden in ["Memory", "Plaintext", "Environment", "File", "Test"] {
+        assert!(
+            !kinds.contains(forbidden),
+            "forbidden production backend variant: {forbidden}"
+        );
+    }
+
+    let selection = block(
+        source,
+        "pub fn production_trust_backend_kind",
+        "pub(crate) enum TestTrustBackendKind",
+    );
+    for forbidden in ["std::env", "std::fs", "PathBuf", "String", "&str"] {
+        assert!(
+            !selection.contains(forbidden),
+            "production backend selection must not consume ambient/config input: {forbidden}"
+        );
+    }
+    assert!(selection.contains("target_os = \"macos\""));
+    assert!(selection.contains("target_os = \"windows\""));
+    assert!(selection.contains("target_os = \"linux\""));
+}
+
+#[test]
+fn test_backend_marker_is_cfg_test_only() {
+    let source = include_str!("../src/backend.rs");
+    let marker = "#[cfg(test)]\n#[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub(crate) enum TestTrustBackendKind";
+    assert!(source.contains(marker));
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn production_selection_resolves_only_native_macos_candidate_on_macos() {
+    assert_eq!(
+        ecra_identity::backend::production_trust_backend_kind().unwrap(),
+        ecra_identity::TrustBackendKind::MacosDataProtectionKeychain
+    );
+}

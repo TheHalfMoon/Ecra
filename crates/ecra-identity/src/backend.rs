@@ -65,6 +65,41 @@ pub enum TrustBackendKind {
     LinuxSecretService,
 }
 
+/// Select the only production-native backend candidate for this compilation
+/// target. The choice accepts no caller input, configuration string, path or
+/// environment value, so plaintext/file/memory substitutes cannot enter the
+/// production selection path.
+pub fn production_trust_backend_kind() -> Result<TrustBackendKind, IdentityError> {
+    #[cfg(target_os = "macos")]
+    {
+        Ok(TrustBackendKind::MacosDataProtectionKeychain)
+    }
+    #[cfg(target_os = "windows")]
+    {
+        Ok(TrustBackendKind::WindowsDpapi)
+    }
+    #[cfg(target_os = "linux")]
+    {
+        Ok(TrustBackendKind::LinuxSecretService)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    {
+        Err(IdentityError::new(
+            IdentityErrorCategory::PlatformUnavailable,
+            IdentityErrorCode::BackendUnsupported,
+            Some("production_trust_backend"),
+        ))
+    }
+}
+
+/// Marker for the isolated test-only backend family used by later lifecycle
+/// fixtures. It cannot exist in a production build or production selector.
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum TestTrustBackendKind {
+    InMemory,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct TrustBackendCapabilities {
@@ -273,7 +308,7 @@ pub(crate) trait TrustBackend {
 mod tests {
     use super::{
         DeterministicSecureRandom, SecureRandom, SystemSecureRandom, TrustBackendCapabilities,
-        TrustBackendKind, TrustBackendSecretRef,
+        TrustBackendKind, TrustBackendSecretRef, production_trust_backend_kind,
     };
     use crate::error::{IdentityErrorCategory, IdentityErrorCode};
     use crate::{KeyId, KeyPurpose, TrustRootId};
@@ -355,6 +390,15 @@ mod tests {
                 KeyPurpose::ProtectedEnvelopeRoot,
             )
             .is_err()
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn production_selection_is_macos_keychain_on_macos() {
+        assert_eq!(
+            production_trust_backend_kind().unwrap(),
+            TrustBackendKind::MacosDataProtectionKeychain
         );
     }
 }
