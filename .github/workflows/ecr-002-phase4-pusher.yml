@@ -1,0 +1,96 @@
+name: ECR-002 Phase 4 tested-state pusher
+
+on:
+  push:
+    branches:
+      - 002-durable-run-ledger
+
+permissions:
+  contents: write
+
+jobs:
+  push-tested-phase4:
+    if: startsWith(github.event.head_commit.message, 'ci(run): add phase4 tested-state pusher')
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --fail --silent --show-error https://sh.rustup.rs \
+              | sh -s -- -y --profile minimal --default-toolchain none
+            export PATH="$HOME/.cargo/bin:$PATH"
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt,clippy
+      - name: Recreate the previously verified Phase 4 tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          source = Path('.github/workflows/ecr-002-phase4-materializer.yml').read_text()
+          marker = "          python3 - <<'PY'\n"
+          start = source.index(marker) + len(marker)
+          end = source.index("\n          PY\n          cargo fmt --all", start)
+          script = textwrap.dedent(source[start:end])
+          Path('/tmp/ecra-phase4-integrate.py').write_text(script)
+          PY
+          python3 /tmp/ecra-phase4-integrate.py
+          git checkout -- .github/workflows/ecr-002.yml
+          cargo fmt --all
+      - name: Reverify the tested tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --workspace --locked
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+          cargo test -p ecra-run --test event_contract --locked
+          cargo test -p ecra-run --test reducer --locked
+          cargo test -p ecra-run --test attempts --locked
+          cargo test -p ecra-run --test budgets --locked
+          cargo test -p ecra-run --test portability --locked
+          cargo test -p ecra-run --locked
+      - name: Commit tested Phase 4 tree and remove one-shot helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf target
+          rm .github/workflows/ecr-002-phase4-materializer.yml
+          rm .github/workflows/ecr-002-phase4-pusher.yml
+          python3 - <<'PY'
+          import subprocess
+
+          allowed = {
+              '.github/workflows/ecr-002-phase4-materializer.yml',
+              '.github/workflows/ecr-002-phase4-pusher.yml',
+              'EXECUTION.md',
+              'crates/ecra-run/src/budget.rs',
+              'crates/ecra-run/src/lib.rs',
+              'crates/ecra-run/src/state.rs',
+              'crates/ecra-run/tests/budgets.rs',
+              'specs/002-durable-run-ledger/STATUS.md',
+              'specs/002-durable-run-ledger/tasks.md',
+          }
+          output = subprocess.check_output(['git', 'status', '--porcelain=v1'], text=True)
+          changed = {line[3:] for line in output.splitlines() if line}
+          unexpected = changed - allowed
+          if unexpected:
+              raise SystemExit(f'unexpected changed paths: {sorted(unexpected)}')
+          required = allowed
+          missing = required - changed
+          if missing:
+              raise SystemExit(f'expected Phase 4 paths not changed: {sorted(missing)}')
+          PY
+          git config user.name 'Abdulaziz M. Shehri'
+          git config user.email 'alshehriofficial@gmail.com'
+          git add -A
+          git commit -m 'feat(run): integrate budget enforcement'
+          git push origin HEAD:002-durable-run-ledger
