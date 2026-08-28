@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   materialize-lockfile:
-    if: startsWith(github.event.head_commit.message, 'ci(identity): materialize ECR-031 lockfile')
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
