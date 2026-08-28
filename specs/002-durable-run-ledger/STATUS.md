@@ -124,6 +124,23 @@ Phase 7 establishes the strict deterministic Stored-only `.ecra` profile, canoni
 
 Temporary Phase 7 helper workflow/materializer files were removed before the stable implementation commit and are absent from the branch.
 
+## Phase 8 — VERIFIED_ON_BRANCH
+
+T060–T066 are complete on the exact verified Phase 8 candidate:
+
+```text
+exact head  13bf66be437b0a5604f810000b0fe851fc7f5ce3
+CI run      33152042870 — SUCCESS
+job         run-ledger / 98786040489 — SUCCESS
+Rust        1.98.0
+Cargo       1.98.0
+Cargo.lock  b720472bf40a554ab61afb74eae95dd625bc6b2604e47a632991faea630e42c6
+```
+
+The exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests, all ECR-001 regression targets, all explicit ECR-002 targets including archive/boundaries/portability, rustdoc, offline replay, both core/run unsafe+dependency boundary suites, and the explicit dependency-evidence step.
+
+Phase 8 establishes executable production-source purity checks for reducer/archive ambient nondeterminism, a crate-wide no-network/provider/process call-surface scan, preservation of the ECR-001 zero-I/O/zero-unsafe dependency boundary, the explicit `ecra-run` native SQLite boundary, LF/CRLF/compact-JSON portability with byte-identical reducer/archive results, committed-fixture credential/secret-marker auditing, documentation non-claim enforcement, and the run architecture/misuse map. Exact dependency evidence remains `rusqlite 0.40.2` with bundled SQLite `3.53.2`, `libsqlite3-sys 0.38.2`, and `zip 8.6.0` with default features disabled.
+
 ## Current implementation position
 
 ```text
@@ -134,22 +151,22 @@ Phase 4 T027–T034  VERIFIED_ON_BRANCH
 Phase 5 T035–T044  VERIFIED_ON_BRANCH
 Phase 6 T045–T051  VERIFIED_ON_BRANCH
 Phase 7 T052–T059  VERIFIED_ON_BRANCH
-Phase 8 T060–T066  ACTIVE
-Phase 9 T067–T073  blocked by Phase 8 exact-head verification
+Phase 8 T060–T066  VERIFIED_ON_BRANCH
+Phase 9 T067–T073  ACTIVE
 ```
 
-Phase 8 semantic mutation starts only after a full exact-head ECR-002 gate passes on this Phase 7 ledger state.
+Phase 9 semantic/convergence mutation starts only after a full exact-head ECR-002 gate passes on this Phase 8 ledger state.
 
 Immediate work:
 
 ```text
-T060 production-source purity/network/provider boundary scan
-T061 prove ecra-core dependency/zero-I/O/zero-unsafe gates remain green
-T062 prove ecra-run unsafe/dependency/native SQLite boundary gates
-T063 LF/CRLF/JSON portability + deterministic reducer/archive output
-T064 synthetic fixture and no-overclaim documentation audit
-T065 run architecture map + misuse warnings
-T066 full exact-head quickstart/dependency/license/SQLite/archive configuration evidence
+T067 FR-001–FR-057 and SC-001–SC-016 implementation traceability closure
+T068 constitution G1–G15 and R-006/R-019/R-033/R-039/R-042/R-052/R-053 re-check
+T069 post-implementation analyze-equivalent consistency review
+T070 converge canonical spec/data-model/contract/plan/quickstart/tasks/status/EXECUTION truth
+T071 final exact-head CI + clean review/check evidence
+T072 exact-head non-rebase merge + post-merge main CI
+T073 canonical closure ledger + next dependency-eligible slice
 ```
 
 ## Active implementation clarification
