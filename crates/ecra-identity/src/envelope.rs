@@ -1,5 +1,9 @@
 use std::fmt;
 
+use chacha20poly1305::{
+    ChaCha20Poly1305,
+    aead::{Aead, KeyInit, Payload, array::Array},
+};
 use ecra_core::{InformationClass, SchemaVersion, to_jcs_vec};
 use hkdf::Hkdf;
 use serde::{Deserialize, Deserializer, Serialize, de};
@@ -11,6 +15,7 @@ use crate::{
     IdentityErrorCode, KeyId, MAX_I_JSON_U64, ProtectedObjectId, TrustRootId,
     validate_ecr031_version, validate_json_limits,
 };
+use crate::backend::SecureRandom;
 
 pub const MAX_PROTECTED_ENVELOPE_WIRE_BYTES: usize = 8 * 1024 * 1024;
 pub const PROTECTED_ENVELOPE_NONCE_BYTES: usize = 12;
@@ -243,6 +248,50 @@ fn envelope_hkdf_info(
     Ok(info)
 }
 
+#[allow(dead_code, clippy::too_many_arguments)]
+pub(crate) fn protect_envelope(
+    master_secret: &SensitiveBytes,
+    random: &mut impl SecureRandom,
+    object_id: ProtectedObjectId,
+    purpose: ProtectedPurpose,
+    information_class: ProtectedInformationClass,
+    key_ref: EnvelopeKeyRef,
+    plaintext: &SensitiveBytes,
+) -> Result<ProtectedEnvelopeV1, IdentityError> {
+    let algorithm = AeadAlgorithm::ChaCha20Poly1305Rfc8439;
+    let key = derive_envelope_key(master_secret, key_ref, purpose, algorithm)?;
+    let mut nonce = [0_u8; PROTECTED_ENVELOPE_NONCE_BYTES];
+    random.fill(&mut nonce)?;
+    let aad = protected_envelope_aad_bytes(
+        ECR_031_CONTRACT_VERSION,
+        object_id,
+        purpose,
+        information_class,
+        key_ref,
+        algorithm,
+    )?;
+    let cipher = ChaCha20Poly1305::new_from_slice(key.as_bytes())
+        .map_err(|_| protected_envelope_crypto_error("protected_envelope_key"))?;
+    let ciphertext_with_tag = cipher
+        .encrypt(
+            &Array(nonce),
+            Payload {
+                msg: plaintext.0.as_slice(),
+                aad: &aad,
+            },
+        )
+        .map_err(|_| protected_envelope_crypto_error("protected_envelope_encrypt"))?;
+
+    ProtectedEnvelopeV1::from_ciphertext(
+        object_id,
+        purpose,
+        information_class,
+        key_ref,
+        nonce,
+        ciphertext_with_tag,
+    )
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProtectedEnvelopeV1 {
@@ -372,25 +421,14 @@ impl ProtectedEnvelopeV1 {
     }
 
     pub fn aad_bytes(&self) -> Result<Vec<u8>, IdentityError> {
-        let aad = ProtectedEnvelopeAadV1 {
-            version: self.version,
-            object_id: self.object_id,
-            purpose: self.purpose,
-            information_class: self.information_class,
-            key_ref: self.key_ref,
-            algorithm: self.algorithm,
-        };
-        let canonical = to_jcs_vec(&aad).map_err(|_| {
-            IdentityError::new(
-                IdentityErrorCategory::InvalidInput,
-                IdentityErrorCode::CanonicalizationFailed,
-                Some("protected_envelope_aad"),
-            )
-        })?;
-        let mut output = Vec::with_capacity(PROTECTED_ENVELOPE_AAD_DOMAIN.len() + canonical.len());
-        output.extend_from_slice(PROTECTED_ENVELOPE_AAD_DOMAIN);
-        output.extend_from_slice(&canonical);
-        Ok(output)
+        protected_envelope_aad_bytes(
+            self.version,
+            self.object_id,
+            self.purpose,
+            self.information_class,
+            self.key_ref,
+            self.algorithm,
+        )
     }
 }
 
@@ -417,10 +455,47 @@ struct ProtectedEnvelopeAadV1 {
     algorithm: AeadAlgorithm,
 }
 
+fn protected_envelope_aad_bytes(
+    version: SchemaVersion,
+    object_id: ProtectedObjectId,
+    purpose: ProtectedPurpose,
+    information_class: ProtectedInformationClass,
+    key_ref: EnvelopeKeyRef,
+    algorithm: AeadAlgorithm,
+) -> Result<Vec<u8>, IdentityError> {
+    let aad = ProtectedEnvelopeAadV1 {
+        version,
+        object_id,
+        purpose,
+        information_class,
+        key_ref,
+        algorithm,
+    };
+    let canonical = to_jcs_vec(&aad).map_err(|_| {
+        IdentityError::new(
+            IdentityErrorCategory::InvalidInput,
+            IdentityErrorCode::CanonicalizationFailed,
+            Some("protected_envelope_aad"),
+        )
+    })?;
+    let mut output = Vec::with_capacity(PROTECTED_ENVELOPE_AAD_DOMAIN.len() + canonical.len());
+    output.extend_from_slice(PROTECTED_ENVELOPE_AAD_DOMAIN);
+    output.extend_from_slice(&canonical);
+    Ok(output)
+}
+
 fn protected_envelope_error(context: &'static str) -> IdentityError {
     IdentityError::new(
         IdentityErrorCategory::InvalidInput,
         IdentityErrorCode::ProtectedEnvelopeInvalid,
+        Some(context),
+    )
+}
+
+fn protected_envelope_crypto_error(context: &'static str) -> IdentityError {
+    IdentityError::new(
+        IdentityErrorCategory::ProtectedStorage,
+        IdentityErrorCode::BackendInvariantViolation,
         Some(context),
     )
 }
@@ -494,10 +569,17 @@ fn base64url_decode(input: &str, context: &'static str) -> Result<Vec<u8>, Ident
 mod kdf_tests {
     use super::{
         AeadAlgorithm, EnvelopeKeyRef, PROTECTED_ENVELOPE_HKDF_SALT_DOMAIN,
-        PROTECTED_ENVELOPE_KEY_DOMAIN, ProtectedPurpose, SensitiveBytes, derive_envelope_key,
-        envelope_hkdf_info, envelope_hkdf_salt,
+        PROTECTED_ENVELOPE_KEY_DOMAIN, PROTECTED_ENVELOPE_NONCE_BYTES,
+        PROTECTED_ENVELOPE_TAG_BYTES, ProtectedInformationClass, ProtectedPurpose, SensitiveBytes,
+        base64url_decode, derive_envelope_key, envelope_hkdf_info, envelope_hkdf_salt,
+        protect_envelope,
     };
-    use crate::{KeyId, TrustRootId};
+    use crate::backend::DeterministicSecureRandom;
+    use crate::{KeyId, ProtectedObjectId, TrustRootId};
+    use chacha20poly1305::{
+        ChaCha20Poly1305,
+        aead::{Aead, KeyInit, Payload, array::Array},
+    };
     use sha2::{Digest, Sha256};
 
     fn key_ref(generation: u64) -> EnvelopeKeyRef {
@@ -507,6 +589,10 @@ mod kdf_tests {
             generation,
         )
         .unwrap()
+    }
+
+    fn object_id() -> ProtectedObjectId {
+        ProtectedObjectId::parse_str("00000000-0000-0000-0000-000000000010").unwrap()
     }
 
     #[test]
@@ -571,5 +657,74 @@ mod kdf_tests {
         assert_ne!(first.as_bytes(), other_generation.as_bytes());
         assert_ne!(first.as_bytes(), other_purpose.as_bytes());
         assert_eq!(format!("{first:?}"), "DerivedEnvelopeKey([REDACTED])");
+    }
+
+    #[test]
+    fn protection_owns_fresh_nonce_and_appends_full_rfc8439_tag() {
+        let master = SensitiveBytes::new(vec![0x42; 32]);
+        let plaintext_bytes = b"ecra-t047-protected-payload";
+        let plaintext = SensitiveBytes::new(plaintext_bytes.to_vec());
+        let mut random = DeterministicSecureRandom::new(
+            [
+                vec![0x11; PROTECTED_ENVELOPE_NONCE_BYTES],
+                vec![0x22; PROTECTED_ENVELOPE_NONCE_BYTES],
+            ]
+            .concat(),
+        );
+
+        let first = protect_envelope(
+            &master,
+            &mut random,
+            object_id(),
+            ProtectedPurpose::IdentityState,
+            ProtectedInformationClass::Sensitive,
+            key_ref(1),
+            &plaintext,
+        )
+        .unwrap();
+        let second = protect_envelope(
+            &master,
+            &mut random,
+            object_id(),
+            ProtectedPurpose::IdentityState,
+            ProtectedInformationClass::Sensitive,
+            key_ref(1),
+            &plaintext,
+        )
+        .unwrap();
+
+        let first_nonce = base64url_decode(first.nonce_b64url(), "test_nonce").unwrap();
+        let second_nonce = base64url_decode(second.nonce_b64url(), "test_nonce").unwrap();
+        assert_eq!(first_nonce, vec![0x11; PROTECTED_ENVELOPE_NONCE_BYTES]);
+        assert_eq!(second_nonce, vec![0x22; PROTECTED_ENVELOPE_NONCE_BYTES]);
+        assert_ne!(first.nonce_b64url(), second.nonce_b64url());
+        assert_ne!(first.ciphertext_b64url(), second.ciphertext_b64url());
+
+        let ciphertext = base64url_decode(first.ciphertext_b64url(), "test_ciphertext").unwrap();
+        assert_eq!(
+            ciphertext.len(),
+            plaintext_bytes.len() + PROTECTED_ENVELOPE_TAG_BYTES
+        );
+
+        let key = derive_envelope_key(
+            &master,
+            key_ref(1),
+            ProtectedPurpose::IdentityState,
+            AeadAlgorithm::ChaCha20Poly1305Rfc8439,
+        )
+        .unwrap();
+        let cipher = ChaCha20Poly1305::new_from_slice(key.as_bytes()).unwrap();
+        let nonce: [u8; PROTECTED_ENVELOPE_NONCE_BYTES] = first_nonce.try_into().unwrap();
+        let aad = first.aad_bytes().unwrap();
+        let recovered = cipher
+            .decrypt(
+                &Array(nonce),
+                Payload {
+                    msg: &ciphertext,
+                    aad: &aad,
+                },
+            )
+            .unwrap();
+        assert_eq!(recovered, plaintext_bytes);
     }
 }
