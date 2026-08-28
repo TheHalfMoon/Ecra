@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-fn production_sources() -> [(&'static str, &'static str); 10] {
+fn production_sources() -> [(&'static str, &'static str); 11] {
     [
         ("archive.rs", include_str!("../src/archive.rs")),
         ("budget.rs", include_str!("../src/budget.rs")),
@@ -13,6 +13,7 @@ fn production_sources() -> [(&'static str, &'static str); 10] {
         ("recovery.rs", include_str!("../src/recovery.rs")),
         ("sqlite.rs", include_str!("../src/sqlite.rs")),
         ("state.rs", include_str!("../src/state.rs")),
+        ("store.rs", include_str!("../src/store.rs")),
     ]
 }
 
