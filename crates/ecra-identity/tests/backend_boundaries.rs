@@ -83,3 +83,35 @@ fn pure_validation_has_no_ambient_io_clock_or_authorization_dependencies() {
         );
     }
 }
+
+#[test]
+fn free_form_metadata_cannot_become_principal_identity() {
+    let sources = [
+        include_str!("../src/bootstrap.rs"),
+        include_str!("../src/assertion.rs"),
+        include_str!("../src/issuance.rs"),
+        include_str!("../src/validation.rs"),
+    ];
+
+    for source in sources {
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        assert!(
+            !production.contains("PrincipalId::parse_str"),
+            "production identity code must not derive PrincipalId from text"
+        );
+        for forbidden in [
+            "username",
+            "user_name",
+            "email",
+            "display_label",
+            "PathBuf",
+            "std::path",
+            "protocol_subject",
+        ] {
+            assert!(
+                !production.contains(forbidden),
+                "free-form principal derivation surface: {forbidden}"
+            );
+        }
+    }
+}
