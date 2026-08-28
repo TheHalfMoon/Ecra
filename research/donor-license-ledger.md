@@ -2,7 +2,7 @@
 
 **Status:** CANONICAL_IMPLEMENTATION_LEDGER  
 **Created:** 2026-08-27  
-**Updated:** 2026-08-27 for ECR-002 locked dependency review
+**Updated:** 2026-08-28 for ECR-002 Phase 8 exact locked-dependency evidence
 
 This ledger separates **conceptual reference**, **dependency candidate**, **locked dependency**, and **source-reuse candidate**. Listing a project here never authorizes copying its source. Source reuse requires exact-file review, license compatibility, notice handling, and an implementation change that records what was copied/modified.
 
@@ -131,6 +131,23 @@ ECR-002 extends the workspace with `ecra-run` while leaving the ECR-001 `ecra-co
 - ECR-002 does not copy/adapt implementation source from rusqlite, libsqlite3-sys, SQLite, zip, Rig, AgentFS, Restate, or other donors into Ecra. Public dependency APIs and independently written Ecra code are used.
 - No network, browser, model, provider, process-execution, telemetry, authentication, authorization, or verification dependency is authorized by this delta.
 - Any feature/version/native-boundary change requires a new ledger delta plus exact-head dependency/unsafe gate evidence.
+
+### ECR-002 Phase 8 locked-dependency evidence
+
+The Phase 8 implementation candidate was gated on exact head `af5d8d580b29af450807b32281b79f04e17c1aa7` by ECR-002 CI run `33151825178`, job `98785357882`, with all build, rustfmt, strict Clippy, workspace tests, ECR-001 regression targets, ECR-002 contract targets, rustdoc, offline replay, core/run unsafe+dependency checks, and dependency-evidence steps successful.
+
+```text
+rustc 1.98.0 (88d9e12ae 2026-08-18)
+cargo 1.98.0 (797e8a9bc 2026-08-05)
+Cargo.lock SHA-256  b720472bf40a554ab61afb74eae95dd625bc6b2604e47a632991faea630e42c6
+rusqlite             =0.40.2, default-features=false, features=["bundled"]
+libsqlite3-sys       0.38.2
+bundled SQLite       3.53.2
+zip                   =8.6.0, default-features=false
+archive profile       Stored-only; Ecra-owned deterministic metadata/order and fail-closed limits
+```
+
+The dependency-evidence step also re-read the direct runtime tree as `ecra-core`, `rusqlite`, `serde`, `serde_jcs`, `serde_json`, `sha2`, `thiserror`, and `zip`; it introduced no new runtime provider/network/process dependency. The exact final Phase 8 ledger head remains subject to its own full gate before T060–T066 are marked complete.
 
 ## Durable Execution References With Licensing Caution
 
