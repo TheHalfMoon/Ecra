@@ -454,9 +454,7 @@ impl ProtectedTrustStateV1 {
             }
             if matches!(key.status(), KeyStatus::Active) {
                 let active_slot = match key.purpose() {
-                    KeyPurpose::IdentityAssertionSigning => {
-                        &mut active_identity_assertion_signing
-                    }
+                    KeyPurpose::IdentityAssertionSigning => &mut active_identity_assertion_signing,
                     KeyPurpose::ProtectedEnvelopeRoot => &mut active_protected_envelope_root,
                     KeyPurpose::ProtectedAnchorSigning => &mut active_protected_anchor_signing,
                 };
@@ -1238,12 +1236,7 @@ mod tests {
 
     #[test]
     fn active_key_selects_active_generation_and_fails_closed_when_absent() {
-        let retired = signing_record_with(
-            SIGNING_KEY,
-            1,
-            KeyStatus::RetiredVerifyOrDecryptOnly,
-            7,
-        );
+        let retired = signing_record_with(SIGNING_KEY, 1, KeyStatus::RetiredVerifyOrDecryptOnly, 7);
         let active = signing_record_with(SIGNING_KEY_2, 2, KeyStatus::Active, 8);
         let state = ProtectedTrustStateV1::new(
             root_id(),
