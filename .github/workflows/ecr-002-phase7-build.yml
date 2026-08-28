@@ -1,0 +1,90 @@
+name: ECR-002 Phase 7 build
+
+on:
+  push:
+    branches:
+      - 002-durable-run-ledger
+
+permissions:
+  contents: write
+
+jobs:
+  build-phase7:
+    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): build phase7 archive') }}"
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --fail --silent --show-error https://sh.rustup.rs \
+              | sh -s -- -y --profile minimal --default-toolchain none
+            export PATH="$HOME/.cargo/bin:$PATH"
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt,clippy
+      - name: Materialize Phase 7 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/ecr-002-phase7-materialize.py
+          cargo fmt --all
+      - name: Compile and lint archive candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --workspace --locked
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - name: Materialize deterministic archive golden
+        shell: bash
+        env:
+          ECRA_WRITE_ARCHIVE_GOLDEN: "1"
+        run: cargo test -p ecra-run --test archive deterministic_export_roundtrip_and_golden_hash --locked -- --exact
+      - name: Verify Phase 7 focused gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo test -p ecra-run --test archive --locked
+          cargo test -p ecra-run --test boundaries --locked
+          cargo test -p ecra-run --test event_contract --locked
+          cargo test -p ecra-run --test reducer --locked
+          cargo test -p ecra-run --test attempts --locked
+          cargo test -p ecra-run --test budgets --locked
+          cargo test -p ecra-run --test migration --locked
+          cargo test -p ecra-run --test sqlite_store --locked
+          cargo test -p ecra-run --test crash_recovery --locked
+          cargo test -p ecra-run --test portability --locked
+          cargo test -p ecra-run --locked
+      - name: Commit Phase 7 candidate and remove helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf target
+          rm .github/workflows/ecr-002-phase7-build.yml
+          rm .github/ecr-002-phase7-materialize.py
+          python3 - <<'PY'
+          import subprocess
+          allowed = {
+              '.github/ecr-002-phase7-materialize.py',
+              '.github/workflows/ecr-002-phase7-build.yml',
+              'contracts/ecra-run-v1/expected/archive-golden.v1.ecra',
+              'contracts/ecra-run-v1/expected/archive-golden.v1.sha256',
+              'crates/ecra-run/src/archive.rs',
+              'crates/ecra-run/src/lib.rs',
+              'crates/ecra-run/tests/archive.rs',
+              'crates/ecra-run/tests/boundaries.rs',
+          }
+          changed = {line[3:] for line in subprocess.check_output(['git','status','--porcelain=v1'], text=True).splitlines() if line}
+          if changed != allowed:
+              raise SystemExit(f'unexpected changed paths: {sorted(changed)}')
+          PY
+          git config user.name 'Abdulaziz M. Shehri'
+          git config user.email 'alshehriofficial@gmail.com'
+          git add -A
+          git commit -m 'feat(run): implement deterministic ecra archive'
+          git push origin HEAD:002-durable-run-ledger
