@@ -1,0 +1,16 @@
+name: ECR-031 T046 stale-helper cancellation
+on:
+  push:
+    branches: [031-identity-trust-root]
+permissions:
+  contents: read
+concurrency:
+  group: ecr-031-t046-converge
+  cancel-in-progress: true
+jobs:
+  cancel-stale-helper:
+    runs-on: self-hosted
+    timeout-minutes: 2
+    steps:
+      - name: Concurrency cancellation barrier
+        run: echo "Stale T046 convergence helper cancelled by shared concurrency group."
