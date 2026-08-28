@@ -20,13 +20,18 @@ fn assert_tree_excludes_sentinel(root: &Path, sentinel: &[u8]) {
         let bytes = fs::read(&path).unwrap();
         scanned_files += 1;
         assert!(
-            !bytes.windows(sentinel.len()).any(|window| window == sentinel),
+            !bytes
+                .windows(sentinel.len())
+                .any(|window| window == sentinel),
             "plaintext synthetic secret persisted in {}",
             path.display()
         );
     }
 
-    assert!(scanned_files > 0, "sentinel scan must cover persisted fixtures");
+    assert!(
+        scanned_files > 0,
+        "sentinel scan must cover persisted fixtures"
+    );
 }
 
 #[test]
@@ -58,8 +63,8 @@ fn sensitive_bytes_storage_is_zeroizing_and_has_no_memory_secrecy_overclaim() {
 
 #[test]
 fn persisted_ecr031_fixtures_exclude_plaintext_synthetic_secret() {
-    let persisted_fixtures = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../contracts/ecra-identity-v1");
+    let persisted_fixtures =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../contracts/ecra-identity-v1");
 
     assert_tree_excludes_sentinel(&persisted_fixtures, SYNTHETIC_SECRET.as_bytes());
 }
