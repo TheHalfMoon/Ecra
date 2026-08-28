@@ -30,15 +30,20 @@ ECR-002 closure-head CI: 33155302100 — SUCCESS
 ECR-001 regression on closure head: 33155302026 — SUCCESS
 
 Selected active slice: ECR-031 — Identity, Trust Root & Sensitive Storage Foundations
-Lifecycle: TASKS_READY_PENDING_EXACT_GREEN_HEAD
+Lifecycle: IMPLEMENTING
+Authorized implementation base: f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0
+Planning-head ECR-001 CI: 33158268342 — SUCCESS
+Planning-head ECR-002 CI: 33158268371 — SUCCESS
+Implementation branch: 031-identity-trust-root
+Implementation PR: #4 — DRAFT
+Current phase: Phase 1 — T001–T010
+Current task frontier: T001 dependency/license/advisory/MSRV review, then T002–T008
 Analyze Pass 1: 44e85aa9ccd28e185a5761889aa12b50459f286e — PLANNING_REWORK_REQUIRED
 Analyze Pass 2: a3c7d563c139c65886f169f9181c07a997038f1f — ZERO_BLOCKING_PLANNING_DRIFT_FOUND
 Requirements checklist: PASS_FOR_ANALYZE_PASS_2
-Implementation branch: NOT YET CREATED
-Implementation PR: NOT YET CREATED
 ```
 
-ECR-031 implementation becomes authorized only after the final planning/lifecycle-convergence `main` head passes both permanent ECR-001 and ECR-002 workflows. The implementation branch MUST be created from that exact green SHA.
+The final synchronized planning head `f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0` passed both permanent closed-slice workflows. The pre-existing `031-identity-trust-root` branch was verified to point exactly at that authorized SHA before the first implementation-state commit, so implementation is active without rewriting branch history.
 
 ## ECR-031 package
 
@@ -107,7 +112,7 @@ macOS v1 claim          Data Protection Keychain custody at rest
 NOT claimed             Secure Enclave signing / hardware-backed / non-exportable signing
 ```
 
-Exact dependency versions/features/licenses/advisories/MSRV remain T001 and must be re-verified immediately before adoption.
+Exact dependency versions/features/licenses/advisories/MSRV are owned by T001 and must be recorded before dependency adoption.
 
 ## Hard slice boundaries
 
@@ -123,17 +128,20 @@ ECR-031 MUST NOT absorb:
 
 Identity evidence answers **who / on whose behalf**. It never means **what is authorized**.
 
-## Next exact execution order
+## Current exact execution order
 
 ```text
-1. Converge roadmap/platform status/spec indexes/tasks header to ECR-031 TASKS_READY planning truth.
-2. Freeze resulting canonical main SHA.
-3. Require ECR-001 and ECR-002 permanent workflows SUCCESS on that exact SHA.
-4. Create branch 031-identity-trust-root from that exact SHA.
-5. Create Draft ECR-031 implementation PR.
-6. Execute T001 dependency/license/advisory/MSRV re-verification.
-7. Continue T002–T082 strictly in tasks.md dependency order.
+1. T001 — lock implementation-time dependency/version/license/advisory/MSRV decisions in research + donor ledger.
+2. T002 — create exactly one new trusted crate: crates/ecra-identity; depend on ecra-core only initially; forbid Ecra-authored unsafe.
+3. T003 — add only the accepted minimal crypto/native dependency set; no Windows/Linux native crates without an implemented/evidenced backend.
+4. T004/T005 — add identity unsafe and dependency boundary scripts.
+5. T006–T008 — add permanent trusted push-only ECR-031 workflow with explicit targets and dependency/toolchain evidence.
+6. T009 — require exact-head Phase 1 build/fmt/Clippy/tests/rustdoc/offline + ECR-001/ECR-002 regression success before semantic implementation.
+7. T010 — record exact first-head dependency/license/native-boundary disposition.
+8. Continue T011–T082 strictly in tasks.md dependency order once the Phase 1 gate is genuinely satisfied.
 ```
+
+Do not mark T001–T010 complete based only on code presence. T009/T010 require exact-head evidence.
 
 ECR-004 remains independently planning-eligible but must remain a separate slice. ECR-003 remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`.
 
@@ -141,8 +149,8 @@ ECR-004 remains independently planning-eligible but must remain a separate slice
 
 The repository-scoped self-hosted macOS runner `macbook` remains the trusted execution oracle. Persistent personal runners must not execute untrusted fork PR code.
 
-Closed ECR-001/ECR-002 workflows remain push gates on `main`. ECR-031 implementation will add its own trusted push-only branch/main workflow with explicit bootstrap, validation, issuance, trust-state, envelope, anchor, redaction, boundaries and live macOS targets.
+Closed ECR-001/ECR-002 workflows remain push gates on `main`. ECR-031 adds its own trusted push-only branch/main workflow with explicit bootstrap, validation, issuance, trust-state, envelope, anchor, redaction, boundaries and live macOS targets as those targets are introduced by the task plan.
 
 ## Execution rule
 
-Follow T001–T082 in dependency order after exact-head planning authorization. Fix actual CI/review blockers and immediately resume. Do not weaken tests/security boundaries to make gates green. No force-push, rebase or destructive history rewriting. Never mark PASS, MERGED or `CLOSED_CANONICAL` without exact-head/post-merge evidence.
+Follow T001–T082 in dependency order. Fix actual CI/review blockers and immediately resume. Do not weaken tests/security boundaries to make gates green. No force-push, rebase or destructive history rewriting. Never mark PASS, MERGED, `VERIFIED_ON_BRANCH`, or `CLOSED_CANONICAL` without the exact evidence required by the active package.
