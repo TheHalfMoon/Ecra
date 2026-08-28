@@ -9,10 +9,10 @@ For current execution state, read:
 1. `../EXECUTION.md`
 2. `000-ecra-platform/roadmap.md`
 3. `000-ecra-platform/STATUS.md`
-4. the active slice `STATUS.md`
-5. the active slice `tasks.md`
+4. the selected/active slice `STATUS.md` and `tasks.md` once that package exists
+5. exact live GitHub branch/head, PR, CI, review and changed-file truth
 
-Do not infer implementation eligibility from directory names alone. The roadmap dependency graph and live repository evidence decide what may be implemented.
+Do not infer implementation eligibility from directory names alone. The roadmap dependency graph and live repository evidence decide what may be planned or implemented.
 
 ## Platform package
 
@@ -27,7 +27,7 @@ Do not infer implementation eligibility from directory names alone. The roadmap 
 - `decision-log.md` — accepted architecture decisions and revisit triggers.
 - `pre-implementation-review-2026-08-27.md` — pre-code review and remediation record.
 
-## Closed slice
+## Canonically closed slices
 
 ### ECR-001 — Trusted Domain Kernel
 
@@ -37,50 +37,28 @@ PR #1 merged; canonical closure-ledger head `85e4bf657b6c33e3f88d83e92e7a35279d1
 
 The package remains the canonical trusted-domain record and dependency for later slices.
 
-## Active slice
-
 ### ECR-002 — Durable Run, Ledger & Budgets
 
 Directory: `002-durable-run-ledger/`  
-Lifecycle: `TASKS_READY` on canonical planning state; implementation branch/PR is the next action.  
-Operational status: `002-durable-run-ledger/STATUS.md`.
+Lifecycle: canonical closure convergence after PR #2 merge.  
+Final feature head: `87fd9fc560bf5ca21a07a4d25473f305b4c05f05`; feature CI `33153413462` passed.  
+Merge commit: `40efc8a64a9562f0f3eb2555b350cfa03d3e0675`; post-merge ECR-002 CI `33154108410` and ECR-001 regression CI `33154108397` passed.  
+Operational/closure ledger: `002-durable-run-ledger/STATUS.md`.
 
-Read the package in this order:
+ECR-002 owns local synthetic/non-sensitive run durability, budgets, recovery semantics and deterministic `.ecra` interchange. It does not authorize real sensitive persistence, authentication/trust roots, general authorization/declassification policy, independent verification/reconciliation, or provider/browser/model/tool execution.
 
-```text
-STATUS.md
-  ↓
-spec.md
-  ↓
-research.md
-  ↓
-data-model.md
-  ↓
-contracts/run-ledger-v1.md
-  ↓
-threat-model.md
-  ↓
-plan.md
-  ↓
-tasks.md
-  ↓
-quickstart.md
-  ↓
-analyze.md
-  ↓
-checklists/requirements.md
-```
+## Next dependency-eligible planning
 
-Planning result:
+After the final ECR-002 closure-convergence head passes the permanent ECR-002 workflow, two slices are dependency-eligible for bounded planning:
 
 ```text
-FR-001–FR-057 OWNED
-SC-001–SC-016 OWNED
-G1–G15 PASS / explicit N/A
-ZERO_BLOCKING_PLANNING_DRIFT_FOUND
+ECR-031 — Identity, Trust Root & Sensitive Storage Foundations
+ECR-004 — Verification & Reconciliation
 ```
 
-Implementation is restricted to local synthetic/non-sensitive durability. Real sensitive persistence remains gated by ECR-031/ECR-003/ECR-025, and independent reconciliation/verification remains ECR-004.
+ECR-031 is selected as the next critical-path planning slice because ECR-003 additionally depends on it and sensitive-state progression remains blocked on its trust-root/protected-storage semantics. ECR-004 remains independently planning-eligible and must not be folded into ECR-031.
+
+No ECR-031 package should be treated as implementation-authorized until it independently completes specify → research/plan/data-model/contracts → checklist → tasks → analyze with all required constitutional gates.
 
 ## Future slices
 
@@ -120,6 +98,8 @@ IMPLEMENTING
 exact-head verification
   ↓
 convergence / analyze
+  ↓
+merge + required post-merge verification
   ↓
 CLOSED_CANONICAL
 ```
