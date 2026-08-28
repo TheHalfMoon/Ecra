@@ -18,7 +18,9 @@ pub mod event;
 mod recovery;
 pub mod state;
 
-pub use budget::{BudgetAmount, BudgetDimension, BudgetLimit, MAX_BUDGET_AMOUNT, RunBudget};
+pub use budget::{
+    BudgetAmount, BudgetDimension, BudgetLimit, BudgetUsage, MAX_BUDGET_AMOUNT, RunBudget,
+};
 pub use digest::{LedgerDigest, LedgerDigestAlgorithm};
 pub use error::{RunError, RunErrorCategory, RunErrorCode, RunErrorSummary};
 pub use event::{

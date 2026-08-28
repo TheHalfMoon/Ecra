@@ -200,9 +200,7 @@ impl RunBudget {
     ) -> Option<BudgetAmount> {
         let limit = self.limit(dimension)?;
         let current = usage.get(dimension).get();
-        Some(BudgetAmount(
-            limit.hard().get().saturating_sub(current),
-        ))
+        Some(BudgetAmount(limit.hard().get().saturating_sub(current)))
     }
 
     pub fn preflight(

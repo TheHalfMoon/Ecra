@@ -31,7 +31,9 @@ Phase 1 verified head: 4577123486fcaf856a3640aeacb3b7dcee733cc3
 Phase 1 CI: 33105751992 — SUCCESS
 Phase 2 verified head: 2ab8d6d80f43bf7dd07ee43659555a573c47021b
 Phase 2 CI: 33107289499 — SUCCESS
-Current phase: Phase 3 T019–T026
+Phase 3 verified head: ac45fcc835674341ae6b9ad18484e6dacda36809
+Phase 3 CI: 33143735332 — SUCCESS
+Current phase: Phase 4 T027–T034
 PR: #2 OPEN / DRAFT / mergeable at last live check
 ```
 
@@ -86,17 +88,17 @@ hostile rewrite claim   not provided by plain hash chain
 ## Active task order
 
 ```text
-T019 derived RunState / PreparedAttemptState / ordered projections
-T020 pure RunReducer
-T021 exact phase transition matrix and terminal rejection
-T022 exact attempt identity and receipt binding
-T023 recovery boundary -> unresolved without fabricated outcome
-T024 resume blockers
-T025 exhaustive transition tests
-T026 1,000x deterministic replay property test
+T027 exact BudgetUsage / BudgetLimit / RunBudget
+T028 malformed/duplicate/out-of-range rejection
+T029 checked accounting and remaining budget
+T030 known-upper-bound preflight refusal
+T031 first soft crossing and exact hard exhaustion semantics
+T032 all 14 dimensions boundary/property tests
+T033 deterministic recursive/tool-loop hard stop
+T034 preserve unresolved attempt/retry truth under exhaustion
 ```
 
-Phase 4 and Phase 5 become eligible only after the complete ECR-002 exact-head gate verifies Phase 3.
+Phase 5 becomes eligible only after the complete ECR-002 exact-head gate verifies Phase 4.
 
 ## CI architecture
 

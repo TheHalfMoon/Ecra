@@ -51,14 +51,27 @@ The exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests
 
 Phase 2 establishes the strict v1 error taxonomy, integer wrappers, run phases/suspension reasons, all 17 run-event kinds, strict envelopes, domain-separated RFC 8785 + SHA-256 `LedgerDigest`, fixtures, golden canonical bytes/digest, and machine-readable error coverage.
 
+## Phase 3 — VERIFIED_ON_BRANCH
+
+T019–T026 are complete on the exact verified Phase 3 head:
+
+```text
+exact head  ac45fcc835674341ae6b9ad18484e6dacda36809
+CI run      33143735332 — SUCCESS
+```
+
+The exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, ECR-002 reducer/attempt/portability targets, rustdoc, offline replay, and both boundary suites.
+
+Phase 3 establishes the pure deterministic reducer, exact v1 phase matrix, attempt/receipt binding, recovery-boundary UNKNOWN semantics, resume blockers, and 1,000x deterministic replay evidence.
+
 ## Current implementation position
 
 ```text
 Phase 1 T001–T008  VERIFIED_ON_BRANCH
 Phase 2 T009–T018  VERIFIED_ON_BRANCH
-Phase 3 T019–T026  ACTIVE
-Phase 4 T027–T034  blocked by Phase 3 exact-head verification
-Phase 5 T035–T044  blocked by Phase 3 exact-head verification
+Phase 3 T019–T026  VERIFIED_ON_BRANCH
+Phase 4 T027–T034  ACTIVE
+Phase 5 T035–T044  blocked by Phase 4 exact-head verification
 Phase 6 T045–T051  blocked
 Phase 7 T052–T059  blocked
 Phase 8 T060–T066  blocked
@@ -68,14 +81,14 @@ Phase 9 T067–T073  blocked
 Immediate work:
 
 ```text
-T019 derived RunState + PreparedAttemptState + ordered projections
-T020 pure RunReducer
-T021 exact transition matrix + terminal rejection
-T022 attempt uniqueness and exact receipt binding
-T023 recovery-boundary unresolved semantics
-T024 v1 resume blockers
-T025 exhaustive transition tests
-T026 deterministic 1,000x replay property evidence
+T027 exact BudgetUsage/RunBudget primitives
+T028 strict budget validation
+T029 checked cumulative accounting and remaining budget
+T030 known-upper-bound preflight refusal
+T031 first soft crossing + exact hard exhaustion evidence
+T032 all-dimension boundary/property coverage
+T033 deterministic hard-budget loop stop
+T034 preserve unresolved-attempt truth across exhaustion
 ```
 
 ## Active implementation clarification

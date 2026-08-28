@@ -1,7 +1,7 @@
 use ecra_core::EpochMillis;
 use ecra_run::{
-    BudgetAmount, BudgetDimension, BudgetLimit, BudgetUsage, RunBudget, RunErrorCode, RunEvent,
-    RunEventEnvelope, RunPhase, RunReducer, SuspensionReason, MAX_BUDGET_AMOUNT,
+    BudgetAmount, BudgetDimension, BudgetLimit, BudgetUsage, MAX_BUDGET_AMOUNT, RunBudget,
+    RunErrorCode, RunEvent, RunEventEnvelope, RunPhase, RunReducer, SuspensionReason,
 };
 use proptest::prelude::*;
 
@@ -84,14 +84,16 @@ fn budget_dimension_v1_contract_is_exact_and_closed() {
 #[test]
 fn malformed_duplicate_and_out_of_range_budgets_fail_closed() {
     assert_eq!(
-        RunBudget::new(vec![]).expect_err("empty budget invalid").code(),
+        RunBudget::new(vec![])
+            .expect_err("empty budget invalid")
+            .code(),
         RunErrorCode::InvalidBudget
     );
 
     let first = BudgetLimit::new(BudgetDimension::ToolCalls, Some(amount(1)), amount(2))
         .expect("first limit");
-    let duplicate = BudgetLimit::new(BudgetDimension::ToolCalls, None, amount(3))
-        .expect("duplicate candidate");
+    let duplicate =
+        BudgetLimit::new(BudgetDimension::ToolCalls, None, amount(3)).expect("duplicate candidate");
     assert_eq!(
         RunBudget::new(vec![first, duplicate])
             .expect_err("duplicate dimension invalid")
@@ -118,19 +120,28 @@ fn malformed_duplicate_and_out_of_range_budgets_fail_closed() {
 #[test]
 fn cumulative_usage_remaining_and_preflight_are_checked() {
     let budget = RunBudget::new(vec![
-        BudgetLimit::new(BudgetDimension::ToolCalls, Some(amount(80)), amount(100))
-            .expect("limit"),
+        BudgetLimit::new(BudgetDimension::ToolCalls, Some(amount(80)), amount(100)).expect("limit"),
     ])
     .expect("budget");
     let mut usage = BudgetUsage::default();
-    assert_eq!(budget.remaining(&usage, BudgetDimension::ToolCalls), Some(amount(100)));
+    assert_eq!(
+        budget.remaining(&usage, BudgetDimension::ToolCalls),
+        Some(amount(100))
+    );
     let (previous, cumulative) = usage
         .charge(BudgetDimension::ToolCalls, amount(40))
         .expect("charge");
     assert_eq!(previous, BudgetAmount::ZERO);
     assert_eq!(cumulative, amount(40));
-    assert_eq!(budget.remaining(&usage, BudgetDimension::ToolCalls), Some(amount(60)));
-    assert!(budget.preflight(&usage, BudgetDimension::ToolCalls, amount(60)).is_ok());
+    assert_eq!(
+        budget.remaining(&usage, BudgetDimension::ToolCalls),
+        Some(amount(60))
+    );
+    assert!(
+        budget
+            .preflight(&usage, BudgetDimension::ToolCalls, amount(60))
+            .is_ok()
+    );
     assert_eq!(
         budget
             .preflight(&usage, BudgetDimension::ToolCalls, amount(61))
@@ -138,7 +149,15 @@ fn cumulative_usage_remaining_and_preflight_are_checked() {
             .code(),
         RunErrorCode::BudgetPreflightExceeded
     );
-    assert!(budget.preflight(&usage, BudgetDimension::NetworkBytes, amount(MAX_BUDGET_AMOUNT)).is_ok());
+    assert!(
+        budget
+            .preflight(
+                &usage,
+                BudgetDimension::NetworkBytes,
+                amount(MAX_BUDGET_AMOUNT)
+            )
+            .is_ok()
+    );
 
     let mut overflow = BudgetUsage::default();
     overflow
@@ -156,6 +175,27 @@ fn cumulative_usage_remaining_and_preflight_are_checked() {
 #[test]
 fn all_fourteen_dimensions_cover_zero_soft_hard_max_and_overflow_boundaries() {
     for dimension in BudgetDimension::ALL {
+        let zero_budget = RunBudget::new(vec![
+            BudgetLimit::new(dimension, None, amount(0)).expect("zero hard limit"),
+        ])
+        .expect("zero budget");
+        let zero_usage = BudgetUsage::default();
+        assert_eq!(
+            zero_budget.remaining(&zero_usage, dimension),
+            Some(BudgetAmount::ZERO)
+        );
+        assert_eq!(
+            zero_budget
+                .preflight(&zero_usage, dimension, amount(1))
+                .expect_err("zero hard limit blocks positive preflight")
+                .code(),
+            RunErrorCode::BudgetPreflightExceeded
+        );
+        assert_eq!(
+            zero_budget.hard_exhaustion(dimension, BudgetAmount::ZERO),
+            Some((BudgetAmount::ZERO, BudgetAmount::ZERO))
+        );
+
         let budget = RunBudget::new(vec![
             BudgetLimit::new(dimension, Some(amount(1)), amount(2)).expect("limit"),
         ])
@@ -163,9 +203,15 @@ fn all_fourteen_dimensions_cover_zero_soft_hard_max_and_overflow_boundaries() {
         let mut usage = BudgetUsage::default();
         assert_eq!(usage.get(dimension), BudgetAmount::ZERO);
         let (previous, soft) = usage.charge(dimension, amount(1)).expect("soft charge");
-        assert_eq!(budget.soft_crossing(dimension, previous, soft), Some((amount(1), amount(1))));
+        assert_eq!(
+            budget.soft_crossing(dimension, previous, soft),
+            Some((amount(1), amount(1)))
+        );
         let (_, hard) = usage.charge(dimension, amount(1)).expect("hard charge");
-        assert_eq!(budget.hard_exhaustion(dimension, hard), Some((amount(2), amount(2))));
+        assert_eq!(
+            budget.hard_exhaustion(dimension, hard),
+            Some((amount(2), amount(2)))
+        );
 
         let max_budget = RunBudget::new(vec![
             BudgetLimit::new(dimension, None, amount(MAX_BUDGET_AMOUNT)).expect("max limit"),
@@ -175,7 +221,10 @@ fn all_fourteen_dimensions_cover_zero_soft_hard_max_and_overflow_boundaries() {
         max_usage
             .charge(dimension, amount(MAX_BUDGET_AMOUNT))
             .expect("max safe charge");
-        assert_eq!(max_budget.remaining(&max_usage, dimension), Some(BudgetAmount::ZERO));
+        assert_eq!(
+            max_budget.remaining(&max_usage, dimension),
+            Some(BudgetAmount::ZERO)
+        );
         assert_eq!(
             max_usage
                 .charge(dimension, amount(1))
@@ -211,10 +260,15 @@ fn reducer_validates_first_soft_crossing_and_exact_hard_exhaustion_evidence() {
 
     let state = RunReducer::reduce(&history).expect("budget history reduces");
     assert_eq!(state.phase(), RunPhase::Suspended);
-    assert_eq!(state.usage_for(BudgetDimension::ToolCalls), Some(amount(100)));
+    assert_eq!(
+        state.usage_for(BudgetDimension::ToolCalls),
+        Some(amount(100))
+    );
     assert!(matches!(
         state.suspension(),
-        Some(SuspensionReason::BudgetExhausted { dimension: BudgetDimension::ToolCalls })
+        Some(SuspensionReason::BudgetExhausted {
+            dimension: BudgetDimension::ToolCalls
+        })
     ));
 
     let mut duplicate_soft = running();
@@ -303,6 +357,53 @@ fn budget_exhaustion_preserves_unresolved_attempt_truth() {
     assert_eq!(after.phase(), RunPhase::Suspended);
     assert_eq!(after.unresolved_attempts(), before.unresolved_attempts());
     assert_eq!(after.prepared_attempts(), &prepared_before);
+}
+
+#[test]
+fn hard_budget_blocks_further_governed_work_before_exhaustion_evidence() {
+    let mut history = running();
+    push(&mut history, charge(BudgetDimension::ToolCalls, 100));
+    let state = RunReducer::reduce(&history).expect("hard-blocked running state");
+    assert!(state.has_hard_budget_blocker());
+
+    let mut extra_usage = history.clone();
+    push(&mut extra_usage, charge(BudgetDimension::ToolCalls, 1));
+    assert_eq!(
+        RunReducer::apply(&state, extra_usage.last().expect("extra usage"))
+            .expect_err("usage after hard exhaustion must stop")
+            .code(),
+        RunErrorCode::BudgetExhausted
+    );
+
+    let mut extra_attempt = history;
+    push(&mut extra_attempt, fixture_event("attempt_prepared"));
+    assert_eq!(
+        RunReducer::apply(&state, extra_attempt.last().expect("extra attempt"))
+            .expect_err("attempt after hard exhaustion must stop")
+            .code(),
+        RunErrorCode::BudgetExhausted
+    );
+}
+
+#[test]
+fn hard_exhaustion_evidence_must_match_limit_and_current_usage() {
+    let mut history = running();
+    push(&mut history, charge(BudgetDimension::ToolCalls, 100));
+    let state = RunReducer::reduce(&history).expect("hard-blocked state");
+    push(
+        &mut history,
+        RunEvent::BudgetExhausted {
+            dimension: BudgetDimension::ToolCalls,
+            hard_limit: amount(99),
+            cumulative_usage: amount(100),
+        },
+    );
+    assert_eq!(
+        RunReducer::apply(&state, history.last().expect("bad hard evidence"))
+            .expect_err("mismatched hard limit must fail")
+            .code(),
+        RunErrorCode::InvalidBudget
+    );
 }
 
 proptest! {

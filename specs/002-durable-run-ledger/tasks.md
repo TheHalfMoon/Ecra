@@ -33,14 +33,14 @@
 
 ## Phase 3 — Pure reducer and run state machine
 
-- [ ] T019 Implement derived `RunState`, `PreparedAttemptState`, ordered usage/attempt collections. **Path:** `crates/ecra-run/src/state.rs`. **FR-006–FR-010, FR-017**
-- [ ] T020 Implement pure `RunReducer` with no clock/random/I/O/environment/process access. **Path:** `crates/ecra-run/src/state.rs`. **FR-004–FR-010, FR-045**
-- [ ] T021 Implement exact phase transition matrix including terminal-state rejection. **Paths:** `crates/ecra-run/src/state.rs`, `crates/ecra-run/tests/reducer.rs`. **FR-006–FR-009, FR-040–FR-045**
-- [ ] T022 Implement attempt uniqueness and exact receipt/action/attempt binding in reducer. **Paths:** `crates/ecra-run/src/state.rs`, `crates/ecra-run/tests/attempts.rs`. **FR-011–FR-017**
-- [ ] T023 Implement recovery-boundary reduction that marks prepared-without-receipt attempts unresolved without fabricating outcome. **Paths:** `crates/ecra-run/src/recovery.rs`, `crates/ecra-run/src/state.rs`, `crates/ecra-run/tests/attempts.rs`. **FR-014–FR-016, FR-043–FR-045**
-- [ ] T024 Implement v1 resume blockers for budget/reconciliation/cancellation suspension. **Paths:** `crates/ecra-run/src/state.rs`, `crates/ecra-run/tests/reducer.rs`. **FR-008, FR-041, FR-044**
-- [ ] T025 Add exhaustive valid/invalid transition-table tests. **Path:** `crates/ecra-run/tests/reducer.rs`. **SC-001, SC-002**
-- [ ] T026 Add deterministic replay/property test: same accepted history reduced 1,000 times yields identical canonical state bytes/digest. **Paths:** `crates/ecra-run/tests/reducer.rs`, `crates/ecra-run/tests/portability.rs`. **SC-003**
+- [x] T019 Implement derived `RunState`, `PreparedAttemptState`, ordered usage/attempt collections. **Path:** `crates/ecra-run/src/state.rs`. **FR-006–FR-010, FR-017**
+- [x] T020 Implement pure `RunReducer` with no clock/random/I/O/environment/process access. **Path:** `crates/ecra-run/src/state.rs`. **FR-004–FR-010, FR-045**
+- [x] T021 Implement exact phase transition matrix including terminal-state rejection. **Paths:** `crates/ecra-run/src/state.rs`, `crates/ecra-run/tests/reducer.rs`. **FR-006–FR-009, FR-040–FR-045**
+- [x] T022 Implement attempt uniqueness and exact receipt/action/attempt binding in reducer. **Paths:** `crates/ecra-run/src/state.rs`, `crates/ecra-run/tests/attempts.rs`. **FR-011–FR-017**
+- [x] T023 Implement recovery-boundary reduction that marks prepared-without-receipt attempts unresolved without fabricating outcome. **Paths:** `crates/ecra-run/src/recovery.rs`, `crates/ecra-run/src/state.rs`, `crates/ecra-run/tests/attempts.rs`. **FR-014–FR-016, FR-043–FR-045**
+- [x] T024 Implement v1 resume blockers for budget/reconciliation/cancellation suspension. **Paths:** `crates/ecra-run/src/state.rs`, `crates/ecra-run/tests/reducer.rs`. **FR-008, FR-041, FR-044**
+- [x] T025 Add exhaustive valid/invalid transition-table tests. **Path:** `crates/ecra-run/tests/reducer.rs`. **SC-001, SC-002**
+- [x] T026 Add deterministic replay/property test: same accepted history reduced 1,000 times yields identical canonical state bytes/digest. **Paths:** `crates/ecra-run/tests/reducer.rs`, `crates/ecra-run/tests/portability.rs`. **SC-003**
 
 ## Phase 4 — Budgets and bounded execution
 

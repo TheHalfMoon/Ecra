@@ -4,7 +4,7 @@ use ecra_core::{ActionAttemptId, ActionAttemptRef, ActionReceipt, ActorId, RunId
 use serde::{Deserialize, Deserializer, Serialize, de};
 
 use crate::{
-    BudgetAmount, BudgetDimension, EventSequence, LedgerDigest, RunBudget, RunError,
+    BudgetAmount, BudgetDimension, BudgetUsage, EventSequence, LedgerDigest, RunBudget, RunError,
     RunErrorCategory, RunErrorCode, RunEvent, RunEventEnvelope,
 };
 
@@ -148,7 +148,11 @@ pub struct RunState {
     phase: RunPhase,
     actor: ActorId,
     budget: RunBudget,
-    usage: BTreeMap<BudgetDimension, BudgetAmount>,
+    usage: BudgetUsage,
+    #[serde(skip)]
+    soft_limits_reached: BTreeSet<BudgetDimension>,
+    #[serde(skip)]
+    pending_soft_crossings: BTreeMap<BudgetDimension, (BudgetAmount, BudgetAmount)>,
     prepared_attempts: BTreeMap<ActionAttemptId, PreparedAttemptState>,
     unresolved_attempts: BTreeSet<ActionAttemptId>,
     last_sequence: EventSequence,
@@ -179,7 +183,7 @@ impl RunState {
 
     #[must_use]
     pub fn usage(&self) -> &BTreeMap<BudgetDimension, BudgetAmount> {
-        &self.usage
+        self.usage.amounts()
     }
 
     #[must_use]
@@ -213,7 +217,7 @@ impl RunState {
 
     #[must_use]
     pub fn usage_for(&self, dimension: BudgetDimension) -> Option<BudgetAmount> {
-        self.usage.get(&dimension).copied()
+        self.usage.recorded(dimension)
     }
 
     #[must_use]
@@ -225,11 +229,10 @@ impl RunState {
 
     #[must_use]
     pub fn has_hard_budget_blocker(&self) -> bool {
-        self.budget.limits().iter().any(|limit| {
-            self.usage
-                .get(&limit.dimension())
-                .is_some_and(|usage| *usage >= limit.hard())
-        })
+        self.budget
+            .limits()
+            .iter()
+            .any(|limit| self.usage.get(limit.dimension()) >= limit.hard())
     }
 }
 
@@ -286,7 +289,9 @@ impl RunReducer {
                     phase: RunPhase::Created,
                     actor: *actor,
                     budget: budget.clone(),
-                    usage: BTreeMap::new(),
+                    usage: BudgetUsage::default(),
+                    soft_limits_reached: BTreeSet::new(),
+                    pending_soft_crossings: BTreeMap::new(),
                     prepared_attempts: BTreeMap::new(),
                     unresolved_attempts: BTreeSet::new(),
                     last_sequence: envelope.sequence(),
@@ -401,6 +406,13 @@ impl RunReducer {
             }
             RunEvent::AttemptPrepared { attempt } => {
                 ensure_phase(state, &[RunPhase::Running], "attempt_prepared")?;
+                if state.has_hard_budget_blocker() {
+                    return Err(RunError::new(
+                        RunErrorCategory::Budget,
+                        RunErrorCode::BudgetExhausted,
+                        "attempt_prepared is blocked by an exhausted hard budget",
+                    ));
+                }
                 let attempt_id = attempt.id();
                 if let Some(existing) = state.prepared_attempts.get(&attempt_id) {
                     let code = if existing.attempt() == attempt {
@@ -507,18 +519,69 @@ impl RunReducer {
                 }
             }
             RunEvent::ResourceUsageRecorded { dimension, amount } => {
-                let current = state
-                    .usage
-                    .get(dimension)
-                    .copied()
-                    .unwrap_or(BudgetAmount::new(0)?);
-                state
-                    .usage
-                    .insert(*dimension, current.checked_add(*amount)?);
+                ensure_phase(state, &[RunPhase::Running], "resource_usage_recorded")?;
+                if state.has_hard_budget_blocker() {
+                    return Err(RunError::new(
+                        RunErrorCategory::Budget,
+                        RunErrorCode::BudgetExhausted,
+                        "resource usage is blocked after hard budget exhaustion",
+                    ));
+                }
+                let (previous, cumulative) = state.usage.charge(*dimension, *amount)?;
+                if !state.soft_limits_reached.contains(dimension)
+                    && let Some(crossing) =
+                        state.budget.soft_crossing(*dimension, previous, cumulative)
+                {
+                    state
+                        .pending_soft_crossings
+                        .entry(*dimension)
+                        .or_insert(crossing);
+                }
             }
-            RunEvent::BudgetSoftLimitReached { .. } => {}
-            RunEvent::BudgetExhausted { dimension, .. } => {
+            RunEvent::BudgetSoftLimitReached {
+                dimension,
+                soft_limit,
+                cumulative_usage,
+            } => {
+                ensure_phase(state, &[RunPhase::Running], "budget_soft_limit_reached")?;
+                if state.soft_limits_reached.contains(dimension) {
+                    return Err(budget_error(
+                        "budget soft-limit evidence is valid only for the first crossing",
+                    ));
+                }
+                let Some(expected) = state.pending_soft_crossings.get(dimension).copied() else {
+                    return Err(budget_error(
+                        "budget soft-limit evidence has no matching first threshold crossing",
+                    ));
+                };
+                if expected != (*soft_limit, *cumulative_usage) {
+                    return Err(budget_error(
+                        "budget soft-limit evidence does not match the configured first crossing",
+                    ));
+                }
+                state.pending_soft_crossings.remove(dimension);
+                state.soft_limits_reached.insert(*dimension);
+            }
+            RunEvent::BudgetExhausted {
+                dimension,
+                hard_limit,
+                cumulative_usage,
+            } => {
                 ensure_phase(state, &[RunPhase::Running], "budget_exhausted")?;
+                let Some(limit) = state.budget.limit(*dimension) else {
+                    return Err(budget_error(
+                        "budget exhaustion evidence references an unconfigured dimension",
+                    ));
+                };
+                let current = state.usage.get(*dimension);
+                if limit.hard() != *hard_limit
+                    || current != *cumulative_usage
+                    || current < *hard_limit
+                {
+                    return Err(budget_error(
+                        "budget exhaustion evidence does not match configured hard limit and cumulative usage",
+                    ));
+                }
                 state.phase = RunPhase::Suspended;
                 state.suspension = Some(SuspensionReason::BudgetExhausted {
                     dimension: *dimension,
@@ -567,6 +630,14 @@ fn unresolved_error(message: impl Into<String>) -> RunError {
     RunError::new(
         RunErrorCategory::Attempt,
         RunErrorCode::UnresolvedAttempt,
+        message,
+    )
+}
+
+fn budget_error(message: impl Into<String>) -> RunError {
+    RunError::new(
+        RunErrorCategory::Budget,
+        RunErrorCode::InvalidBudget,
         message,
     )
 }
