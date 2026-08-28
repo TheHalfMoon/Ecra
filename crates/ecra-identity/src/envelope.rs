@@ -10,12 +10,12 @@ use serde::{Deserialize, Deserializer, Serialize, de};
 use sha2::{Digest, Sha256};
 use zeroize::Zeroizing;
 
+use crate::backend::SecureRandom;
 use crate::{
     AeadAlgorithm, ECR_031_CONTRACT_VERSION, IdentityError, IdentityErrorCategory,
     IdentityErrorCode, KeyId, MAX_I_JSON_U64, ProtectedObjectId, TrustRootId,
     validate_ecr031_version, validate_json_limits,
 };
-use crate::backend::SecureRandom;
 
 pub const MAX_PROTECTED_ENVELOPE_WIRE_BYTES: usize = 8 * 1024 * 1024;
 pub const PROTECTED_ENVELOPE_NONCE_BYTES: usize = 12;
