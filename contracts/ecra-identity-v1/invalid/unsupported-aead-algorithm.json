@@ -1,0 +1,15 @@
+{
+  "version": {"major": 1, "minor": 0},
+  "trust_root_id": "00000000-0000-0000-0000-000000000002",
+  "key_id": "00000000-0000-0000-0000-000000000003",
+  "protected_object_id": "00000000-0000-0000-0000-000000000010",
+  "enrollment_id": "00000000-0000-0000-0000-000000000030",
+  "assertion_nonce_id": "00000000-0000-0000-0000-000000000031",
+  "delegation_id": "00000000-0000-0000-0000-000000000032",
+  "signature_algorithm": "ed25519",
+  "aead_algorithm": "aes_256_gcm",
+  "key_purpose": "identity_assertion_signing",
+  "key_status": "active",
+  "protected_purpose": "trust_state",
+  "backend_kind": "macos_data_protection_keychain"
+}
