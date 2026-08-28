@@ -1,5 +1,11 @@
-use ecra_core::{ActionAttemptRef, ActionReceipt, EpochMillis};
-use ecra_run::{RunErrorCode, RunEvent, RunEventEnvelope, RunPhase, RunReducer, SuspensionReason};
+use ecra_core::{
+    ActionAttemptId, ActionAttemptRef, ActionIntent, ActionOutcome, ActionReceipt, ActorId,
+    EpochMillis, ReceiptId,
+};
+use ecra_run::{
+    RunErrorCode, RunEvent, RunEventEnvelope, RunPhase, RunReducer, SuspensionReason,
+    ensure_retry_allowed,
+};
 
 fn genesis() -> RunEventEnvelope {
     RunEventEnvelope::from_json_slice(include_bytes!(
@@ -216,5 +222,186 @@ fn reconciliation_request_requires_exact_unresolved_attempt() {
     assert_eq!(
         next.unresolved_attempts(),
         recovered_state.unresolved_attempts()
+    );
+}
+
+fn intent_with_semantics(
+    retry: &str,
+    idempotency: serde_json::Value,
+    effect: serde_json::Value,
+) -> ActionIntent {
+    let mut value: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../contracts/ecra-domain-v1/valid/action-digest-golden.json"
+    ))
+    .expect("golden action intent JSON");
+    value["retry"] = serde_json::Value::String(retry.to_owned());
+    value["idempotency"] = idempotency;
+    value["effect"] = effect;
+    serde_json::from_value(value).expect("valid ECR-001 retry fixture")
+}
+
+fn attempt_for_intent(intent: &ActionIntent, id: &str) -> ActionAttemptRef {
+    let id: ActionAttemptId = serde_json::from_str(&format!("\"{id}\"")).expect("attempt id");
+    ActionAttemptRef::new(id, intent.action_ref().expect("action ref"))
+}
+
+fn receipt_for_attempt(attempt: ActionAttemptRef, id: &str) -> ActionReceipt {
+    let receipt_id: ReceiptId = serde_json::from_str(&format!("\"{id}\"")).expect("receipt id");
+    let actor: ActorId =
+        serde_json::from_str("\"00000000-0000-0000-0000-000000000001\"").expect("actor id");
+    ActionReceipt::new(
+        receipt_id,
+        attempt,
+        actor,
+        ActionOutcome::ExecutorObservedSuccess,
+    )
+}
+
+fn state_with_received_attempt(
+    intent: &ActionIntent,
+    attempt_id: &str,
+    receipt_id: &str,
+) -> (ecra_run::RunState, ActionAttemptRef) {
+    let attempt = attempt_for_intent(intent, attempt_id);
+    let receipt = receipt_for_attempt(attempt.clone(), receipt_id);
+    let mut history = running();
+    push(
+        &mut history,
+        RunEvent::AttemptPrepared {
+            attempt: attempt.clone(),
+        },
+    );
+    push(&mut history, RunEvent::ReceiptRecorded { receipt });
+    (
+        RunReducer::reduce(&history).expect("received attempt state"),
+        attempt,
+    )
+}
+
+#[test]
+fn retry_guard_preserves_all_ecr001_retry_classes() {
+    let none_effect = serde_json::json!({"mutation":"none","reversibility":"not_applicable"});
+    let safe = intent_with_semantics(
+        "safe",
+        serde_json::json!({"class":"naturally_idempotent","key_ref":null}),
+        none_effect.clone(),
+    );
+    let (safe_state, safe_attempt) = state_with_received_attempt(
+        &safe,
+        "00000000-0000-0000-0000-000000000410",
+        "00000000-0000-0000-0000-000000000510",
+    );
+    ensure_retry_allowed(&safe_state, &safe, &safe_attempt).expect("safe retry allowed");
+
+    let keyed = intent_with_semantics(
+        "requires_same_idempotency_key",
+        serde_json::json!({"class":"idempotent_with_key","key_ref":"phase6-key"}),
+        serde_json::json!({"mutation":"local","reversibility":"reversible"}),
+    );
+    let (keyed_state, keyed_attempt) = state_with_received_attempt(
+        &keyed,
+        "00000000-0000-0000-0000-000000000411",
+        "00000000-0000-0000-0000-000000000511",
+    );
+    ensure_retry_allowed(&keyed_state, &keyed, &keyed_attempt)
+        .expect("same-key retry allowed for exact bound intent");
+
+    let reconcile = intent_with_semantics(
+        "requires_external_reconciliation",
+        serde_json::json!({"class":"naturally_idempotent","key_ref":null}),
+        serde_json::json!({"mutation":"external","reversibility":"reversible"}),
+    );
+    let (reconcile_state, reconcile_attempt) = state_with_received_attempt(
+        &reconcile,
+        "00000000-0000-0000-0000-000000000412",
+        "00000000-0000-0000-0000-000000000512",
+    );
+    let error = ensure_retry_allowed(&reconcile_state, &reconcile, &reconcile_attempt)
+        .expect_err("reconciliation retry class must not blind retry");
+    assert_eq!(error.code(), RunErrorCode::BlindRetryForbidden);
+
+    let never = intent_with_semantics(
+        "never_blind_retry",
+        serde_json::json!({"class":"naturally_idempotent","key_ref":null}),
+        none_effect,
+    );
+    let (never_state, never_attempt) = state_with_received_attempt(
+        &never,
+        "00000000-0000-0000-0000-000000000413",
+        "00000000-0000-0000-0000-000000000513",
+    );
+    let error = ensure_retry_allowed(&never_state, &never, &never_attempt)
+        .expect_err("never-blind retry class must be refused");
+    assert_eq!(error.code(), RunErrorCode::BlindRetryForbidden);
+}
+
+#[test]
+fn unresolved_attempt_blocks_blind_retry_even_for_naturally_idempotent_safe_action() {
+    let intent = intent_with_semantics(
+        "safe",
+        serde_json::json!({"class":"naturally_idempotent","key_ref":null}),
+        serde_json::json!({"mutation":"none","reversibility":"not_applicable"}),
+    );
+    let attempt = attempt_for_intent(&intent, "00000000-0000-0000-0000-000000000414");
+    let mut history = running();
+    push(
+        &mut history,
+        RunEvent::AttemptPrepared {
+            attempt: attempt.clone(),
+        },
+    );
+    push(&mut history, event("recovery_boundary"));
+    let state = RunReducer::reduce(&history).expect("recovered unresolved state");
+    let error = ensure_retry_allowed(&state, &intent, &attempt)
+        .expect_err("unresolved attempt must block blind retry");
+    assert_eq!(error.code(), RunErrorCode::BlindRetryForbidden);
+}
+
+#[test]
+fn multiple_attempts_for_one_action_keep_receipts_isolated() {
+    let intent = intent_with_semantics(
+        "safe",
+        serde_json::json!({"class":"naturally_idempotent","key_ref":null}),
+        serde_json::json!({"mutation":"none","reversibility":"not_applicable"}),
+    );
+    let first = attempt_for_intent(&intent, "00000000-0000-0000-0000-000000000415");
+    let second = attempt_for_intent(&intent, "00000000-0000-0000-0000-000000000416");
+    let first_receipt = receipt_for_attempt(first.clone(), "00000000-0000-0000-0000-000000000515");
+
+    let mut history = running();
+    push(
+        &mut history,
+        RunEvent::AttemptPrepared {
+            attempt: first.clone(),
+        },
+    );
+    push(
+        &mut history,
+        RunEvent::AttemptPrepared {
+            attempt: second.clone(),
+        },
+    );
+    push(
+        &mut history,
+        RunEvent::ReceiptRecorded {
+            receipt: first_receipt.clone(),
+        },
+    );
+    let state = RunReducer::reduce(&history).expect("two-attempt state");
+    assert_eq!(
+        state
+            .prepared_attempts()
+            .get(&first.id())
+            .unwrap()
+            .receipt(),
+        Some(&first_receipt)
+    );
+    assert!(
+        state
+            .prepared_attempts()
+            .get(&second.id())
+            .unwrap()
+            .receipt()
+            .is_none()
     );
 }

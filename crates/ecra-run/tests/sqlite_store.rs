@@ -1,3 +1,6 @@
+use std::sync::{Arc, Barrier};
+use std::thread;
+
 use ecra_core::{ContentDigest, EpochMillis, RunId, to_jcs_vec};
 use ecra_run::{
     BudgetAmount, ExpectedRunHead, LedgerDigest, RunErrorCode, RunEvent, RunEventEnvelope,
@@ -296,4 +299,120 @@ fn store_returns_none_for_unknown_run_and_blob() {
     assert!(store.load_state(run_id).unwrap().is_none());
     let digest = sha256_digest(b"not stored");
     assert!(store.get_blob(&digest).unwrap().is_none());
+}
+
+#[test]
+fn attempt_guard_and_receipt_store_apis_commit_exact_bound_truth() {
+    let directory = tempdir().expect("tempdir");
+    let path = directory.path().join("attempt-guard.db");
+    let mut store = RunStore::open(&path).expect("open store");
+    let created = genesis();
+    store
+        .append(&ExpectedRunHead::Genesis, &created)
+        .expect("append genesis");
+    let started = successor(&created, fixture_event("run_started"));
+    store
+        .append(&expected(&created), &started)
+        .expect("append started");
+
+    let attempt = match fixture_event("attempt_prepared") {
+        RunEvent::AttemptPrepared { attempt } => attempt,
+        _ => unreachable!(),
+    };
+    let guard = store
+        .prepare_attempt(
+            created.run_id(),
+            &expected(&started),
+            attempt.clone(),
+            EpochMillis::new(started.recorded_at().get() + 1).unwrap(),
+        )
+        .expect("durably prepare attempt");
+    assert_eq!(guard.run_id(), created.run_id());
+    assert_eq!(guard.attempt(), &attempt);
+    let history = store
+        .load_history(created.run_id())
+        .expect("prepared history");
+    assert!(
+        matches!(history.last().unwrap().event(), RunEvent::AttemptPrepared { attempt: found } if found == &attempt)
+    );
+
+    let receipt = match fixture_event("receipt_recorded") {
+        RunEvent::ReceiptRecorded { receipt } => receipt,
+        _ => unreachable!(),
+    };
+    let receipt_expected = ExpectedRunHead::At {
+        sequence: guard.committed_sequence(),
+        digest: guard.committed_digest().clone(),
+    };
+    let state = store
+        .record_receipt(
+            created.run_id(),
+            &receipt_expected,
+            receipt.clone(),
+            EpochMillis::new(started.recorded_at().get() + 2).unwrap(),
+        )
+        .expect("durably record receipt");
+    assert_eq!(
+        state
+            .prepared_attempts()
+            .get(&attempt.id())
+            .unwrap()
+            .receipt(),
+        Some(&receipt)
+    );
+}
+
+#[test]
+fn two_connections_competing_on_one_expected_head_allow_exactly_one_append() {
+    let directory = tempdir().expect("tempdir");
+    let path = directory.path().join("concurrency.db");
+    let mut initializer = RunStore::open(&path).expect("initializer");
+    let created = genesis();
+    initializer
+        .append(&ExpectedRunHead::Genesis, &created)
+        .expect("append genesis");
+    let started = successor(&created, fixture_event("run_started"));
+    initializer
+        .append(&expected(&created), &started)
+        .expect("append started");
+    drop(initializer);
+
+    let candidate = successor(&started, fixture_event("intervention_recorded"));
+    let expected_head = expected(&started);
+    let barrier = Arc::new(Barrier::new(3));
+    let path = Arc::new(path);
+
+    let spawn_writer = |barrier: Arc<Barrier>| {
+        let path = Arc::clone(&path);
+        let expected_head = expected_head.clone();
+        let candidate = candidate.clone();
+        thread::spawn(move || {
+            let mut store = RunStore::open(path.as_path()).expect("writer connection");
+            barrier.wait();
+            store.append(&expected_head, &candidate)
+        })
+    };
+
+    let first = spawn_writer(Arc::clone(&barrier));
+    let second = spawn_writer(Arc::clone(&barrier));
+    barrier.wait();
+    let results = [
+        first.join().expect("first writer"),
+        second.join().expect("second writer"),
+    ];
+    assert_eq!(results.iter().filter(|result| result.is_ok()).count(), 1);
+    let errors: Vec<_> = results
+        .iter()
+        .filter_map(|result| result.as_ref().err())
+        .collect();
+    assert_eq!(errors.len(), 1);
+    assert!(matches!(
+        errors[0].code(),
+        RunErrorCode::LedgerHeadMismatch | RunErrorCode::StoreBusy
+    ));
+
+    let store = RunStore::open(path.as_path()).expect("reopen store");
+    let history = store.load_history(created.run_id()).expect("final history");
+    assert_eq!(history.len(), 3);
+    assert_eq!(history[2], candidate);
 }

@@ -1,14 +1,15 @@
 use std::path::Path;
 
-use ecra_core::{ContentDigest, RunId, to_jcs_vec};
+use ecra_core::{ActionAttemptRef, ActionReceipt, ContentDigest, EpochMillis, RunId, to_jcs_vec};
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use sha2::{Digest, Sha256};
 
 use crate::migration::ensure_schema;
 use crate::sqlite::{map_sqlite, open_configured, read_configuration};
 use crate::{
-    BudgetAmount, EventSequence, LedgerDigest, RunError, RunErrorCategory, RunErrorCode,
-    RunEventEnvelope, RunPhase, RunReducer, RunState, SqliteConfiguration,
+    BudgetAmount, EventSequence, LedgerDigest, PreparedAttemptGuard, RecoveryReason,
+    RecoveryResult, RunError, RunErrorCategory, RunErrorCode, RunEvent, RunEventEnvelope, RunPhase,
+    RunReducer, RunState, SqliteConfiguration,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -33,6 +34,71 @@ impl RunStore {
 
     pub fn sqlite_configuration(&self) -> Result<SqliteConfiguration, RunError> {
         read_configuration(&self.connection)
+    }
+
+    pub fn prepare_attempt(
+        &mut self,
+        run_id: RunId,
+        expected: &ExpectedRunHead,
+        attempt: ActionAttemptRef,
+        recorded_at: EpochMillis,
+    ) -> Result<PreparedAttemptGuard, RunError> {
+        let envelope = successor_envelope(
+            run_id,
+            expected,
+            recorded_at,
+            RunEvent::AttemptPrepared {
+                attempt: attempt.clone(),
+            },
+        )?;
+        self.append(expected, &envelope)?;
+        Ok(PreparedAttemptGuard::new(
+            run_id,
+            attempt,
+            envelope.sequence(),
+            envelope.event_digest().clone(),
+        ))
+    }
+
+    pub fn record_receipt(
+        &mut self,
+        run_id: RunId,
+        expected: &ExpectedRunHead,
+        receipt: ActionReceipt,
+        recorded_at: EpochMillis,
+    ) -> Result<RunState, RunError> {
+        let envelope = successor_envelope(
+            run_id,
+            expected,
+            recorded_at,
+            RunEvent::ReceiptRecorded { receipt },
+        )?;
+        self.append(expected, &envelope)
+    }
+
+    pub fn recover(
+        &mut self,
+        run_id: RunId,
+        expected: &ExpectedRunHead,
+        reason: RecoveryReason,
+        recorded_at: EpochMillis,
+    ) -> Result<RecoveryResult, RunError> {
+        let current = self.load_state(run_id)?.ok_or_else(|| {
+            RunError::new(
+                RunErrorCategory::Recovery,
+                RunErrorCode::RecoveryRequired,
+                "recovery requires an existing durable run",
+            )
+        })?;
+        let unreceipted_attempts = crate::recovery::scan_unreceipted_attempts(&current);
+        let envelope = successor_envelope(
+            run_id,
+            expected,
+            recorded_at,
+            RunEvent::RecoveryBoundary { reason },
+        )?;
+        let state = self.append(expected, &envelope)?;
+        Ok(RecoveryResult::new(unreceipted_attempts, state))
     }
 
     pub fn append(
@@ -235,6 +301,28 @@ impl RunStore {
         verify_content_digest(digest, &bytes)?;
         Ok(Some(bytes))
     }
+}
+
+fn successor_envelope(
+    run_id: RunId,
+    expected: &ExpectedRunHead,
+    recorded_at: EpochMillis,
+    event: RunEvent,
+) -> Result<RunEventEnvelope, RunError> {
+    let ExpectedRunHead::At { sequence, digest } = expected else {
+        return Err(RunError::new(
+            RunErrorCategory::Ledger,
+            RunErrorCode::LedgerHeadMismatch,
+            "non-genesis store operation requires an existing expected run head",
+        ));
+    };
+    RunEventEnvelope::new(
+        run_id,
+        sequence.checked_next()?,
+        recorded_at,
+        Some(digest.clone()),
+        event,
+    )
 }
 
 fn authoritative_head(

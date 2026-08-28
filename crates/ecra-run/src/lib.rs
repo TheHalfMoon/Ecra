@@ -31,6 +31,7 @@ pub use event::{
     MAX_INTERVENTION_NOTE_BYTES, RecoveryReason, RunEvent, RunEventEnvelope,
 };
 pub use migration::ECR_RUN_SCHEMA_VERSION;
+pub use recovery::{PreparedAttemptGuard, RecoveryResult, ensure_retry_allowed};
 pub use sqlite::SqliteConfiguration;
 pub use state::{
     MAX_SUSPENSION_OTHER_CODE_BYTES, PreparedAttemptState, RunPhase, RunReducer, RunState,
