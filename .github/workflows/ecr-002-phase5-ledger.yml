@@ -1,0 +1,74 @@
+name: ECR-002 Phase 5 ledger
+
+on:
+  push:
+    branches:
+      - 002-durable-run-ledger
+
+permissions:
+  contents: write
+
+jobs:
+  record-phase5:
+    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): record phase5 ledger') }}"
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Record Phase 5 verification and activate Phase 6
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          tasks = Path('specs/002-durable-run-ledger/tasks.md')
+          text = tasks.read_text()
+          for task in range(35, 45):
+              pattern = rf'(?m)^- \[ \] T{task:03d} '
+              text, count = re.subn(pattern, f'- [x] T{task:03d} ', text)
+              if count != 1:
+                  raise SystemExit(f'T{task:03d} checkbox replacement count={count}')
+          tasks.write_text(text)
+
+          status = Path('specs/002-durable-run-ledger/STATUS.md')
+          text = status.read_text()
+          marker = '## Current implementation position\n'
+          if text.count(marker) != 1:
+              raise SystemExit('current position marker mismatch')
+          phase5 = '''## Phase 5 — VERIFIED_ON_BRANCH\n\nT035–T044 are complete on the exact verified Phase 5 head:\n\n```text\nexact head  90dfb87a2b17ba749663d999c4659ad4244bd131\nCI run      33145935409 — SUCCESS\njob         run-ledger / 98766883647 — SUCCESS\n```\n\nThe exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests, ECR-001 regression targets, explicit ECR-002 migration/SQLite store/crash-recovery targets, rustdoc, offline replay, and both boundary suites.\n\nPhase 5 establishes WAL + FULL SQLite configuration with read-back, deterministic STRICT schema v1 and append-only authoritative events, transactional schema handling, Immediate expected-head append, reducer-before-commit validation, strict authoritative replay, rebuildable projections, synthetic content-addressed blobs, mutation/corruption rejection, and process-crash durability evidence.\n\n'''
+          text = text.replace(marker, phase5 + marker, 1)
+          old_position = '''Phase 1 T001–T008  VERIFIED_ON_BRANCH\nPhase 2 T009–T018  VERIFIED_ON_BRANCH\nPhase 3 T019–T026  VERIFIED_ON_BRANCH\nPhase 4 T027–T034  VERIFIED_ON_BRANCH\nPhase 5 T035–T044  ACTIVE\nPhase 6 T045–T051  blocked by Phase 5 exact-head verification\nPhase 7 T052–T059  blocked\nPhase 8 T060–T066  blocked\nPhase 9 T067–T073  blocked\n'''
+          new_position = '''Phase 1 T001–T008  VERIFIED_ON_BRANCH\nPhase 2 T009–T018  VERIFIED_ON_BRANCH\nPhase 3 T019–T026  VERIFIED_ON_BRANCH\nPhase 4 T027–T034  VERIFIED_ON_BRANCH\nPhase 5 T035–T044  VERIFIED_ON_BRANCH\nPhase 6 T045–T051  ACTIVE\nPhase 7 T052–T059  blocked by Phase 6 exact-head verification\nPhase 8 T060–T066  blocked\nPhase 9 T067–T073  blocked\n'''
+          if text.count(old_position) != 1:
+              raise SystemExit('current position block mismatch')
+          text = text.replace(old_position, new_position, 1)
+          old_work = '''T035 SQLite open/configuration + pragma read-back\nT036 deterministic STRICT schema v1 + append-only triggers\nT037 schema-version create/reject/migration fixtures\nT038 ExpectedRunHead + Immediate atomic append\nT039 reducer validation before commit + atomic projection\nT040 strict ordered history load + chain verification\nT041 projection delete/rebuild equivalence\nT042 synthetic content-addressed blob put/get + storage hook\nT043 mutation/corruption rejection tests\nT044 process-crash persistence + WAL/FULL evidence\n'''
+          new_work = '''T045 durable prepare_attempt store API\nT046 exact-bound record_receipt store API\nT047 recovery scan + explicit recovery-boundary append\nT048 ECR-001-preserving retry guard + unresolved blind-retry block\nT049 crash matrix A–D\nT050 multiple-attempt/one-action distinctness + receipt cross-bind rejection\nT051 two-connection expected-head concurrency\n'''
+          if text.count(old_work) != 1:
+              raise SystemExit('immediate work block mismatch')
+          status.write_text(text.replace(old_work, new_work, 1))
+          PY
+      - name: Commit ledger and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/ecr-002-phase5-ledger.yml
+          python3 - <<'PY'
+          import subprocess
+          allowed = {
+              '.github/workflows/ecr-002-phase5-ledger.yml',
+              'specs/002-durable-run-ledger/STATUS.md',
+              'specs/002-durable-run-ledger/tasks.md',
+          }
+          changed = {line[3:] for line in subprocess.check_output(['git','status','--porcelain=v1'], text=True).splitlines() if line}
+          if changed != allowed:
+              raise SystemExit(f'unexpected changed paths: {sorted(changed)}')
+          PY
+          git config user.name 'Abdulaziz M. Shehri'
+          git config user.email 'alshehriofficial@gmail.com'
+          git add -A
+          git commit -m 'docs(run): record phase5 exact-head verification'
+          git push origin HEAD:002-durable-run-ledger
