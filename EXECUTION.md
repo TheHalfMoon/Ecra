@@ -36,8 +36,11 @@ Planning-head ECR-001 CI: 33158268342 — SUCCESS
 Planning-head ECR-002 CI: 33158268371 — SUCCESS
 Implementation branch: 031-identity-trust-root
 Implementation PR: #4 — DRAFT
-Current phase: Phase 1 — T001–T010
-Current task frontier: T001 dependency/license/advisory/MSRV review, then T002–T008
+Current phase: Phase 1 closure convergence — T001–T010 complete; Phase 2 blocked on final exact-head gate
+Phase 1 verified head: 0289596bb7cdbb81d5f03c445fd324e985294143
+Phase 1 ECR-031 CI: 33161529028 / job 98816955646 — SUCCESS
+Phase 1 Cargo.lock SHA-256: 5bd1b14d1643ff59492bafb7c6195b270cfc1424832788ad8078e62f22d907bc
+Current task frontier: final record-only Phase 1 convergence CI, then T011
 Analyze Pass 1: 44e85aa9ccd28e185a5761889aa12b50459f286e — PLANNING_REWORK_REQUIRED
 Analyze Pass 2: a3c7d563c139c65886f169f9181c07a997038f1f — ZERO_BLOCKING_PLANNING_DRIFT_FOUND
 Requirements checklist: PASS_FOR_ANALYZE_PASS_2

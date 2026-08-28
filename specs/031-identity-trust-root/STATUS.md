@@ -107,7 +107,7 @@ analyze.md                      Pass 2 ZERO_BLOCKING_PLANNING_DRIFT_FOUND
 
 ## Phase 1 materialized state
 
-The Phase 1 implementation surface is now present, but it is **not yet declared T009 PASS** until a permanent ECR-031 workflow succeeds on the exact current head.
+Phase 1 T001–T010 is complete against the verified implementation head `0289596bb7cdbb81d5f03c445fd324e985294143`. A final record-only convergence head must still pass the permanent ECR-031 workflow before semantic Phase 2 implementation begins.
 
 ```text
 T001  dependency/version/license/advisory/MSRV review recorded
@@ -118,8 +118,8 @@ T005  scripts/check-identity-deps.sh materialized
 T006  .github/workflows/ecr-031.yml materialized as trusted push-only branch/main workflow
 T007  explicit ECR-031 phase-owned target hooks materialized; targets become mandatory when their owning task creates the test file
 T008  Rust/Cargo, lock digest, manifest feature assertions and cargo-tree evidence materialized
-T009  PENDING exact-head permanent ECR-031 CI
-T010  PENDING exact-head dependency/license/native-boundary disposition after T009
+T009  COMPLETE — exact-head ECR-031 CI 33161529028 / job 98816955646 SUCCESS on 0289596bb7cdbb81d5f03c445fd324e985294143
+T010  COMPLETE — locked dependency/license/native-boundary disposition recorded; Cargo.lock SHA-256 5bd1b14d1643ff59492bafb7c6195b270cfc1424832788ad8078e62f22d907bc
 ```
 
 Lock generation evidence:
@@ -134,10 +134,23 @@ The temporary helper workflow is not part of the permanent trust surface.
 
 ## Current execution frontier
 
-1. require the permanent `.github/workflows/ecr-031.yml` to run and succeed on the exact current branch head with build/fmt/strict Clippy/workspace tests/rustdoc/offline, ECR-001/ECR-002 regressions, ECR-031 boundaries and dependency/toolchain evidence;
-2. if the run fails, repair the exact failing step without weakening a gate;
-3. after exact-head success, complete T009 and record T010 locked dependency/license/native-boundary evidence in this status and `research/donor-license-ledger.md`;
-4. synchronize `tasks.md` Phase 1 checkboxes only to evidence actually satisfied;
-5. immediately begin T011 and continue Phase 2 in dependency order.
+1. run permanent ECR-031 CI on the record-only Phase 1 ledger-convergence head;
+2. require terminal `completed/success` on that exact head before semantic implementation;
+3. after the closure-head gate succeeds, begin T011 and continue Phase 2 strictly in dependency order;
+4. any dependency/feature/native-backend change requires a fresh reviewed disposition and exact-head evidence.
 
-No task is marked complete because code merely exists. `VERIFIED_ON_BRANCH` will not be treated as `CLOSED_CANONICAL`.
+## Phase 1 verified closure evidence
+
+```text
+VERIFIED_PHASE1_HEAD      0289596bb7cdbb81d5f03c445fd324e985294143
+ECR031_CI_RUN             33161529028
+ECR031_CI_JOB             98816955646
+ECR031_CI_RESULT          SUCCESS
+CARGO_LOCK_SHA256         5bd1b14d1643ff59492bafb7c6195b270cfc1424832788ad8078e62f22d907bc
+RUST_TOOLCHAIN            1.98.0
+DIRECT_V1_DEPENDENCIES    ecra-core, ed25519-dalek=3.0.0, chacha20poly1305=0.11.0, hkdf=0.13.0, sha2=0.11.0, zeroize=1.9.0, getrandom=0.4.3
+MACOS_NATIVE_DEPENDENCY   security-framework=3.7.0, target-specific, default-features=false, OSX_10_15
+WINDOWS_LINUX_BACKENDS    not adopted / not verified
+```
+
+The exact-head run passed stale-lock rejection, locked workspace build, rustfmt, strict Clippy, workspace tests, ECR-001/ECR-002 regressions, ECR-031 phase hooks, rustdoc, offline replay, core/run/identity boundary scripts, and dependency/toolchain evidence. This closes only the Phase 1 workspace/dependency/CI gate; it does not claim semantic identity, envelope, key-lifecycle, or native Keychain behavior is implemented.

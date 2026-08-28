@@ -242,3 +242,28 @@ Before a candidate becomes a locked dependency:
 ## Current Authorization
 
 ECR-001 remains authorized only for its locked trusted-domain dependency set. ECR-002 is additionally authorized for the locked `ecra-run` dependency delta recorded above, including the bounded bundled-SQLite native boundary and Stored-only ZIP substrate. ECR-031 T001 has authorized only the accepted candidate/direct-feature set recorded above for Phase 1 adoption; those candidates are not `LOCKED_DEPENDENCY` until the generated lockfile and exact-head T009/T010 evidence converge. No authorization permits copied donor source, ambient network/provider execution, downstream sensitive-state persistence, general authorization/declassification policy, or independent verification/reconciliation behavior.
+
+## ECR-031 Phase 1 Locked Dependency Evidence
+
+The accepted T001 candidates were promoted to the ECR-031 v1 Phase 1 locked dependency set only after Cargo generated the committed lock graph and the permanent workflow passed on exact head `0289596bb7cdbb81d5f03c445fd324e985294143` in ECR-031 CI run `33161529028`, job `98816955646`.
+
+```text
+Cargo.lock SHA-256        5bd1b14d1643ff59492bafb7c6195b270cfc1424832788ad8078e62f22d907bc
+rustc / cargo             repository-pinned 1.98.0
+ed25519-dalek             =3.0.0, default-features=false, fast+zeroize
+chacha20poly1305          =0.11.0, default-features=false, alloc+zeroize
+hkdf                      =0.13.0, default-features=false
+sha2                      =0.11.0, default-features=false
+zeroize                   =1.9.0, default-features=false, alloc
+getrandom                 =0.4.3, default-features=false
+security-framework        =3.7.0, macOS target only, default-features=false, OSX_10_15
+security-framework-sys    2.17.0, transitive native/FFI boundary
+core-foundation           0.10.1, transitive Apple framework wrapper
+core-foundation-sys       0.8.7, transitive native/FFI boundary
+```
+
+`security-framework` / `security-framework-sys` and their CoreFoundation bridge remain reviewed dependency-owned Apple native/FFI boundaries; Ecra-authored `ecra-identity` Rust remains `#![forbid(unsafe_code)]`. No Windows DPAPI or Linux Secret Service backend dependency was adopted. `rand`/`rand_chacha` may appear elsewhere in workspace dev/test trees through the pre-existing ECR-001 `proptest` dev dependency, but they are absent from the normal `ecra-identity` dependency tree and are not an ECR-031 production RNG surface. No model/browser/network/protocol/policy/process framework entered the allowed identity runtime surface.
+
+Any future dependency, feature, native-boundary, or platform-backend change requires a new review and exact-head evidence rather than inheriting this disposition.
+
+**T010 disposition:** `LOCKED_DEPENDENCY_FOR_ECR031_V1_PHASE1`.

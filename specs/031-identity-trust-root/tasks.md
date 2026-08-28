@@ -1,23 +1,23 @@
 # Tasks: Identity, Trust Root & Sensitive Storage Foundations
 
 **Feature:** ECR-031  
-**Status:** TASKS_READY  
+**Status:** IMPLEMENTING  
 **Dependencies:** ECR-001/ECR-002 `CLOSED_CANONICAL`  
 **Analyze:** Pass 2 `ZERO_BLOCKING_PLANNING_DRIFT_FOUND`; implementation branch requires exact green synchronized planning head.  
 **Execution rule:** `[x]` requires the linked requirement/evidence, not merely compiling code. `VERIFIED_ON_BRANCH` is not `CLOSED_CANONICAL`.
 
 ## Phase 1 — Workspace, dependency and CI boundaries
 
-- [ ] **T001** Re-verify exact candidate dependency versions, features, licenses, advisories and MSRV immediately before adoption; record accepted/rejected candidates. **Paths:** `specs/031-identity-trust-root/research.md`, `research/donor-license-ledger.md`. **FR-052, SC-015**
-- [ ] **T002** Add one `crates/ecra-identity` workspace crate depending on `ecra-core` only initially; add crate-level `#![forbid(unsafe_code)]` and architecture/misuse docs. **Paths:** `Cargo.toml`, `crates/ecra-identity/Cargo.toml`, `crates/ecra-identity/src/lib.rs`, `crates/ecra-identity/README.md`. **FR-001, FR-047, FR-048, FR-053**
-- [ ] **T003** Add only accepted minimal crypto dependencies/features; do not add Windows/Linux platform crates unless the corresponding backend is implemented in this v1 branch. **Paths:** `crates/ecra-identity/Cargo.toml`, `Cargo.lock`. **FR-052**
-- [ ] **T004** Add `scripts/check-identity-unsafe.sh` proving no Ecra-authored unsafe and documenting reviewed native dependency boundary. **Path:** `scripts/check-identity-unsafe.sh`. **FR-053, SC-014**
-- [ ] **T005** Add `scripts/check-identity-deps.sh` allowlisting only core/serialization/crypto/native-backend dependencies and rejecting model/browser/network/protocol/policy crates. **Path:** `scripts/check-identity-deps.sh`. **FR-047, FR-048, SC-014**
-- [ ] **T006** Add trusted push-only `.github/workflows/ecr-031.yml` for `031-identity-trust-root` and `main`, preserving ECR-001/ECR-002 regressions and self-hosted trust posture. **Path:** `.github/workflows/ecr-031.yml`. **SC-013, SC-014**
-- [ ] **T007** Add explicit ECR-031 bootstrap/contract/validation/issuance/lifecycle/envelope/anchor/redaction/backend/macOS targets to the workflow; no generic workspace-only green gate. **Path:** `.github/workflows/ecr-031.yml`. **SC-001–SC-016**
-- [ ] **T008** Add dependency/toolchain evidence output and `cargo tree -p ecra-identity` to CI. **Path:** `.github/workflows/ecr-031.yml`. **FR-052, SC-015**
-- [ ] **T009** Verify the first workspace/dependency head passes build/fmt/Clippy/tests/rustdoc/offline plus ECR-001/ECR-002 gates before semantic implementation. **Path:** `specs/031-identity-trust-root/STATUS.md`. **SC-013**
-- [ ] **T010** Record exact first-head dependency/license/native-boundary disposition before moving to primitives. **Paths:** `research/donor-license-ledger.md`, `specs/031-identity-trust-root/STATUS.md`. **SC-015**
+- [x] **T001** Re-verify exact candidate dependency versions, features, licenses, advisories and MSRV immediately before adoption; record accepted/rejected candidates. **Paths:** `specs/031-identity-trust-root/research.md`, `research/donor-license-ledger.md`. **FR-052, SC-015**
+- [x] **T002** Add one `crates/ecra-identity` workspace crate depending on `ecra-core` only initially; add crate-level `#![forbid(unsafe_code)]` and architecture/misuse docs. **Paths:** `Cargo.toml`, `crates/ecra-identity/Cargo.toml`, `crates/ecra-identity/src/lib.rs`, `crates/ecra-identity/README.md`. **FR-001, FR-047, FR-048, FR-053**
+- [x] **T003** Add only accepted minimal crypto dependencies/features; do not add Windows/Linux platform crates unless the corresponding backend is implemented in this v1 branch. **Paths:** `crates/ecra-identity/Cargo.toml`, `Cargo.lock`. **FR-052**
+- [x] **T004** Add `scripts/check-identity-unsafe.sh` proving no Ecra-authored unsafe and documenting reviewed native dependency boundary. **Path:** `scripts/check-identity-unsafe.sh`. **FR-053, SC-014**
+- [x] **T005** Add `scripts/check-identity-deps.sh` allowlisting only core/serialization/crypto/native-backend dependencies and rejecting model/browser/network/protocol/policy crates. **Path:** `scripts/check-identity-deps.sh`. **FR-047, FR-048, SC-014**
+- [x] **T006** Add trusted push-only `.github/workflows/ecr-031.yml` for `031-identity-trust-root` and `main`, preserving ECR-001/ECR-002 regressions and self-hosted trust posture. **Path:** `.github/workflows/ecr-031.yml`. **SC-013, SC-014**
+- [x] **T007** Add explicit ECR-031 bootstrap/contract/validation/issuance/lifecycle/envelope/anchor/redaction/backend/macOS targets to the workflow; no generic workspace-only green gate. **Path:** `.github/workflows/ecr-031.yml`. **SC-001–SC-016**
+- [x] **T008** Add dependency/toolchain evidence output and `cargo tree -p ecra-identity` to CI. **Path:** `.github/workflows/ecr-031.yml`. **FR-052, SC-015**
+- [x] **T009** Verify the first workspace/dependency head passes build/fmt/Clippy/tests/rustdoc/offline plus ECR-001/ECR-002 gates before semantic implementation. **Path:** `specs/031-identity-trust-root/STATUS.md`. **SC-013**
+- [x] **T010** Record exact first-head dependency/license/native-boundary disposition before moving to primitives. **Paths:** `research/donor-license-ledger.md`, `specs/031-identity-trust-root/STATUS.md`. **SC-015**
 
 ## Phase 2 — IDs, errors, algorithms and strict wire primitives
 
