@@ -1,0 +1,79 @@
+name: ECR-031 T046 convergence
+on:
+  push:
+    branches: [031-identity-trust-root]
+permissions:
+  contents: write
+concurrency:
+  group: ecr-031-t046-converge
+  cancel-in-progress: true
+jobs:
+  converge-t046:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Converge T046 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "b4350abfd887248390b825d14402478a6a9cd9f4"
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('crates/ecra-identity/src/envelope.rs')
+          s = p.read_text()
+          s = s.replace(
+              'pub const PROTECTED_ENVELOPE_HKDF_SALT_DOMAIN: &[u8] =\n    b"ecra.protected-envelope-hkdf-salt.v1\\n";',
+              'pub const PROTECTED_ENVELOPE_HKDF_SALT_DOMAIN: &[u8] = b"ecra.protected-envelope-hkdf-salt.v1\\n";'
+          )
+          s = s.replace(
+              'pub(crate) struct DerivedEnvelopeKey(Zeroizing<[u8; PROTECTED_ENVELOPE_KEY_BYTES]>);',
+              '#[allow(dead_code)]\npub(crate) struct DerivedEnvelopeKey(Zeroizing<[u8; PROTECTED_ENVELOPE_KEY_BYTES]>);'
+          )
+          s = s.replace(
+              'impl DerivedEnvelopeKey {\n    #[must_use]\n    pub(crate) fn as_bytes',
+              'impl DerivedEnvelopeKey {\n    #[must_use]\n    #[allow(dead_code)]\n    pub(crate) fn as_bytes'
+          )
+          s = s.replace(
+              '#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]\nenum EnvelopeObjectDomain',
+              '#[allow(dead_code)]\n#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]\nenum EnvelopeObjectDomain'
+          )
+          s = s.replace(
+              '#[derive(Serialize)]\nstruct DerivedEnvelopeKeyInfo',
+              '#[allow(dead_code)]\n#[derive(Serialize)]\nstruct DerivedEnvelopeKeyInfo'
+          )
+          s = s.replace(
+              'pub(crate) fn derive_envelope_key(',
+              '#[allow(dead_code)]\npub(crate) fn derive_envelope_key('
+          )
+          s = s.replace(
+              'fn envelope_hkdf_salt(key_ref: EnvelopeKeyRef)',
+              '#[allow(dead_code)]\nfn envelope_hkdf_salt(key_ref: EnvelopeKeyRef)'
+          )
+          s = s.replace(
+              'fn envelope_hkdf_info(\n',
+              '#[allow(dead_code)]\nfn envelope_hkdf_info(\n'
+          )
+          p.write_text(s)
+          PY
+          cargo fmt --all
+          cargo build --workspace --locked
+          cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+          cargo test --workspace --locked
+          cargo test --doc --workspace --locked
+          cargo test --workspace --locked --offline
+          ./scripts/check-core-boundaries.sh
+          ./scripts/check-core-deps.sh
+          ./scripts/check-run-boundaries.sh
+          ./scripts/check-run-deps.sh
+          ./scripts/check-identity-unsafe.sh
+          ./scripts/check-identity-deps.sh
+          git diff --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add crates/ecra-identity/src/envelope.rs
+          git commit -m "style(identity): converge T046 derivation source"
+          git rm .github/workflows/ecr-031-t046-converge.yml
+          git commit -m "ci(identity): remove T046 convergence helper"
+          git push origin HEAD:031-identity-trust-root
