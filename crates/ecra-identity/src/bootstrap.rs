@@ -81,9 +81,8 @@ impl EnrollmentRecord {
 
 /// Identity fields embedded in the authenticated protected trust-state payload.
 ///
-/// The type accepts only already-typed opaque IDs. OS usernames, email
-/// addresses, display labels, filesystem paths and protocol subject strings
-/// have no conversion path into this schema.
+/// The type accepts only already-typed opaque IDs. Free-form account/session
+/// metadata has no conversion path into this schema.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProtectedEnrollmentV1 {
