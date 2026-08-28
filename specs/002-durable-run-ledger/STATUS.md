@@ -106,6 +106,24 @@ The exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests
 
 Phase 6 establishes durable prepare-before-effect guards, exact-bound receipt persistence, recovery scanning plus explicit recovery boundaries, ECR-001-preserving retry refusal, crash matrix A–D with UNKNOWN/no-fabrication evidence, distinct attempts for one action, and two-connection expected-head concurrency where only one competing append succeeds.
 
+## Phase 7 — VERIFIED_ON_BRANCH
+
+T052–T059 are complete on the exact verified Phase 7 head:
+
+```text
+implementation commit  4cf186372d27e90ad78b4e5e22c28b390e01da89
+exact verified head    ff4031302e30a46d3d15d2928548f7e8c19e5d9c
+focused helper run     33151102307 — SUCCESS
+CI run                 33151219953 — SUCCESS
+job                    run-ledger / 98783466698 — SUCCESS
+```
+
+The permanent exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, explicit ECR-002 event/reducer/attempt/budget/migration/SQLite/crash/archive/boundaries/portability targets, rustdoc, offline replay, and both dependency/unsafe boundary suites.
+
+Phase 7 establishes the strict deterministic Stored-only `.ecra` profile, canonical manifest/events/blobs ordering and metadata, hard parser limits, path/feature/duplicate rejection, manifest entry whitelisting, ContentDigest and LedgerDigest validation, reducer validation before accepted import, deterministic golden bytes/hash, malicious archive corpus, synthetic-only interchange, and proof that live SQLite/WAL/SHM bytes are never exported. ZIP central-directory duplicate collapse is fail-closed before manifest parsing by cross-checking the EOCD-declared entry count against the retained archive entry set.
+
+Temporary Phase 7 helper workflow/materializer files were removed before the stable implementation commit and are absent from the branch.
+
 ## Current implementation position
 
 ```text
@@ -115,24 +133,23 @@ Phase 3 T019–T026  VERIFIED_ON_BRANCH
 Phase 4 T027–T034  VERIFIED_ON_BRANCH
 Phase 5 T035–T044  VERIFIED_ON_BRANCH
 Phase 6 T045–T051  VERIFIED_ON_BRANCH
-Phase 7 T052–T059  ACTIVE
-Phase 8 T060–T066  blocked by Phase 7 exact-head verification
-Phase 9 T067–T073  blocked
+Phase 7 T052–T059  VERIFIED_ON_BRANCH
+Phase 8 T060–T066  ACTIVE
+Phase 9 T067–T073  blocked by Phase 8 exact-head verification
 ```
 
-Phase 7 semantic mutation starts only after a full exact-head ECR-002 gate passes on this Phase 6 ledger state.
+Phase 8 semantic mutation starts only after a full exact-head ECR-002 gate passes on this Phase 7 ledger state.
 
 Immediate work:
 
 ```text
-T052 strict archive manifest/path/metadata model + hard limits
-T053 deterministic Stored-only writer
-T054 archive reader safety/profile preflight
-T055 manifest whitelist + digest/event/ledger/reducer validation
-T056 deterministic export golden/hash
-T057 malicious archive corpus
-T058 malformed manifest/event/content/ledger failures
-T059 prove SQLite/WAL are never exported + synthetic-only fixtures
+T060 production-source purity/network/provider boundary scan
+T061 prove ecra-core dependency/zero-I/O/zero-unsafe gates remain green
+T062 prove ecra-run unsafe/dependency/native SQLite boundary gates
+T063 LF/CRLF/JSON portability + deterministic reducer/archive output
+T064 synthetic fixture and no-overclaim documentation audit
+T065 run architecture map + misuse warnings
+T066 full exact-head quickstart/dependency/license/SQLite/archive configuration evidence
 ```
 
 ## Active implementation clarification
