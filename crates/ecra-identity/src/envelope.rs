@@ -48,6 +48,11 @@ impl SensitiveBytes {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+
+    #[must_use]
+    pub(crate) fn as_slice(&self) -> &[u8] {
+        self.0.as_slice()
+    }
 }
 
 impl fmt::Debug for SensitiveBytes {
