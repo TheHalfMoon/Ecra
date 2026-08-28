@@ -127,9 +127,8 @@ fn backend_capability_surface_carries_no_secret_material() {
 
 #[test]
 fn persisted_envelope_metadata_excludes_all_secret_sentinels() {
-    let persisted = include_bytes!(
-        "../../../contracts/ecra-identity-v1/expected/protected-envelope-v1.json"
-    );
+    let persisted =
+        include_bytes!("../../../contracts/ecra-identity-v1/expected/protected-envelope-v1.json");
 
     for sentinel in SENSITIVE_SENTINELS {
         assert!(
