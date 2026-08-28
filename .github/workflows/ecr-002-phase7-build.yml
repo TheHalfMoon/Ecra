@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-phase7:
-    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): preserve phase7 duplicate error type') }}"
+    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): diagnose phase7 duplicate parser error') }}"
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -90,7 +90,13 @@ jobs:
               '    }',
               '    assert_eq!(replacements, 2, "local and central ZIP names must both be patched");',
               '    let error = read_ecra(&duplicate).expect_err("duplicate entry must fail");',
-              '    assert_eq!(error.code(), RunErrorCode::ArchiveDuplicateEntry);',
+              '    assert_eq!(',
+              '        error.code(),',
+              '        RunErrorCode::ArchiveDuplicateEntry,',
+              '        "duplicate parser error: category={:?} message={:?}",',
+              '        error.category(),',
+              '        error.message()',
+              '    );',
           ])
           count = text.count(old)
           if count != 1:
