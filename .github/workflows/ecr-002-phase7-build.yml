@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-phase7:
-    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): repair phase7 zip metadata tests') }}"
+    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): repair phase7 duplicate corpus') }}"
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -50,12 +50,40 @@ jobs:
 
           test = Path('crates/ecra-run/tests/archive.rs')
           text = test.read_text()
-          old = 'assert!(file.extra_data().is_empty());'
-          new = 'assert!(file.extra_data().is_none_or(|data| data.is_empty()));'
-          count = text.count(old)
-          if count != 1:
-              raise SystemExit(f'expected exactly one archive test repair site, found {count}')
-          test.write_text(text.replace(old, new, 1))
+          repairs = [
+              (
+                  'assert!(file.extra_data().is_empty());',
+                  'assert!(file.extra_data().is_none_or(|data| data.is_empty()));',
+              ),
+              (
+                  '''    let duplicate = zip_entries(&[("manifest.v1.json", b"{}"), ("manifest.v1.json", b"{}")]);
+    let error = read_ecra(&duplicate).expect_err("duplicate entry must fail");
+    assert_eq!(error.code(), RunErrorCode::ArchiveDuplicateEntry);''',
+                  '''    let mut duplicate = zip_entries(&[("manifest.v1.json", b"{}"), ("manifest.v2.json", b"{}")]);
+    let old_name = b"manifest.v2.json";
+    let new_name = b"manifest.v1.json";
+    let mut replacements = 0_usize;
+    let mut index = 0_usize;
+    while index + old_name.len() <= duplicate.len() {
+        if &duplicate[index..index + old_name.len()] == old_name {
+            duplicate[index..index + old_name.len()].copy_from_slice(new_name);
+            replacements += 1;
+            index += old_name.len();
+        } else {
+            index += 1;
+        }
+    }
+    assert_eq!(replacements, 2, "local and central ZIP names must both be patched");
+    let error = read_ecra(&duplicate).expect_err("duplicate entry must fail");
+    assert_eq!(error.code(), RunErrorCode::ArchiveDuplicateEntry);''',
+              ),
+          ]
+          for old, new in repairs:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'expected exactly one archive test repair site for {old[:48]!r}, found {count}')
+              text = text.replace(old, new, 1)
+          test.write_text(text)
           PY
           cargo fmt --all
       - name: Compile and lint archive candidate
