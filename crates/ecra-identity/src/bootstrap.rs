@@ -235,7 +235,7 @@ pub(crate) fn bootstrap_or_reopen_local_principal(
 
     let mut assertion_seed = Zeroizing::new([0_u8; SOFTWARE_SECRET_BYTES]);
     random.fill(&mut *assertion_seed)?;
-    let signing_key = SigningKey::from_bytes(&*assertion_seed);
+    let signing_key = SigningKey::from_bytes(&assertion_seed);
     let assertion_signing_ref = TrustBackendSecretRef::new(
         trust_root_id,
         assertion_signing_key_id,
