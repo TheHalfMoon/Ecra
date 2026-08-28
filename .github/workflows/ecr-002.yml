@@ -57,6 +57,8 @@ jobs:
           cargo test -p ecra-run --test migration --locked
           cargo test -p ecra-run --test sqlite_store --locked
           cargo test -p ecra-run --test crash_recovery --locked
+          cargo test -p ecra-run --test archive --locked
+          cargo test -p ecra-run --test boundaries --locked
           cargo test -p ecra-run --test portability --locked
           cargo test -p ecra-run --locked
       - name: Rustdoc tests
