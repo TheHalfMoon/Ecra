@@ -1,0 +1,95 @@
+name: ECR-002 Phase 4 closure ledger
+
+on:
+  push:
+    branches:
+      - 002-durable-run-ledger
+
+permissions:
+  contents: write
+
+jobs:
+  record-phase4:
+    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): record phase4 exact-head evidence') }}"
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Record Phase 4 and activate Phase 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          tasks = Path('specs/002-durable-run-ledger/tasks.md')
+          text = tasks.read_text()
+          for task in range(27, 35):
+              old = f'- [ ] T{task:03d}'
+              new = f'- [x] T{task:03d}'
+              if text.count(old) != 1:
+                  raise SystemExit(f'tasks.md expected exactly one {old}')
+              text = text.replace(old, new, 1)
+          tasks.write_text(text)
+
+          status = Path('specs/002-durable-run-ledger/STATUS.md')
+          text = status.read_text()
+          marker = '## Current implementation position\n'
+          phase4 = '''## Phase 4 — VERIFIED_ON_BRANCH\n\nT027–T034 are complete on the exact verified Phase 4 head:\n\n```text\nexact head  69f65ab5b07e6c8a0dbabec6681123c67ae01f5a\nCI run      33145231800 — SUCCESS\njob         run-ledger / 98764652133 — SUCCESS\n```\n\nThe exact-head gate passed locked build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, explicit ECR-002 event/reducer/attempt/budget/portability targets, rustdoc, offline replay, and both boundary suites.\n\nPhase 4 establishes all 14 fixed budget dimensions, strict I-JSON-safe checked accounting, remaining-budget/preflight refusal, first-crossing soft evidence, exact hard-exhaustion evidence/suspension, deterministic hard stops, and preservation of unresolved-attempt truth.\n\n'''
+          if phase4 not in text:
+              if text.count(marker) != 1:
+                  raise SystemExit('STATUS current-position marker missing')
+              text = text.replace(marker, phase4 + marker, 1)
+          old = '''Phase 1 T001–T008  VERIFIED_ON_BRANCH\nPhase 2 T009–T018  VERIFIED_ON_BRANCH\nPhase 3 T019–T026  VERIFIED_ON_BRANCH\nPhase 4 T027–T034  ACTIVE\nPhase 5 T035–T044  blocked by Phase 4 exact-head verification\nPhase 6 T045–T051  blocked\nPhase 7 T052–T059  blocked\nPhase 8 T060–T066  blocked\nPhase 9 T067–T073  blocked\n'''
+          new = '''Phase 1 T001–T008  VERIFIED_ON_BRANCH\nPhase 2 T009–T018  VERIFIED_ON_BRANCH\nPhase 3 T019–T026  VERIFIED_ON_BRANCH\nPhase 4 T027–T034  VERIFIED_ON_BRANCH\nPhase 5 T035–T044  ACTIVE\nPhase 6 T045–T051  blocked by Phase 5 exact-head verification\nPhase 7 T052–T059  blocked\nPhase 8 T060–T066  blocked\nPhase 9 T067–T073  blocked\n'''
+          if text.count(old) != 1:
+              raise SystemExit('STATUS phase-position block missing')
+          text = text.replace(old, new, 1)
+          old_work = '''T027 exact BudgetUsage/RunBudget primitives\nT028 strict budget validation\nT029 checked cumulative accounting and remaining budget\nT030 known-upper-bound preflight refusal\nT031 first soft crossing + exact hard exhaustion evidence\nT032 all-dimension boundary/property coverage\nT033 deterministic hard-budget loop stop\nT034 preserve unresolved-attempt truth across exhaustion\n'''
+          new_work = '''T035 SQLite open/configuration + pragma read-back\nT036 deterministic STRICT schema v1 + append-only triggers\nT037 schema-version create/reject/migration fixtures\nT038 ExpectedRunHead + Immediate atomic append\nT039 reducer validation before commit + atomic projection\nT040 strict ordered history load + chain verification\nT041 projection delete/rebuild equivalence\nT042 synthetic content-addressed blob put/get + storage hook\nT043 mutation/corruption rejection tests\nT044 process-crash persistence + WAL/FULL evidence\n'''
+          if text.count(old_work) != 1:
+              raise SystemExit('STATUS immediate-work block missing')
+          status.write_text(text.replace(old_work, new_work, 1))
+
+          execution = Path('EXECUTION.md')
+          text = execution.read_text()
+          old_head = '''Phase 3 verified head: ac45fcc835674341ae6b9ad18484e6dacda36809\nPhase 3 CI: 33143735332 — SUCCESS\nCurrent phase: Phase 4 T027–T034\n'''
+          new_head = '''Phase 3 verified head: ac45fcc835674341ae6b9ad18484e6dacda36809\nPhase 3 CI: 33143735332 — SUCCESS\nPhase 4 verified head: 69f65ab5b07e6c8a0dbabec6681123c67ae01f5a\nPhase 4 CI: 33145231800 — SUCCESS\nCurrent phase: Phase 5 T035–T044\n'''
+          if text.count(old_head) != 1:
+              raise SystemExit('EXECUTION current-head block missing')
+          text = text.replace(old_head, new_head, 1)
+          old_order = '''T027 exact BudgetUsage / BudgetLimit / RunBudget\nT028 malformed/duplicate/out-of-range rejection\nT029 checked accounting and remaining budget\nT030 known-upper-bound preflight refusal\nT031 first soft crossing and exact hard exhaustion semantics\nT032 all 14 dimensions boundary/property tests\nT033 deterministic recursive/tool-loop hard stop\nT034 preserve unresolved attempt/retry truth under exhaustion\n'''
+          new_order = '''T035 SQLite open/configuration + verified pragmas\nT036 deterministic STRICT v1 schema and append-only triggers\nT037 user_version create/reject/migration fixtures\nT038 ExpectedRunHead + BEGIN IMMEDIATE atomic append\nT039 validate envelope/reducer before authoritative commit\nT040 ordered load + full ledger-chain verification\nT041 projection rebuild from authoritative events\nT042 synthetic content-addressed blobs + storage budget hook\nT043 mutation/corruption rejection\nT044 process-crash persistence with WAL + FULL assertion\n'''
+          if text.count(old_order) != 1:
+              raise SystemExit('EXECUTION task-order block missing')
+          text = text.replace(old_order, new_order, 1)
+          text = text.replace(
+              'Phase 5 becomes eligible only after the complete ECR-002 exact-head gate verifies Phase 4.',
+              'Phase 6 becomes eligible only after the complete ECR-002 exact-head gate verifies Phase 5.',
+              1,
+          )
+          execution.write_text(text)
+          PY
+      - name: Commit ledger update and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/ecr-002-phase4-close.yml
+          python3 - <<'PY'
+          import subprocess
+          allowed = {
+              '.github/workflows/ecr-002-phase4-close.yml',
+              'EXECUTION.md',
+              'specs/002-durable-run-ledger/STATUS.md',
+              'specs/002-durable-run-ledger/tasks.md',
+          }
+          changed = {line[3:] for line in subprocess.check_output(['git','status','--porcelain=v1'], text=True).splitlines() if line}
+          if changed != allowed:
+              raise SystemExit(f'unexpected ledger paths: {sorted(changed)}')
+          PY
+          git config user.name 'Abdulaziz M. Shehri'
+          git config user.email 'alshehriofficial@gmail.com'
+          git add -A
+          git commit -m 'docs(run): verify phase4 and start phase5'
+          git push origin HEAD:002-durable-run-ledger
