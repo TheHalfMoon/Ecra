@@ -1191,7 +1191,10 @@ mod tests {
 
         let revoked = signing_record(KeyStatus::Revoked);
         assert_eq!(
-            revoked.ensure_new_material_use_allowed().unwrap_err().code(),
+            revoked
+                .ensure_new_material_use_allowed()
+                .unwrap_err()
+                .code(),
             IdentityErrorCode::KeyRevoked
         );
         assert_eq!(
