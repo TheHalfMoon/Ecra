@@ -203,3 +203,15 @@ Copying only the main DB while a live WAL exists is invalid as export. `.ecra` i
 - broader import/export/deletion portability -> ECR-029.
 
 ECR-002 must expose durable hooks for these owners without implementing their policy prematurely.
+
+## 10. Phase 8 acceptance audit
+
+Phase 8 makes the security non-claims executable instead of relying only on prose:
+
+- `tests/boundaries.rs` scans deterministic reducer/archive production source for OS clock, random, environment, process and network dependencies;
+- the same boundary suite scans every `ecra-run/src/*.rs` module for prohibited provider/network/process call surfaces;
+- committed ECR-002 textual fixtures are scanned for high-confidence private-key, bearer-token and credential markers;
+- README/threat-model acceptance tests require the explicit statements that Actor is not Principal authentication, receipt is not verification, missing receipt remains UNKNOWN, projection is not history, LedgerDigest is not hostile-tamper protection, budget is not authority, and `.ecra` is not a protected secret container;
+- `scripts/check-core-unsafe.sh`, `scripts/check-core-deps.sh`, `scripts/check-run-unsafe.sh`, and `scripts/check-run-deps.sh` remain mandatory exact-head CI gates.
+
+These tests do not authorize real sensitive persistence, provider execution, authenticity claims, independent verification, or policy decisions. They only prove that ECR-002 stays inside its bounded local durability contract.
