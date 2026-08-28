@@ -298,6 +298,91 @@ impl ProtectedTrustStateStore {
         self.open_authenticated(backend)
     }
 
+    /// Revoke one existing generation in the authenticated protected state.
+    ///
+    /// Revocation is authoritative lifecycle state, not backend deletion. The
+    /// protected secret is intentionally left in backend custody so callers do
+    /// not confuse `revoked` with unavailable/destroyed material. An active
+    /// protected-envelope root must be rotated first because the store still
+    /// needs one active root to authenticate and publish the revocation state.
+    #[allow(dead_code)]
+    pub(crate) fn revoke_key(
+        &self,
+        backend: &impl TrustBackend,
+        random: &mut impl SecureRandom,
+        key_id: KeyId,
+        revoked_at: EpochMillis,
+    ) -> Result<AuthenticatedTrustState, IdentityError> {
+        let authenticated = self.open_authenticated(backend)?;
+        let state = authenticated.state();
+        state.validate_schema_invariants()?;
+        if revoked_at.get() < state.updated_at().get() {
+            return Err(revocation_error("revocation_timestamp_before_state"));
+        }
+
+        let target = state
+            .keys()
+            .iter()
+            .find(|key| key.key_id() == key_id)
+            .ok_or_else(|| {
+                IdentityError::new(
+                    IdentityErrorCategory::KeyState,
+                    IdentityErrorCode::KeyNotFound,
+                    Some("revocation_key"),
+                )
+            })?;
+        if matches!(target.status(), KeyStatus::Revoked) {
+            return Err(IdentityError::new(
+                IdentityErrorCategory::KeyState,
+                IdentityErrorCode::KeyRevoked,
+                Some("revocation_key"),
+            ));
+        }
+        if target.purpose() == KeyPurpose::ProtectedEnvelopeRoot
+            && matches!(target.status(), KeyStatus::Active)
+        {
+            return Err(IdentityError::new(
+                IdentityErrorCategory::KeyState,
+                IdentityErrorCode::KeyNotActive,
+                Some("revoke_active_envelope_root_requires_rotation"),
+            ));
+        }
+
+        let next_state_generation = state
+            .state_generation()
+            .checked_add(1)
+            .filter(|generation| *generation <= MAX_I_JSON_U64)
+            .ok_or_else(|| revocation_error("revocation_state_generation_overflow"))?;
+        let revoked_record = revoked_key_record(target, revoked_at)?;
+        let mut keys = Vec::with_capacity(state.keys().len());
+        for key in state.keys() {
+            if key.key_id() == key_id {
+                keys.push(revoked_record.clone());
+            } else {
+                keys.push(key.clone());
+            }
+        }
+        let mut revoked_key_ids = state.revoked_key_ids().clone();
+        if !revoked_key_ids.insert(key_id) {
+            return Err(IdentityError::new(
+                IdentityErrorCategory::KeyState,
+                IdentityErrorCode::KeyRevoked,
+                Some("revocation_set"),
+            ));
+        }
+
+        let next_state = ProtectedTrustStateV1::new(
+            state.trust_root_id(),
+            state.enrollment(),
+            next_state_generation,
+            keys,
+            revoked_key_ids,
+            revoked_at,
+        )?;
+        self.publish(backend, random, &next_state)?;
+        self.open_authenticated(backend)
+    }
+
     pub(crate) fn open_authenticated(
         &self,
         backend: &impl TrustBackend,
@@ -420,6 +505,46 @@ fn protect_rotated_secret(
     Ok(record)
 }
 
+fn revoked_key_record(record: &KeyRecord, revoked_at: EpochMillis) -> Result<KeyRecord, IdentityError> {
+    if matches!(record.status(), KeyStatus::Revoked) {
+        return Err(IdentityError::new(
+            IdentityErrorCategory::KeyState,
+            IdentityErrorCode::KeyRevoked,
+            Some("revoked_key_record"),
+        ));
+    }
+
+    match record.purpose() {
+        KeyPurpose::ProtectedEnvelopeRoot => KeyRecord::new_protected_envelope_root(
+            record.key_id(),
+            record.trust_root_id(),
+            record.generation(),
+            KeyStatus::Revoked,
+            record.created_at(),
+            record.activated_at(),
+            record.retired_at(),
+            Some(revoked_at),
+        ),
+        KeyPurpose::IdentityAssertionSigning | KeyPurpose::ProtectedAnchorSigning => {
+            let public_key = record.ed25519_public_key()?.ok_or_else(|| {
+                revocation_error("revoked_signing_key_missing_public_material")
+            })?;
+            KeyRecord::new_ed25519(
+                record.key_id(),
+                record.trust_root_id(),
+                record.purpose(),
+                record.generation(),
+                KeyStatus::Revoked,
+                public_key,
+                record.created_at(),
+                record.activated_at(),
+                record.retired_at(),
+                Some(revoked_at),
+            )
+        }
+    }
+}
+
 fn random_rotation_key_id(random: &mut impl SecureRandom) -> Result<KeyId, IdentityError> {
     let mut bytes = [0_u8; 16];
     random.fill(&mut bytes)?;
@@ -429,6 +554,14 @@ fn random_rotation_key_id(random: &mut impl SecureRandom) -> Result<KeyId, Ident
 }
 
 fn rotation_error(context: &'static str) -> IdentityError {
+    IdentityError::new(
+        IdentityErrorCategory::KeyState,
+        IdentityErrorCode::TrustSnapshotLifecycleInvalid,
+        Some(context),
+    )
+}
+
+fn revocation_error(context: &'static str) -> IdentityError {
     IdentityError::new(
         IdentityErrorCategory::KeyState,
         IdentityErrorCode::TrustSnapshotLifecycleInvalid,
@@ -1053,6 +1186,142 @@ mod tests {
             IdentityErrorCode::TrustSnapshotLifecycleInvalid
         );
         assert_eq!(backend.secrets.borrow().len(), before);
+
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn revocation_persists_authoritatively_without_deleting_backend_secret() {
+        let (directory, store) = test_store("revoke-signing");
+        let backend = rotation_backend();
+        let initial = rotation_state();
+        let signing_secret_ref = TrustBackendSecretRef::new(
+            root_id(),
+            signing_key_id(),
+            1,
+            KeyPurpose::IdentityAssertionSigning,
+        )
+        .unwrap();
+        let mut publish_random = DeterministicSecureRandom::new(vec![0x71; 12]);
+        store
+            .publish(&backend, &mut publish_random, &initial)
+            .unwrap();
+        let mut revoke_random = DeterministicSecureRandom::new(vec![0x72; 12]);
+        let authenticated = store
+            .revoke_key(
+                &backend,
+                &mut revoke_random,
+                signing_key_id(),
+                timestamp(1_300),
+            )
+            .unwrap();
+        let revoked = authenticated.state();
+        assert_eq!(revoked.state_generation(), 2);
+        assert!(revoked.revoked_key_ids().contains(&signing_key_id()));
+        let record = revoked
+            .keys()
+            .iter()
+            .find(|key| key.key_id() == signing_key_id())
+            .unwrap();
+        assert_eq!(record.status(), KeyStatus::Revoked);
+        assert_eq!(record.revoked_at(), Some(timestamp(1_300)));
+        assert_eq!(
+            revoked
+                .active_key(KeyPurpose::IdentityAssertionSigning)
+                .unwrap_err()
+                .code(),
+            IdentityErrorCode::KeyNotActive
+        );
+        assert!(backend.secrets.borrow().contains_key(&signing_secret_ref));
+
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn retired_generation_can_be_revoked_without_reactivating_it() {
+        let (directory, store) = test_store("revoke-retired");
+        let backend = rotation_backend();
+        let initial = rotation_state();
+        let mut publish_random = DeterministicSecureRandom::new(vec![0x81; 12]);
+        store
+            .publish(&backend, &mut publish_random, &initial)
+            .unwrap();
+        let mut rotation_random = DeterministicSecureRandom::new(vec![0x82; 60]);
+        let rotated = store
+            .rotate_key(
+                &backend,
+                &mut rotation_random,
+                KeyPurpose::IdentityAssertionSigning,
+                timestamp(1_300),
+            )
+            .unwrap();
+        let active_key_id = rotated
+            .state()
+            .active_key(KeyPurpose::IdentityAssertionSigning)
+            .unwrap()
+            .key_id();
+        let mut revoke_random = DeterministicSecureRandom::new(vec![0x83; 12]);
+        let revoked = store
+            .revoke_key(
+                &backend,
+                &mut revoke_random,
+                signing_key_id(),
+                timestamp(1_400),
+            )
+            .unwrap();
+        let state = revoked.state();
+        assert_eq!(state.state_generation(), 3);
+        assert_eq!(
+            state
+                .active_key(KeyPurpose::IdentityAssertionSigning)
+                .unwrap()
+                .key_id(),
+            active_key_id
+        );
+        let old = state
+            .keys()
+            .iter()
+            .find(|key| key.key_id() == signing_key_id())
+            .unwrap();
+        assert_eq!(old.status(), KeyStatus::Revoked);
+        assert_eq!(old.retired_at(), Some(timestamp(1_300)));
+        assert_eq!(old.revoked_at(), Some(timestamp(1_400)));
+        assert!(state.revoked_key_ids().contains(&signing_key_id()));
+
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn active_envelope_root_requires_rotation_before_revocation() {
+        let (directory, store) = test_store("revoke-active-root");
+        let backend = rotation_backend();
+        let initial = rotation_state();
+        let before = backend.secrets.borrow().len();
+        let mut publish_random = DeterministicSecureRandom::new(vec![0x91; 12]);
+        store
+            .publish(&backend, &mut publish_random, &initial)
+            .unwrap();
+        let mut revoke_random = DeterministicSecureRandom::new(Vec::new());
+        let error = store
+            .revoke_key(
+                &backend,
+                &mut revoke_random,
+                key_id(),
+                timestamp(1_300),
+            )
+            .unwrap_err();
+        assert_eq!(error.code(), IdentityErrorCode::KeyNotActive);
+        assert_eq!(backend.secrets.borrow().len(), before);
+        assert_eq!(
+            store
+                .open_authenticated(&backend)
+                .unwrap()
+                .state()
+                .active_key(KeyPurpose::ProtectedEnvelopeRoot)
+                .unwrap()
+                .key_id(),
+            key_id()
+        );
 
         fs::remove_dir_all(directory).unwrap();
     }
