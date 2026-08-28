@@ -307,8 +307,9 @@ pub(crate) trait TrustBackend {
 #[cfg(test)]
 mod tests {
     use super::{
-        DeterministicSecureRandom, SecureRandom, SystemSecureRandom, TrustBackendCapabilities,
-        TrustBackendKind, TrustBackendSecretRef, production_trust_backend_kind,
+        DeterministicSecureRandom, SecureRandom, SystemSecureRandom, TestTrustBackendKind,
+        TrustBackendCapabilities, TrustBackendKind, TrustBackendSecretRef,
+        production_trust_backend_kind,
     };
     use crate::error::{IdentityErrorCategory, IdentityErrorCode};
     use crate::{KeyId, KeyPurpose, TrustRootId};
@@ -343,6 +344,7 @@ mod tests {
         let source = include_str!("backend.rs");
         let production = source.split("#[cfg(test)]").next().unwrap();
         assert!(!production.contains("DeterministicSecureRandom"));
+        let _test_backend_kind = TestTrustBackendKind::InMemory;
     }
 
     #[test]
