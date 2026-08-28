@@ -81,6 +81,8 @@ pub struct EnrolledPrincipalHandle {
 }
 
 impl EnrolledPrincipalHandle {
+    // Phase 4 protected-state opening is the production caller; keep this non-public.
+    #[allow(dead_code)]
     pub(crate) fn from_verified_snapshot(snapshot: &VerifiedTrustSnapshot) -> Self {
         Self {
             principal: snapshot.principal(),

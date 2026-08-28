@@ -5,8 +5,8 @@ use ed25519_dalek::VerifyingKey;
 use serde::{Serialize, Serializer};
 
 use crate::{
-    EnrollmentId, IdentityError, IdentityErrorCategory, IdentityErrorCode, KeyId, SignatureAlgorithm,
-    TrustRootId,
+    EnrollmentId, IdentityError, IdentityErrorCategory, IdentityErrorCode, KeyId,
+    SignatureAlgorithm, TrustRootId,
 };
 
 pub const MAX_PROTECTED_TRUST_STATE_KEYS: usize = 128;
@@ -79,6 +79,8 @@ pub struct VerifiedAssertionKey {
 }
 
 impl VerifiedAssertionKey {
+    // Phase 4 authenticated trust-state parsing is the production caller.
+    #[allow(dead_code)]
     pub(crate) fn new(
         key_id: KeyId,
         generation: u64,
@@ -145,6 +147,8 @@ pub struct VerifiedTrustSnapshot {
 }
 
 impl VerifiedTrustSnapshot {
+    // Phase 4 protected-state authentication is the production caller; no public constructor.
+    #[allow(dead_code)]
     pub(crate) fn from_authenticated_parts(
         enrollment_id: EnrollmentId,
         principal: PrincipalRef,
@@ -226,7 +230,9 @@ impl VerifiedTrustSnapshot {
 
     #[must_use]
     pub fn assertion_key(&self, key_id: KeyId) -> Option<&VerifiedAssertionKey> {
-        self.assertion_keys.iter().find(|key| key.key_id() == key_id)
+        self.assertion_keys
+            .iter()
+            .find(|key| key.key_id() == key_id)
     }
 
     #[must_use]
@@ -242,6 +248,7 @@ impl VerifiedTrustSnapshot {
     }
 }
 
+#[allow(dead_code)]
 fn lifecycle_error(context: &'static str) -> IdentityError {
     IdentityError::new(
         IdentityErrorCategory::IdentityValidation,

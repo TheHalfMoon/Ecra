@@ -65,14 +65,14 @@ pub use anchor::{
     PROTECTED_ANCHOR_DOMAIN, canonical_protected_anchor_input, protected_anchor_input_digest_bytes,
 };
 pub use assertion::{
-    ActorBinding, AssertionAttributes, AssertionAudience, AssertionAudienceService, AssertionIssuer,
-    AssertionSignature, AudienceInstanceId, IDENTITY_ASSERTION_DIGEST_DOMAIN,
+    ActorBinding, AssertionAttributes, AssertionAudience, AssertionAudienceService,
+    AssertionIssuer, AssertionSignature, AudienceInstanceId, IDENTITY_ASSERTION_DIGEST_DOMAIN,
     IDENTITY_ASSERTION_SIGNING_DOMAIN, IdentityAssertionDigest, IdentityAssertionPayloadV1,
-    IdentityAssertionV1, MAX_ASSERTION_ATTRIBUTES, MAX_ASSERTION_ATTRIBUTE_KEY_BYTES,
-    MAX_ASSERTION_ATTRIBUTE_VALUE_BYTES, MAX_ASSERTION_VALIDITY_MILLIS,
-    MAX_AUDIENCE_INSTANCE_BYTES, MAX_IDENTITY_ASSERTION_WIRE_BYTES, MAX_JSON_DEPTH,
-    OnBehalfOfBinding, canonical_assertion_signing_input, identity_assertion_digest_bytes,
-    validate_collection_count, validate_json_limits,
+    IdentityAssertionV1, MAX_ASSERTION_ATTRIBUTE_KEY_BYTES, MAX_ASSERTION_ATTRIBUTE_VALUE_BYTES,
+    MAX_ASSERTION_ATTRIBUTES, MAX_ASSERTION_VALIDITY_MILLIS, MAX_AUDIENCE_INSTANCE_BYTES,
+    MAX_IDENTITY_ASSERTION_WIRE_BYTES, MAX_JSON_DEPTH, OnBehalfOfBinding,
+    canonical_assertion_signing_input, identity_assertion_digest_bytes, validate_collection_count,
+    validate_json_limits,
 };
 pub use backend::TrustBackendKind;
 pub use bootstrap::{EnrolledPrincipalHandle, EnrollmentKind, EnrollmentRecord};
@@ -87,8 +87,9 @@ pub use key::{
     TrustStateDigest, VerifiedAssertionKey, VerifiedTrustSnapshot,
 };
 pub use validation::{
-    IdentityValidationContext, ReplayMode, ReplayValidationInput, VALIDATED_IDENTITY_CONTEXT_DOMAIN,
-    ValidatedIdentityContext, ValidatedOnBehalfOf, validate_identity_assertion,
+    IdentityValidationContext, ReplayMode, ReplayValidationInput,
+    VALIDATED_IDENTITY_CONTEXT_DOMAIN, ValidatedIdentityContext, ValidatedOnBehalfOf,
+    validate_identity_assertion,
 };
 
 pub const ECR_031_CONTRACT_MAJOR: u16 = 1;

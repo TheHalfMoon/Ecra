@@ -63,6 +63,8 @@ pub struct IssuerSession {
 }
 
 impl IssuerSession {
+    // Phase 4 authenticated key opening is the production caller; keep this non-public.
+    #[allow(dead_code)]
     pub(crate) fn from_verified_state(
         handle: EnrolledPrincipalHandle,
         snapshot: &VerifiedTrustSnapshot,
@@ -155,7 +157,10 @@ impl IssuerSession {
         )?;
         let signing_input = payload.signing_input()?;
         let signature = self.signing_key.sign(&signing_input);
-        payload.into_signed(AssertionSignature::from_bytes(self.key_id, signature.to_bytes()))
+        payload.into_signed(AssertionSignature::from_bytes(
+            self.key_id,
+            signature.to_bytes(),
+        ))
     }
 }
 
@@ -182,13 +187,15 @@ mod tests {
             ),
             TrustRootId::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
             1,
-            vec![VerifiedAssertionKey::new(
-                key_id,
-                1,
-                KeyStatus::Active,
-                signing_key.verifying_key().to_bytes(),
-            )
-            .unwrap()],
+            vec![
+                VerifiedAssertionKey::new(
+                    key_id,
+                    1,
+                    KeyStatus::Active,
+                    signing_key.verifying_key().to_bytes(),
+                )
+                .unwrap(),
+            ],
             BTreeSet::new(),
             TrustStateDigest::from_bytes([9u8; 32]),
         )
@@ -244,13 +251,15 @@ mod tests {
             ),
             TrustRootId::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
             1,
-            vec![VerifiedAssertionKey::new(
-                key_id,
-                1,
-                KeyStatus::Active,
-                trusted_key.verifying_key().to_bytes(),
-            )
-            .unwrap()],
+            vec![
+                VerifiedAssertionKey::new(
+                    key_id,
+                    1,
+                    KeyStatus::Active,
+                    trusted_key.verifying_key().to_bytes(),
+                )
+                .unwrap(),
+            ],
             BTreeSet::new(),
             TrustStateDigest::from_bytes([9u8; 32]),
         )

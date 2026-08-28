@@ -1,6 +1,8 @@
 use std::{collections::BTreeMap, fmt};
 
-use ecra_core::{ActorId, EpochMillis, IdentityAssertionId, PrincipalId, SchemaVersion, to_jcs_vec};
+use ecra_core::{
+    ActorId, EpochMillis, IdentityAssertionId, PrincipalId, SchemaVersion, to_jcs_vec,
+};
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::{self, MapAccess, Visitor},
@@ -8,9 +10,8 @@ use serde::{
 use sha2::{Digest, Sha256};
 
 use crate::{
-    AssertionNonceId, DelegationId, ECR_031_CONTRACT_VERSION, IdentityError,
-    IdentityErrorCategory, IdentityErrorCode, KeyId, SignatureAlgorithm, TrustRootId,
-    validate_ecr031_version,
+    AssertionNonceId, DelegationId, ECR_031_CONTRACT_VERSION, IdentityError, IdentityErrorCategory,
+    IdentityErrorCode, KeyId, SignatureAlgorithm, TrustRootId, validate_ecr031_version,
 };
 
 pub const MAX_IDENTITY_ASSERTION_WIRE_BYTES: usize = 8 * 1024;
@@ -112,7 +113,9 @@ impl AssertionAttributes {
                 return Err(invalid_input("assertion_attribute_key"));
             }
             if value.len() > MAX_ASSERTION_ATTRIBUTE_VALUE_BYTES
-                || value.bytes().any(|byte| byte.is_ascii_control() && !byte.is_ascii_whitespace())
+                || value
+                    .bytes()
+                    .any(|byte| byte.is_ascii_control() && !byte.is_ascii_whitespace())
             {
                 return Err(invalid_input("assertion_attribute_value"));
             }
@@ -438,7 +441,10 @@ impl IdentityAssertionPayloadV1 {
         identity_assertion_digest_bytes(self).map(IdentityAssertionDigest::from_bytes)
     }
 
-    pub(crate) fn into_signed(self, signature: AssertionSignature) -> Result<IdentityAssertionV1, IdentityError> {
+    pub(crate) fn into_signed(
+        self,
+        signature: AssertionSignature,
+    ) -> Result<IdentityAssertionV1, IdentityError> {
         if signature.key_id() != self.issuer.key_id() {
             return Err(IdentityError::new(
                 IdentityErrorCategory::InvalidInput,
@@ -725,8 +731,7 @@ fn decode_signature(input: &str) -> Result<[u8; 64], IdentityError> {
 }
 
 fn base64url_encode(input: &[u8]) -> String {
-    const ALPHABET: &[u8; 64] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     let mut output = String::with_capacity(input.len().div_ceil(3) * 4);
     let mut index = 0usize;
     while index + 3 <= input.len() {

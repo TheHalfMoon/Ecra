@@ -346,8 +346,9 @@ mod tests {
 
     use super::*;
     use crate::{
-        AssertionAttributes, AssertionAudienceService, AssertionIssuanceRequest, EnrollmentId,
-        EnrolledPrincipalHandle, IssuerSession, KeyStatus, TrustStateDigest, VerifiedAssertionKey,
+        AssertionAttributes, AssertionAudienceService, AssertionIssuanceRequest,
+        EnrolledPrincipalHandle, EnrollmentId, IssuerSession, KeyStatus, TrustStateDigest,
+        VerifiedAssertionKey,
     };
 
     #[test]
@@ -361,13 +362,15 @@ mod tests {
             ),
             TrustRootId::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
             1,
-            vec![VerifiedAssertionKey::new(
-                key_id,
-                1,
-                KeyStatus::Active,
-                signing_key.verifying_key().to_bytes(),
-            )
-            .unwrap()],
+            vec![
+                VerifiedAssertionKey::new(
+                    key_id,
+                    1,
+                    KeyStatus::Active,
+                    signing_key.verifying_key().to_bytes(),
+                )
+                .unwrap(),
+            ],
             BTreeSet::new(),
             TrustStateDigest::from_bytes([9u8; 32]),
         )
