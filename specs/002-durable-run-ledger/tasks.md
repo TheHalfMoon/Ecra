@@ -1,7 +1,7 @@
 # Tasks: Durable Run, Ledger & Budgets
 
 **Feature:** ECR-002  
-**Status:** IMPLEMENTING_PHASE_9  
+**Status:** PHASE_9_FINAL_READINESS  
 **Canonical inputs:** `spec.md`, `research.md`, `data-model.md`, `contracts/run-ledger-v1.md`, `threat-model.md`, `plan.md`, `quickstart.md`, `analyze.md`, `traceability-closure.md`, `post-implementation-analyze.md`  
 **Base:** canonical `main` after ECR-001 `CLOSED_CANONICAL`
 
@@ -102,7 +102,7 @@
 - [x] T067 Map FR-001–FR-057 and SC-001–SC-016 to implementation/test/contract evidence. **Path:** `specs/002-durable-run-ledger/traceability-closure.md`. **SC-016**
 - [x] T068 Re-check constitution G1–G15 and platform risks R-006/R-019/R-033/R-039/R-042/R-052/R-053. **Path:** `specs/002-durable-run-ledger/traceability-closure.md`.
 - [x] T069 Run post-implementation analyze-equivalent consistency review; create convergence tasks for any MUST-level drift rather than hiding it. **Path:** `specs/002-durable-run-ledger/post-implementation-analyze.md`. **SC-016**
-- [ ] T070 Converge spec/data-model/contract/plan/quickstart/tasks/status/EXECUTION with exact implementation truth. **Paths:** `specs/002-durable-run-ledger/*`, `EXECUTION.md`, platform status/roadmap as lifecycle changes.
+- [x] T070 Converge spec/data-model/contract/plan/quickstart/tasks/status/EXECUTION with exact implementation truth. **Paths:** `specs/002-durable-run-ledger/*`, `EXECUTION.md`, platform status/roadmap as lifecycle changes. **Evidence:** exact convergence head `84d8cb5a8c0a28ab7adba42d2cd049e014c8f368`, CI `33153174953`, job `98789740534` — SUCCESS.
 - [ ] T071 Require complete exact-head CI on final feature head, clean review threads/checks, and no actionable blocker before merge. **SC-015**
 - [ ] T072 Merge with exact expected head using a non-rebase method; require post-merge canonical-main ECR-002 CI. **SC-015**
 - [ ] T073 Mark ECR-002 `CLOSED_CANONICAL` only after merge + post-merge evidence; update roadmap/platform status/EXECUTION and identify the next genuinely dependency-eligible slice.
