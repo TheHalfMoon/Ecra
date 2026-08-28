@@ -1,5 +1,12 @@
 use ecra_core::EpochMillis;
-use ecra_run::{RunErrorCode, RunEvent, RunEventEnvelope, RunPhase, RunReducer, SuspensionReason};
+use ecra_run::{
+    BudgetAmount, BudgetDimension, RunErrorCode, RunEvent, RunEventEnvelope, RunPhase, RunReducer,
+    SuspensionReason,
+};
+
+fn amount(value: u64) -> BudgetAmount {
+    BudgetAmount::new(value).expect("safe budget amount")
+}
 
 fn genesis() -> RunEventEnvelope {
     RunEventEnvelope::from_json_slice(include_bytes!(
@@ -35,6 +42,24 @@ fn push(history: &mut Vec<RunEventEnvelope>, next: RunEvent) {
     );
 }
 
+fn push_valid_budget_exhaustion(history: &mut Vec<RunEventEnvelope>) {
+    push(
+        history,
+        RunEvent::ResourceUsageRecorded {
+            dimension: BudgetDimension::ToolCalls,
+            amount: amount(100),
+        },
+    );
+    push(
+        history,
+        RunEvent::BudgetExhausted {
+            dimension: BudgetDimension::ToolCalls,
+            hard_limit: amount(100),
+            cumulative_usage: amount(100),
+        },
+    );
+}
+
 fn history(kinds: &[&str]) -> Vec<RunEventEnvelope> {
     let mut history = vec![genesis()];
     for kind in kinds {
@@ -46,6 +71,29 @@ fn history(kinds: &[&str]) -> Vec<RunEventEnvelope> {
 fn apply_kind(base: &[&str], candidate: &str) -> Result<RunPhase, RunErrorCode> {
     let mut history = history(base);
     let state = RunReducer::reduce(&history).expect("base state");
+
+    if candidate == "budget_exhausted" && state.phase() == RunPhase::Running {
+        push(
+            &mut history,
+            RunEvent::ResourceUsageRecorded {
+                dimension: BudgetDimension::ToolCalls,
+                amount: amount(100),
+            },
+        );
+        let charged_state = RunReducer::reduce(&history).expect("charged running state");
+        push(
+            &mut history,
+            RunEvent::BudgetExhausted {
+                dimension: BudgetDimension::ToolCalls,
+                hard_limit: amount(100),
+                cumulative_usage: amount(100),
+            },
+        );
+        return RunReducer::apply(&charged_state, history.last().expect("budget exhaustion"))
+            .map(|next| next.phase())
+            .map_err(|error| error.code());
+    }
+
     push(&mut history, event(candidate));
     RunReducer::apply(&state, history.last().expect("candidate envelope"))
         .map(|next| next.phase())
@@ -142,7 +190,8 @@ fn resumability_obeys_suspension_and_unresolved_blockers() {
         Ok(RunPhase::Running)
     );
 
-    let exhausted = history(&["run_started", "budget_exhausted"]);
+    let mut exhausted = history(&["run_started"]);
+    push_valid_budget_exhaustion(&mut exhausted);
     let exhausted_state = RunReducer::reduce(&exhausted).expect("budget suspended state");
     let mut attempt = exhausted;
     push(&mut attempt, event("run_resumed"));
