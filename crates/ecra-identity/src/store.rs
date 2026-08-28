@@ -14,7 +14,7 @@ use zeroize::Zeroizing;
 
 use crate::backend::{SecureRandom, TrustBackend, TrustBackendSecretRef, TrustBackendStatus};
 use crate::envelope::{open_envelope, protect_envelope};
-use crate::key::{KeyRecord, KeyStatus, ProtectedTrustStateV1, MAX_I_JSON_U64};
+use crate::key::{KeyRecord, KeyStatus, MAX_I_JSON_U64, ProtectedTrustStateV1};
 use crate::{
     EnvelopeKeyRef, IdentityError, IdentityErrorCategory, IdentityErrorCode, KeyId, KeyPurpose,
     MAX_JSON_DEPTH, MAX_PROTECTED_ENVELOPE_WIRE_BYTES, ProtectedEnvelopeV1,
@@ -626,13 +626,7 @@ fn sync_parent_directory(_parent: &Path) -> Result<(), IdentityError> {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        cell::RefCell,
-        collections::HashMap,
-        env, fs,
-        path::PathBuf,
-        process,
-    };
+    use std::{cell::RefCell, collections::HashMap, env, fs, path::PathBuf, process};
 
     use ecra_core::{EpochMillis, PrincipalId, to_jcs_vec};
     use ed25519_dalek::SigningKey;
@@ -812,13 +806,8 @@ mod tests {
     fn rotation_backend() -> RotationBackend {
         let backend = RotationBackend::new();
         backend.insert(
-            TrustBackendSecretRef::new(
-                root_id(),
-                key_id(),
-                1,
-                KeyPurpose::ProtectedEnvelopeRoot,
-            )
-            .unwrap(),
+            TrustBackendSecretRef::new(root_id(), key_id(), 1, KeyPurpose::ProtectedEnvelopeRoot)
+                .unwrap(),
             vec![0x42; 32],
         );
         backend.insert(
@@ -1013,7 +1002,9 @@ mod tests {
             .find(|key| key.key_id() == key_id())
             .unwrap();
         assert_eq!(old.status(), KeyStatus::RetiredVerifyOrDecryptOnly);
-        let active = rotated.active_key(KeyPurpose::ProtectedEnvelopeRoot).unwrap();
+        let active = rotated
+            .active_key(KeyPurpose::ProtectedEnvelopeRoot)
+            .unwrap();
         assert_eq!(active.generation(), 2);
         assert_ne!(active.key_id(), key_id());
         let new_secret_ref = TrustBackendSecretRef::new(
