@@ -1,9 +1,13 @@
 use std::fmt;
 
 use ecra_core::{SchemaVersion, to_jcs_vec};
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use sha2::{Digest, Sha256};
+use zeroize::Zeroizing;
 
+use crate::backend::{TrustBackend, TrustBackendSecretRef, TrustBackendStatus};
+use crate::key::{KeyRecord, KeyRecordAlgorithm, KeyPurpose};
 use crate::{
     ECR_031_CONTRACT_VERSION, IdentityError, IdentityErrorCategory, IdentityErrorCode, KeyId,
     MAX_JSON_DEPTH, ProtectedObjectId, SignatureAlgorithm, TrustRootId, validate_ecr031_version,
@@ -13,6 +17,7 @@ use crate::{
 pub const PROTECTED_ANCHOR_DOMAIN: &[u8] = b"ecra.protected-anchor.v1\n";
 pub const MAX_PROTECTED_ANCHOR_WIRE_BYTES: usize = 64 * 1024;
 const ED25519_SIGNATURE_BYTES: usize = 64;
+const ED25519_SEED_BYTES: usize = 32;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ProtectedAnchorPurpose {
@@ -37,7 +42,11 @@ impl ProtectedAnchorPayloadDigest {
         let hex = value
             .strip_prefix("sha256:")
             .ok_or_else(anchor_digest_error)?;
-        if hex.len() != 64 || !hex.bytes().all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)) {
+        if hex.len() != 64
+            || !hex
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        {
             return Err(anchor_digest_error());
         }
 
@@ -56,7 +65,10 @@ impl ProtectedAnchorPayloadDigest {
 
 impl fmt::Debug for ProtectedAnchorPayloadDigest {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.debug_tuple("ProtectedAnchorPayloadDigest").field(&self.to_string()).finish()
+        formatter
+            .debug_tuple("ProtectedAnchorPayloadDigest")
+            .field(&self.to_string())
+            .finish()
     }
 }
 
@@ -116,7 +128,8 @@ pub struct ProtectedAnchorV1 {
 impl ProtectedAnchorV1 {
     pub fn from_json_slice(input: &[u8]) -> Result<Self, IdentityError> {
         validate_json_limits(input, MAX_PROTECTED_ANCHOR_WIRE_BYTES, MAX_JSON_DEPTH)?;
-        let wire: ProtectedAnchorWire = serde_json::from_slice(input).map_err(|_| anchor_wire_error())?;
+        let wire: ProtectedAnchorWire =
+            serde_json::from_slice(input).map_err(|_| anchor_wire_error())?;
         Self::from_encoded_parts(
             wire.version,
             wire.anchor_id,
@@ -142,7 +155,9 @@ impl ProtectedAnchorV1 {
     ) -> Result<Self, IdentityError> {
         validate_ecr031_version(version)?;
         let decoded = base64url_decode(&signature_or_mac_b64url)?;
-        if decoded.len() != ED25519_SIGNATURE_BYTES || base64url_encode(&decoded) != signature_or_mac_b64url {
+        if decoded.len() != ED25519_SIGNATURE_BYTES
+            || base64url_encode(&decoded) != signature_or_mac_b64url
+        {
             return Err(anchor_wire_error());
         }
         Ok(Self {
@@ -216,6 +231,27 @@ impl ProtectedAnchorV1 {
         canonical_protected_anchor_input(&self.signing_payload())
     }
 
+    pub fn verify_with_key_record(&self, key_record: &KeyRecord) -> Result<(), IdentityError> {
+        if self.trust_root_id != key_record.trust_root_id()
+            || self.key_id != key_record.key_id()
+            || key_record.purpose() != KeyPurpose::ProtectedAnchorSigning
+            || key_record.algorithm() != KeyRecordAlgorithm::Ed25519
+        {
+            return Err(anchor_authentication_error());
+        }
+        key_record.ensure_historical_use_allowed()?;
+        let public_key = key_record
+            .ed25519_public_key()?
+            .ok_or_else(anchor_authentication_error)?;
+        let verifying_key =
+            VerifyingKey::from_bytes(&public_key).map_err(|_| anchor_authentication_error())?;
+        let signature = Signature::from_slice(&self.decoded_signature()?)
+            .map_err(|_| anchor_authentication_error())?;
+        verifying_key
+            .verify(&self.signing_input()?, &signature)
+            .map_err(|_| anchor_authentication_error())
+    }
+
     fn signing_payload(&self) -> ProtectedAnchorSigningPayloadV1 {
         ProtectedAnchorSigningPayloadV1 {
             version: self.version,
@@ -227,11 +263,89 @@ impl ProtectedAnchorV1 {
         }
     }
 
-    pub(crate) fn decoded_signature(&self) -> Result<[u8; ED25519_SIGNATURE_BYTES], IdentityError> {
+    pub(crate) fn decoded_signature(
+        &self,
+    ) -> Result<[u8; ED25519_SIGNATURE_BYTES], IdentityError> {
         base64url_decode(&self.signature_or_mac_b64url)?
             .try_into()
             .map_err(|_| anchor_wire_error())
     }
+}
+
+#[allow(dead_code)]
+pub(crate) fn sign_protected_anchor(
+    backend: &impl TrustBackend,
+    key_record: &KeyRecord,
+    anchor_id: ProtectedObjectId,
+    purpose: ProtectedAnchorPurpose,
+    payload_digest: ProtectedAnchorPayloadDigest,
+) -> Result<ProtectedAnchorV1, IdentityError> {
+    if key_record.purpose() != KeyPurpose::ProtectedAnchorSigning
+        || key_record.algorithm() != KeyRecordAlgorithm::Ed25519
+    {
+        return Err(IdentityError::new(
+            IdentityErrorCategory::KeyState,
+            IdentityErrorCode::KeyNotActive,
+            Some("protected_anchor_signing_key"),
+        ));
+    }
+    key_record.ensure_new_material_use_allowed()?;
+    match backend.status()? {
+        TrustBackendStatus::Available => {}
+        TrustBackendStatus::Locked => {
+            return Err(IdentityError::new(
+                IdentityErrorCategory::TrustBackend,
+                IdentityErrorCode::TrustRootLocked,
+                Some("protected_anchor_backend"),
+            ));
+        }
+        TrustBackendStatus::Unavailable => {
+            return Err(IdentityError::new(
+                IdentityErrorCategory::PlatformUnavailable,
+                IdentityErrorCode::TrustRootUnavailable,
+                Some("protected_anchor_backend"),
+            ));
+        }
+    }
+
+    let secret_ref = TrustBackendSecretRef::new(
+        key_record.trust_root_id(),
+        key_record.key_id(),
+        key_record.generation(),
+        KeyPurpose::ProtectedAnchorSigning,
+    )?;
+    let opened = backend.open_protected_secret(secret_ref)?;
+    if opened.len() != ED25519_SEED_BYTES {
+        return Err(anchor_backend_invariant_error());
+    }
+    let mut seed = Zeroizing::new([0_u8; ED25519_SEED_BYTES]);
+    seed.copy_from_slice(opened.as_slice());
+    let signing_key = SigningKey::from_bytes(&seed);
+    let expected_public = key_record
+        .ed25519_public_key()?
+        .ok_or_else(anchor_backend_invariant_error)?;
+    if signing_key.verifying_key().to_bytes() != expected_public {
+        return Err(anchor_backend_invariant_error());
+    }
+
+    let payload = ProtectedAnchorSigningPayloadV1 {
+        version: ECR_031_CONTRACT_VERSION,
+        trust_root_id: key_record.trust_root_id(),
+        key_id: key_record.key_id(),
+        purpose,
+        payload_digest,
+        algorithm: SignatureAlgorithm::Ed25519,
+    };
+    let input = canonical_protected_anchor_input(&payload)?;
+    let signature = signing_key.sign(&input).to_bytes();
+    ProtectedAnchorV1::from_signature_bytes(
+        anchor_id,
+        key_record.trust_root_id(),
+        key_record.key_id(),
+        purpose,
+        payload_digest,
+        signature,
+    )
 }
 
 #[derive(Deserialize)]
@@ -299,6 +413,22 @@ fn anchor_wire_error() -> IdentityError {
     )
 }
 
+fn anchor_authentication_error() -> IdentityError {
+    IdentityError::new(
+        IdentityErrorCategory::CryptographicAuthentication,
+        IdentityErrorCode::AuthenticationFailed,
+        Some("protected_anchor_authentication"),
+    )
+}
+
+fn anchor_backend_invariant_error() -> IdentityError {
+    IdentityError::new(
+        IdentityErrorCategory::TrustBackend,
+        IdentityErrorCode::BackendInvariantViolation,
+        Some("protected_anchor_signing_material"),
+    )
+}
+
 fn base64url_encode(input: &[u8]) -> String {
     const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     let mut output = String::with_capacity(input.len().div_ceil(3) * 4);
@@ -357,4 +487,143 @@ fn base64url_decode(input: &str) -> Result<Vec<u8>, IdentityError> {
         return Err(anchor_wire_error());
     }
     Ok(output)
+}
+
+#[cfg(test)]
+mod tests {
+    use ecra_core::EpochMillis;
+
+    use super::*;
+    use crate::backend::{TrustBackendCapabilities, TrustBackendKind};
+    use crate::{KeyStatus, SensitiveBytes};
+
+    struct AnchorBackend {
+        secret_ref: TrustBackendSecretRef,
+        seed: [u8; ED25519_SEED_BYTES],
+        status: TrustBackendStatus,
+    }
+
+    impl TrustBackend for AnchorBackend {
+        fn capabilities(&self) -> TrustBackendCapabilities {
+            TrustBackendCapabilities::new(TrustBackendKind::MacosDataProtectionKeychain)
+        }
+
+        fn status(&self) -> Result<TrustBackendStatus, IdentityError> {
+            Ok(self.status)
+        }
+
+        fn protect_secret(
+            &self,
+            _secret_ref: TrustBackendSecretRef,
+            _secret: &SensitiveBytes,
+        ) -> Result<(), IdentityError> {
+            Err(anchor_backend_invariant_error())
+        }
+
+        fn open_protected_secret(
+            &self,
+            secret_ref: TrustBackendSecretRef,
+        ) -> Result<SensitiveBytes, IdentityError> {
+            if secret_ref != self.secret_ref {
+                return Err(anchor_backend_invariant_error());
+            }
+            Ok(SensitiveBytes::new(self.seed.to_vec()))
+        }
+
+        fn delete_backend_material(
+            &self,
+            _secret_ref: TrustBackendSecretRef,
+        ) -> Result<(), IdentityError> {
+            Err(anchor_backend_invariant_error())
+        }
+    }
+
+    fn fixture(status: KeyStatus) -> (AnchorBackend, KeyRecord) {
+        let trust_root_id =
+            TrustRootId::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
+        let key_id = KeyId::parse_str("00000000-0000-0000-0000-000000000021").unwrap();
+        let seed = [7_u8; ED25519_SEED_BYTES];
+        let signing_key = SigningKey::from_bytes(&seed);
+        let created = EpochMillis::new(1_000).unwrap();
+        let retired_at = matches!(status, KeyStatus::RetiredVerifyOrDecryptOnly)
+            .then(|| EpochMillis::new(2_000).unwrap());
+        let revoked_at = matches!(status, KeyStatus::Revoked)
+            .then(|| EpochMillis::new(2_000).unwrap());
+        let record = KeyRecord::new_ed25519(
+            key_id,
+            trust_root_id,
+            KeyPurpose::ProtectedAnchorSigning,
+            1,
+            status,
+            signing_key.verifying_key().to_bytes(),
+            created,
+            created,
+            retired_at,
+            revoked_at,
+        )
+        .unwrap();
+        let secret_ref = TrustBackendSecretRef::new(
+            trust_root_id,
+            key_id,
+            1,
+            KeyPurpose::ProtectedAnchorSigning,
+        )
+        .unwrap();
+        (
+            AnchorBackend {
+                secret_ref,
+                seed,
+                status: TrustBackendStatus::Available,
+            },
+            record,
+        )
+    }
+
+    #[test]
+    fn protected_anchor_signing_uses_backend_opened_active_purpose_key() {
+        let (backend, record) = fixture(KeyStatus::Active);
+        let anchor = sign_protected_anchor(
+            &backend,
+            &record,
+            ProtectedObjectId::parse_str("00000000-0000-0000-0000-000000000020").unwrap(),
+            ProtectedAnchorPurpose::RunLedgerHead,
+            ProtectedAnchorPayloadDigest::from_bytes([9_u8; 32]),
+        )
+        .unwrap();
+        anchor.verify_with_key_record(&record).unwrap();
+    }
+
+    #[test]
+    fn retired_and_revoked_anchor_keys_cannot_create_new_anchor() {
+        for (status, expected) in [
+            (KeyStatus::RetiredVerifyOrDecryptOnly, IdentityErrorCode::KeyNotActive),
+            (KeyStatus::Revoked, IdentityErrorCode::KeyRevoked),
+        ] {
+            let (backend, record) = fixture(status);
+            let error = sign_protected_anchor(
+                &backend,
+                &record,
+                ProtectedObjectId::parse_str("00000000-0000-0000-0000-000000000020").unwrap(),
+                ProtectedAnchorPurpose::RunLedgerHead,
+                ProtectedAnchorPayloadDigest::from_bytes([9_u8; 32]),
+            )
+            .unwrap_err();
+            assert_eq!(error.code(), expected);
+        }
+    }
+
+    #[test]
+    fn protected_anchor_signing_rejects_backend_seed_public_key_mismatch() {
+        let (mut backend, record) = fixture(KeyStatus::Active);
+        backend.seed = [8_u8; ED25519_SEED_BYTES];
+        let error = sign_protected_anchor(
+            &backend,
+            &record,
+            ProtectedObjectId::parse_str("00000000-0000-0000-0000-000000000020").unwrap(),
+            ProtectedAnchorPurpose::RunLedgerHead,
+            ProtectedAnchorPayloadDigest::from_bytes([9_u8; 32]),
+        )
+        .unwrap_err();
+        assert_eq!(error.code(), IdentityErrorCode::BackendInvariantViolation);
+    }
 }
