@@ -337,16 +337,11 @@ mod tests {
 
     #[test]
     fn backend_secret_reference_is_typed_and_generation_bounded() {
-        let trust_root_id =
-            TrustRootId::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
+        let trust_root_id = TrustRootId::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
         let key_id = KeyId::parse_str("00000000-0000-0000-0000-000000000011").unwrap();
-        let secret_ref = TrustBackendSecretRef::new(
-            trust_root_id,
-            key_id,
-            1,
-            KeyPurpose::ProtectedEnvelopeRoot,
-        )
-        .unwrap();
+        let secret_ref =
+            TrustBackendSecretRef::new(trust_root_id, key_id, 1, KeyPurpose::ProtectedEnvelopeRoot)
+                .unwrap();
         assert_eq!(secret_ref.trust_root_id(), trust_root_id);
         assert_eq!(secret_ref.key_id(), key_id);
         assert_eq!(secret_ref.generation(), 1);
