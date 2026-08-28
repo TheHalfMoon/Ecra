@@ -1,5 +1,9 @@
 [workspace]
-members = ["crates/ecra-core", "crates/ecra-run"]
+members = [
+    "crates/ecra-core",
+    "crates/ecra-run",
+    "crates/ecra-identity",
+]
 resolver = "3"
 
 [workspace.package]
