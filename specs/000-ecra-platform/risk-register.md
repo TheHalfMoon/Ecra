@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-27  
 **Status:** CANONICAL_PLANNING_V2  
-**Review source:** `pre-implementation-review-2026-08-27.md`
+**Review source:** `pre-implementation-review-2026-08-27.md` + local-model world gateway review 2026-08-28
 
 Scores are qualitative and must be revised from evidence, not optimism.
 
@@ -63,12 +63,18 @@ Scores are qualitative and must be revised from evidence, not optimism.
 | R-053 | Sensitive state persisted before key/storage protection design | Medium | Critical | synthetic/non-sensitive persistence first; sensitive-state gate | ECR-002/ECR-031/ECR-025 |
 | R-054 | Remote protocol token passthrough creates confused deputy | Medium | Critical | version-pinned auth mapping, audience/resource binding, no token passthrough | ECR-016/ECR-031 |
 | R-055 | Malicious PDF/archive/parser input escapes search/content pipeline | Medium | Critical | parser isolation/resource limits/quarantine/hostile corpora | ECR-017/ECR-027/ECR-005 |
+| R-056 | “Ecra is the gate” is only architectural prose while local agents retain unrestricted direct egress/ambient tools | High | Critical | explicit high-assurance runtime profile, default-deny enforcement where supported, direct-bypass tests and honest host boundary | ECR-005/ECR-017/ECR-021 |
+| R-057 | Context compiler over-compresses, mixes scopes or drops provenance so a smaller model receives misleading context | Medium/High | Critical | typed EvidencePack/ContextProjection lineage, disclosure checks, golden compression/drill-down tests | ECR-003/ECR-005/ECR-009/ECR-021 |
+| R-058 | Broad MCP/WebMCP/plugin tool exposure overwhelms weaker models and increases wrong-tool/unsafe routing | High | High | adaptive tool aperture, model profiles, bounded schemas, same action/policy gates, comparative evals | ECR-005/ECR-011/ECR-016/ECR-021/ECR-028 |
+| R-059 | Sandbox/network policy becomes a second authority model or stays stale after Ecra revocation | Medium | Critical | sandbox as enforcement projection only, decision/version/expiry binding, fail-closed revocation/conformance tests | ECR-003/ECR-005/ECR-017/ECR-031 |
+| R-060 | Credential injection/proxy sends a valid secret to the wrong destination/path/operation or leaks it through diagnostics | Medium | Critical | narrow audience/destination/operation binding, redaction, revocation tests, no secret material in model/workload/log context | ECR-003/ECR-005/ECR-017/ECR-025/ECR-031 |
 
 ## Risk Acceptance Rules
 
 - A **Critical** risk cannot be accepted implicitly by a feature PR.
 - Any plan touching a Critical risk must name prevention/detection tests and containment/rollback where applicable.
 - Security boundaries cannot be replaced by prompt wording, “local-only”, Containers, citations, Wasm, or a model refusal alone.
+- A “default-deny” or “Ecra-mediated world access” claim is security-relevant and requires bypass evidence on every supported high-assurance backend/profile.
 - “Monitor later” is not mitigation for identity, authority, information flow, secrets, side effects, persistence, privileged browser IPC or supply chain.
 - Risk status changes cite tests, benchmark reports, incidents, upstream changes or validated design evidence.
 
@@ -80,6 +86,8 @@ Regardless of feature status, release is blocked by a known unresolved path for:
 - unauthorized capability or information-flow escape;
 - Actor/self-asserted identity being accepted as authenticated authority;
 - raw secret exposure to generic model/log/memory/tool paths;
+- a release profile claiming mediated/default-deny agent world access while a tested direct bypass remains;
+- sandbox policy being accepted as canonical authority after conflicting/stale Ecra decision;
 - duplicate consequential non-idempotent side effects caused by Ecra retry/resume;
 - verifier false-positive marking release-critical consequential failure successful;
 - page-spoofed privileged approval surface in a release-critical flow;
