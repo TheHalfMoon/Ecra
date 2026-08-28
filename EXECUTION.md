@@ -45,9 +45,10 @@ Phase 3 closure head: 7eaede3f9f10461c307c8900c021273a4dbffa03
 Phase 3 closure CI: 33165941748 / job 98831297208 — SUCCESS
 Phase 4 semantic head: f4068278352a46ab1b42dba94994adf0f653f254
 Phase 4 semantic CI: 33195283366 / job 98930731243 — SUCCESS
+T042 verified ledger head: f05840782fab68b6360d69db912920f657102f05
+T042 ECR-031 CI: 33195948025 / job 98932988529 — SUCCESS
 
-Current task frontier: T042 — Phase 4 ledger convergence + exact-head CI
-Next only after T042 exact-head SUCCESS: T051
+Current task frontier: T051 after the current closure-record head is exact-green
 ```
 
 ## ECR-031 current implementation state
@@ -58,7 +59,7 @@ IC-001 required this prerequisite wave before T035:
 T043 → T044 → T045 → T046 → T047 → T048 → T049 → T050 → T059 → T060
 ```
 
-The live feature head and exact-head Phase 4 gate establish that the wave is implemented:
+The live implementation and T042 exact-head gate establish that the full prerequisite wave is complete:
 
 - redacted/zeroizing sensitive bytes and production/test-isolated randomness;
 - strict protected-envelope schema/AAD;
@@ -68,7 +69,7 @@ The live feature head and exact-head Phase 4 gate establish that the wave is imp
 - typed minimal `TrustBackend`/capability boundary;
 - compile-target-only production backend selection with no memory/plaintext/environment/file/test production fallback.
 
-The corrected Phase 4 chain through T040 is also implemented and exact-head verified:
+The corrected Phase 4 chain is complete and verified:
 
 ```text
 T035  protected trust-root/key/enrollment schemas
@@ -79,9 +80,10 @@ T038  retirement semantics
 T037  atomic rotation transition
 T039  protected-state revocation transition
 T040  lifecycle/bootstrap/crash/rollback-boundary coverage
+T042  exact-head Phase 4 ledger gate
 ```
 
-T042 remains the current gate until the ledger-convergence head itself completes the permanent ECR-031 workflow with `SUCCESS`.
+The next dependency-eligible work is T051 → T052 → T053. Because this closure record changes lifecycle docs after the T042 evidence head, require the permanent ECR-031 workflow to be green on the current record head before beginning T051.
 
 ## Frozen ECR-031 v1 security decisions
 
@@ -135,11 +137,9 @@ Identity evidence answers **who / on whose behalf**. It never means **what is au
 
 ## Current exact execution order
 
-Do not skip the active gate. Continue only when the preceding exact-head evidence is satisfied:
+After the current closure-record head is exact-green:
 
 ```text
-T042
-  ↓
 T051 → T052 → T053
   ↓
 T054 → T055 → T056 → T057 → T058
@@ -151,7 +151,7 @@ T069 → T070 → T071 → T072 → T073 → T074
 T075 → T076 → T077 → T078 → T079 → T080 → T081 → T082
 ```
 
-T061 owns the concrete macOS Data Protection Keychain backend. Do not steal that scope into Phase 4 or T051–T058.
+T061 owns the concrete macOS Data Protection Keychain backend. Do not steal that scope into T051–T058.
 
 ECR-004 remains independently planning-eligible but must remain a separate slice. ECR-003 remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`.
 

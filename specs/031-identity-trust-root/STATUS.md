@@ -12,11 +12,13 @@ ECR-031 remains branch-only implementation work. It is not canonical until the e
 
 ## Current execution frontier
 
-Phase 4 semantic implementation is complete and exact-head verified through T040. T042 is the current task: converge the Phase 4 ledgers and require the permanent ECR-031 workflow to complete `SUCCESS` on the exact ledger-convergence head before proceeding to T051.
+T042 is complete. The Phase 4 ledger-convergence head `f05840782fab68b6360d69db912920f657102f05` passed permanent ECR-031 CI run `33195948025`, job `98932988529`, with result `SUCCESS` and every required gate green.
+
+T051 is the next dependency-eligible task. Because this closure-record commit changes lifecycle documentation, begin T051 only after the permanent ECR-031 workflow also completes `SUCCESS` on this record head; live GitHub exact-head evidence remains authoritative.
 
 ```text
-CURRENT_TASK               T042
-NEXT_AFTER_T042             T051 → T052 → T053
+CURRENT_TASK               T051_AFTER_RECORD_HEAD_GREEN
+NEXT_PHASE5_ORDER           T051 → T052 → T053
 FEATURE_BRANCH              031-identity-trust-root
 DRAFT_PR                    #4
 CANONICAL_MAIN_BASE         f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0
@@ -24,7 +26,10 @@ PHASE4_SEMANTIC_HEAD        f4068278352a46ab1b42dba94994adf0f653f254
 PHASE4_SEMANTIC_CI_RUN      33195283366
 PHASE4_SEMANTIC_CI_JOB      98930731243
 PHASE4_SEMANTIC_CI_RESULT   SUCCESS
-T042_LEDGER_GATE            PENDING_EXACT_HEAD_CI
+T042_VERIFIED_HEAD          f05840782fab68b6360d69db912920f657102f05
+T042_ECR031_CI_RUN          33195948025
+T042_ECR031_CI_JOB          98932988529
+T042_ECR031_CI_RESULT       SUCCESS
 ```
 
 ## Corrected prerequisite wave — reconciled implementation truth
@@ -35,7 +40,7 @@ IC-001 made the following order authoritative before T035:
 T043 → T044 → T045 → T046 → T047 → T048 → T049 → T050 → T059 → T060
 ```
 
-The current source, tests, fixtures and exact-head Phase 4 CI establish that this entire prerequisite wave is implemented and exercised:
+The source, tests, fixtures and exact-head Phase 4/T042 CI establish that this entire prerequisite wave is implemented and exercised:
 
 - T043 — redacted/zeroizing `SensitiveBytes` boundary.
 - T044 — production system CSPRNG with deterministic provider restricted to tests.
@@ -62,18 +67,18 @@ T043_ECR031_CI_RESULT     SUCCESS
 T044_VERIFIED_HEAD        0f84b2215529442cf7efbd1d3fa2892f224e6e6e
 T044_ECR031_CI_RUN        33168674153
 T044_ECR031_CI_RESULT     SUCCESS
-PREREQ_RECONCILIATION     f4068278352a46ab1b42dba94994adf0f653f254 / run 33195283366 / SUCCESS
+PREREQ_RECONCILIATION     f05840782fab68b6360d69db912920f657102f05 / run 33195948025 / SUCCESS
 ```
 
-## Phase 4 verified semantic evidence
+## Phase 4 verified closure evidence
 
-The corrected Phase 4 chain is:
+The corrected Phase 4 chain is complete:
 
 ```text
 T035 → T036 → T041 → T041A → T038 → T037 → T039 → T040 → T042
 ```
 
-Verified semantic checkpoints:
+Verified checkpoints:
 
 ```text
 T035  0c2f9bc1cde6e33dcb36c34bb8068452f49b99bd  CI 33187589061  SUCCESS
@@ -84,11 +89,12 @@ T038  f5c229e05b23d8dc616d8abd81f543400f3307c5  CI 33193152128  SUCCESS
 T037  ad1f3732b5b34e577904ab71a0cf669029295234  CI 33193746774  SUCCESS
 T039  7abfcbccc3da0cba1841e939860011bf40e6b495  CI 33194274996  SUCCESS
 T040  f4068278352a46ab1b42dba94994adf0f653f254  CI 33195283366  SUCCESS
+T042  f05840782fab68b6360d69db912920f657102f05  CI 33195948025  SUCCESS
 ```
 
-The T040 exact-head workflow passed locked build, rustfmt, strict Clippy, workspace tests, ECR-001 regression targets, ECR-002 regression targets, explicit ECR-031 phase targets, rustdoc, offline replay, ECR-001/ECR-002/ECR-031 boundary checks and dependency/toolchain evidence.
+The T042 exact-head workflow passed locked build, rustfmt, strict Clippy, workspace tests, ECR-001 regression targets, ECR-002 regression targets, explicit ECR-031 phase targets, rustdoc, offline replay, ECR-001/ECR-002/ECR-031 boundary checks and dependency/toolchain evidence.
 
-Phase 4 now provides, on the feature branch:
+Phase 4 provides, on the feature branch:
 
 - strict protected trust-root/key/enrollment state with opaque generated identifiers and no serialized private/root/symmetric secret material;
 - one-active-key-per-purpose enforcement;
@@ -130,8 +136,6 @@ PHASE3_CLOSURE_CI         33165941748 / job 98831297208 / SUCCESS
 
 ## Remaining canonical order
 
-After T042 exact-head success, continue without skipping:
-
 ```text
 T051 → T052 → T053
   ↓
@@ -144,8 +148,8 @@ T069 → T070 → T071 → T072 → T073 → T074
 T075 → T076 → T077 → T078 → T079 → T080 → T081 → T082
 ```
 
-T061 owns the concrete macOS Data Protection Keychain backend. No Phase 4 implementation should be represented as satisfying that native-backend acceptance task.
+T061 owns the concrete macOS Data Protection Keychain backend. Do not represent Phase 4 or T051–T058 as satisfying native-backend acceptance.
 
 ## Closure rule
 
-T042 is not verified merely because this ledger text exists. The permanent ECR-031 workflow must complete `SUCCESS` on the exact ledger-convergence head. ECR-031 remains `IMPLEMENTING`, PR #4 remains draft/non-canonical, and `CLOSED_CANONICAL` remains forbidden until T081 merge evidence and T082 post-merge closure evidence are both satisfied.
+ECR-031 remains `IMPLEMENTING`, PR #4 remains draft/non-canonical, and `CLOSED_CANONICAL` remains forbidden until T081 merge evidence and T082 post-merge closure evidence are both satisfied. Historical CI success may not be reused to claim a changed current head green; the closure-record head must pass before implementation resumes at T051.

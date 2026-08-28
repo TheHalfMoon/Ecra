@@ -61,7 +61,7 @@
 - [x] **T037** Implement rotate transition: create/protect next generation, activate it and atomically publish new protected trust state; prior active becomes retired according to purpose. **Paths:** `crates/ecra-identity/src/key.rs`, `crates/ecra-identity/src/store.rs`. **FR-019, FR-021**
 - [x] **T039** Implement revocation semantics in protected trust state blocking new use/current assertion validation; distinguish revocation from unavailable/destroyed key and reject ordinary metadata attempts to unrevoke/reactivate. **Paths:** `crates/ecra-identity/src/key.rs`, `crates/ecra-identity/src/validation.rs`, `crates/ecra-identity/src/store.rs`. **FR-020, FR-021**
 - [x] **T040** Add exhaustive lifecycle/bootstrap tests including first enrollment, crash before/after backend secret creation and before/after protected-state publish, incomplete-bootstrap recovery, invalid second bootstrap, generation collision, stale-key issuance, revoked-key validation, stale/unsigned metadata and explicit no-monotonic-rollback-overclaim fixture. **Paths:** `crates/ecra-identity/tests/bootstrap.rs`, `crates/ecra-identity/tests/key_lifecycle.rs`. **SC-004, SC-008**
-- [ ] **T042** Exact-head Phase 4 CI and status ledger update after T035–T041A and the corrected prerequisite wave are complete. **Path:** `specs/031-identity-trust-root/STATUS.md`. **SC-004, SC-008, SC-013**
+- [x] **T042** Exact-head Phase 4 CI and status ledger update after T035–T041A and the corrected prerequisite wave are complete. **Path:** `specs/031-identity-trust-root/STATUS.md`. **SC-004, SC-008, SC-013**
 
 ## Phase 5 — Sensitive byte handling and protected envelopes
 
