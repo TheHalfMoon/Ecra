@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-phase7:
-    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): repair phase7 extra-data') }}"
+    if: "${{ startsWith(github.event.head_commit.message, 'ci(run): repair phase7 strict clippy') }}"
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -37,12 +37,16 @@ jobs:
 
           path = Path('crates/ecra-run/src/archive.rs')
           text = path.read_text()
-          old = '!file.extra_data().is_empty()'
-          new = 'file.extra_data().is_some_and(|data| !data.is_empty())'
-          count = text.count(old)
-          if count != 1:
-              raise SystemExit(f'expected exactly one extra_data repair site, found {count}')
-          path.write_text(text.replace(old, new, 1))
+          repairs = [
+              ('!file.extra_data().is_empty()', 'file.extra_data().is_some_and(|data| !data.is_empty())'),
+              ('path.as_bytes().len() > MAX_PATH_BYTES', 'path.len() > MAX_PATH_BYTES'),
+          ]
+          for old, new in repairs:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'expected exactly one repair site for {old!r}, found {count}')
+              text = text.replace(old, new, 1)
+          path.write_text(text)
           PY
           cargo fmt --all
       - name: Compile and lint archive candidate
