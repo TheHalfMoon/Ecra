@@ -103,6 +103,9 @@ fn json_formatting_variants_preserve_reducer_and_archive_output() {
             .canonical_bytes()
             .expect("variant canonical state");
         assert_eq!(state, first_state);
-        assert_eq!(export_ecra(history, &[]).expect("variant archive"), first_archive);
+        assert_eq!(
+            export_ecra(history, &[]).expect("variant archive"),
+            first_archive
+        );
     }
 }
