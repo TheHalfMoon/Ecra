@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, path::PathBuf};
+use std::collections::BTreeSet;
 
 use ecra_core::{EpochMillis, PrincipalId, PrincipalRef, SchemaVersion};
 use ed25519_dalek::SigningKey;
@@ -8,7 +8,7 @@ use zeroize::Zeroizing;
 
 use crate::backend::{SecureRandom, TrustBackend, TrustBackendSecretRef, TrustBackendStatus};
 use crate::key::{KeyRecord, ProtectedTrustStateV1};
-use crate::store::{AuthenticatedTrustState, ProtectedTrustStateStore};
+use crate::store::{AuthenticatedTrustState, BootstrapStoreLocation, ProtectedTrustStateStore};
 use crate::{
     ECR_031_CONTRACT_VERSION, EnrollmentId, IdentityError, IdentityErrorCategory,
     IdentityErrorCode, KeyId, KeyPurpose, KeyStatus, ProtectedObjectId, SensitiveBytes,
@@ -188,24 +188,25 @@ impl EnrolledPrincipalHandle {
 /// is absent while that marker remains, the transaction fails as
 /// `incomplete_bootstrap` and never silently mints a replacement identity.
 pub(crate) fn bootstrap_or_reopen_local_principal(
-    store_path: PathBuf,
+    location: &BootstrapStoreLocation,
     backend: &impl TrustBackend,
     random: &mut impl SecureRandom,
     created_at: EpochMillis,
 ) -> Result<EnrolledPrincipalHandle, IdentityError> {
-    if ProtectedTrustStateStore::store_exists(&store_path)? {
+    let store_path = location.path();
+    if ProtectedTrustStateStore::store_exists(store_path)? {
         let (_, authenticated) =
-            ProtectedTrustStateStore::open_existing(store_path.clone(), backend)?;
+            ProtectedTrustStateStore::open_existing(store_path.to_path_buf(), backend)?;
         let handle = enrolled_handle_from_authenticated(&authenticated)?;
-        ProtectedTrustStateStore::clear_bootstrap_marker(&store_path)?;
+        ProtectedTrustStateStore::clear_bootstrap_marker(store_path)?;
         return Ok(handle);
     }
 
-    if ProtectedTrustStateStore::bootstrap_marker_exists(&store_path)? {
+    if ProtectedTrustStateStore::bootstrap_marker_exists(store_path)? {
         return Err(incomplete_bootstrap_error());
     }
     ensure_bootstrap_backend_available(backend)?;
-    ProtectedTrustStateStore::write_bootstrap_marker(&store_path)?;
+    ProtectedTrustStateStore::write_bootstrap_marker(store_path)?;
 
     let principal_id = PrincipalId::from_uuid(random_uuid_v4(random)?);
     let trust_root_id = TrustRootId::from_uuid(random_uuid_v4(random)?)?;
@@ -229,7 +230,7 @@ pub(crate) fn bootstrap_or_reopen_local_principal(
 
     let mut assertion_seed = Zeroizing::new([0_u8; SOFTWARE_SECRET_BYTES]);
     random.fill(&mut *assertion_seed)?;
-    let signing_key = SigningKey::from_bytes(&assertion_seed);
+    let signing_key = SigningKey::from_bytes(&*assertion_seed);
     let assertion_signing_ref = TrustBackendSecretRef::new(
         trust_root_id,
         assertion_signing_key_id,
@@ -273,11 +274,11 @@ pub(crate) fn bootstrap_or_reopen_local_principal(
         BTreeSet::new(),
         created_at,
     )?;
-    let store = ProtectedTrustStateStore::new(store_path.clone(), protected_object_id)?;
+    let store = ProtectedTrustStateStore::new(store_path.to_path_buf(), protected_object_id)?;
     store.publish(backend, random, &protected_state)?;
     let authenticated = store.open_authenticated(backend)?;
     let handle = enrolled_handle_from_authenticated(&authenticated)?;
-    ProtectedTrustStateStore::clear_bootstrap_marker(&store_path)?;
+    ProtectedTrustStateStore::clear_bootstrap_marker(store_path)?;
     Ok(handle)
 }
 
@@ -376,7 +377,7 @@ mod tests {
         DeterministicSecureRandom, TrustBackend, TrustBackendCapabilities, TrustBackendKind,
         TrustBackendSecretRef, TrustBackendStatus,
     };
-    use crate::store::ProtectedTrustStateStore;
+    use crate::store::{BootstrapStoreLocation, ProtectedTrustStateStore};
     use crate::{
         EnrollmentId, IdentityError, IdentityErrorCategory, IdentityErrorCode, SensitiveBytes,
         TrustRootId,
@@ -460,15 +461,16 @@ mod tests {
         EpochMillis::new(value).unwrap()
     }
 
-    fn test_path(name: &str) -> (PathBuf, PathBuf) {
+    fn test_location(name: &str) -> (PathBuf, BootstrapStoreLocation) {
         let directory = env::temp_dir().join(format!(
             "ecra-identity-t041a-{}-{name}",
             process::id()
         ));
         let _ = fs::remove_dir_all(&directory);
         fs::create_dir_all(&directory).unwrap();
-        let path = directory.join("protected-trust-state.json");
-        (directory, path)
+        let location =
+            BootstrapStoreLocation::new(directory.join("protected-trust-state.json")).unwrap();
+        (directory, location)
     }
 
     fn deterministic_random() -> DeterministicSecureRandom {
@@ -518,23 +520,23 @@ mod tests {
 
     #[test]
     fn complete_bootstrap_reopens_same_principal_without_reminting() {
-        let (directory, path) = test_path("complete-reopen");
+        let (directory, location) = test_location("complete-reopen");
         let backend = TestBackend::available();
         let mut random = deterministic_random();
         let first = bootstrap_or_reopen_local_principal(
-            path.clone(),
+            &location,
             &backend,
             &mut random,
             timestamp(1_000),
         )
         .unwrap();
         assert_eq!(backend.secrets.borrow().len(), 2);
-        assert!(ProtectedTrustStateStore::store_exists(&path).unwrap());
-        assert!(!ProtectedTrustStateStore::bootstrap_marker_exists(&path).unwrap());
+        assert!(ProtectedTrustStateStore::store_exists(location.path()).unwrap());
+        assert!(!ProtectedTrustStateStore::bootstrap_marker_exists(location.path()).unwrap());
 
         let mut no_more_randomness = DeterministicSecureRandom::new(Vec::new());
         let reopened = bootstrap_or_reopen_local_principal(
-            path.clone(),
+            &location,
             &backend,
             &mut no_more_randomness,
             timestamp(2_000),
@@ -554,41 +556,43 @@ mod tests {
 
     #[test]
     fn partial_marker_blocks_silent_identity_remint() {
-        let (directory, path) = test_path("incomplete");
-        ProtectedTrustStateStore::write_bootstrap_marker(&path).unwrap();
+        let (directory, location) = test_location("incomplete");
+        ProtectedTrustStateStore::write_bootstrap_marker(location.path()).unwrap();
         let backend = TestBackend::available();
         let mut random = deterministic_random();
         let error = bootstrap_or_reopen_local_principal(
-            path.clone(),
+            &location,
             &backend,
             &mut random,
             timestamp(1_000),
         )
-        .unwrap_err();
+        .err()
+        .unwrap();
         assert_eq!(error.category(), IdentityErrorCategory::Bootstrap);
         assert_eq!(error.code(), IdentityErrorCode::BootstrapIncomplete);
         assert_eq!(error.safe_context(), Some("incomplete_bootstrap"));
         assert!(backend.secrets.borrow().is_empty());
-        assert!(!ProtectedTrustStateStore::store_exists(&path).unwrap());
+        assert!(!ProtectedTrustStateStore::store_exists(location.path()).unwrap());
 
         fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]
     fn unavailable_backend_fails_before_creating_partial_marker() {
-        let (directory, path) = test_path("backend-unavailable");
+        let (directory, location) = test_location("backend-unavailable");
         let backend = TestBackend::unavailable();
         let mut random = deterministic_random();
         let error = bootstrap_or_reopen_local_principal(
-            path.clone(),
+            &location,
             &backend,
             &mut random,
             timestamp(1_000),
         )
-        .unwrap_err();
+        .err()
+        .unwrap();
         assert_eq!(error.code(), IdentityErrorCode::TrustRootUnavailable);
-        assert!(!ProtectedTrustStateStore::bootstrap_marker_exists(&path).unwrap());
-        assert!(!ProtectedTrustStateStore::store_exists(&path).unwrap());
+        assert!(!ProtectedTrustStateStore::bootstrap_marker_exists(location.path()).unwrap());
+        assert!(!ProtectedTrustStateStore::store_exists(location.path()).unwrap());
 
         fs::remove_dir_all(directory).unwrap();
     }
