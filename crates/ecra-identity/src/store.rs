@@ -25,6 +25,28 @@ const TRUST_STATE_INFORMATION_CLASS: ProtectedInformationClass =
 const BOOTSTRAP_MARKER_BYTES: &[u8] =
     br#"{"state":"in_progress","version":{"major":1,"minor":0}}"#;
 
+/// Filesystem location owned by the protected store boundary rather than by
+/// identity bootstrap logic. The location is operational metadata only and can
+/// never be converted into a principal, trust root, enrollment or key id.
+#[derive(Clone, Debug)]
+pub(crate) struct BootstrapStoreLocation {
+    path: PathBuf,
+}
+
+impl BootstrapStoreLocation {
+    pub(crate) fn new(path: PathBuf) -> Result<Self, IdentityError> {
+        if path.file_name().is_none() {
+            return Err(store_input_error("trust_state_store_path"));
+        }
+        Ok(Self { path })
+    }
+
+    #[must_use]
+    pub(crate) fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
 /// Authenticated protected trust state returned only after backend secret open,
 /// AEAD authentication and strict lifecycle validation all succeed.
 ///
@@ -473,7 +495,8 @@ mod tests {
     use ecra_core::{EpochMillis, PrincipalId, to_jcs_vec};
 
     use super::{
-        ProtectedTrustStateStore, TRUST_STATE_INFORMATION_CLASS, TRUST_STATE_PURPOSE, temp_path_for,
+        BootstrapStoreLocation, ProtectedTrustStateStore, TRUST_STATE_INFORMATION_CLASS,
+        TRUST_STATE_PURPOSE, temp_path_for,
     };
     use crate::backend::{
         DeterministicSecureRandom, TrustBackend, TrustBackendCapabilities, TrustBackendKind,
@@ -603,6 +626,14 @@ mod tests {
         let path = directory.join("protected-trust-state.json");
         let store = ProtectedTrustStateStore::new(path, object_id()).unwrap();
         (directory, store)
+    }
+
+    #[test]
+    fn store_location_is_operational_metadata_only() {
+        let (directory, store) = test_store("location");
+        let location = BootstrapStoreLocation::new(store.path().to_path_buf()).unwrap();
+        assert_eq!(location.path(), store.path());
+        fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]
