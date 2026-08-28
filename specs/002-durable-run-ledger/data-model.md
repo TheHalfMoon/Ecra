@@ -1,7 +1,7 @@
 # Data Model: Durable Run, Ledger & Budgets
 
 **Feature:** ECR-002  
-**Status:** PLAN_MODEL  
+**Status:** IMPLEMENTED_NORMATIVE_MODEL  
 **Depends on:** ECR-001 canonical public types
 
 This model adds durable execution concepts without redefining ECR-001 Actor, ActionRef/ActionAttemptRef/ActionReceipt, VerificationReceipt, ArtifactRef, ContentDigest, EpochMillis, or RunId semantics.
@@ -98,10 +98,10 @@ budget_exhausted(BudgetDimension)
 reconciliation_required(ActionAttemptRef)
 cancellation_in_progress
 runtime_interruption
-other(code: bounded non-empty string)
+other(code: 1..=256 UTF-8 bytes)
 ```
 
-The `other` code is state-machine/diagnostic data only and cannot encode authority.
+The `other` code is state-machine/diagnostic data only and cannot encode authority. The byte bound is normative and deterministic across platforms.
 
 ## 6. RunState
 
@@ -349,11 +349,11 @@ Transitions running -> suspended with a non-resumable v1 budget blocker.
 {
   actor: ActorId,
   kind: takeover | hand_back | pause_request | edit | denial | note,
-  note: Option<bounded string>
+  note: Option<0..=4096 UTF-8 bytes>
 }
 ```
 
-Records attribution/context only. It is not authentication, approval or authorization.
+The note byte bound is normative and deterministic across platforms. Records attribution/context only. It is not authentication, approval or authorization.
 
 ## 12. RunErrorSummary
 

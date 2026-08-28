@@ -1,8 +1,9 @@
 # Threat Model: ECR-002 Durable Run, Ledger & Budgets
 
 **Feature:** ECR-002  
-**Status:** PLANNING_SECURITY_COMPLETE  
-**Parent:** `specs/000-ecra-platform/threat-model.md`
+**Status:** IMPLEMENTED_SECURITY_REVIEWED_PRE_MERGE  
+**Parent:** `specs/000-ecra-platform/threat-model.md`  
+**Post-implementation re-check:** 2026-08-28 — no missing ECR-002 security control or implicitly accepted Critical risk found
 
 ## 1. Security objective
 
@@ -202,4 +203,20 @@ Copying only the main DB while a live WAL exists is invalid as export. `.ecra` i
 - telemetry/redaction/protected sensitive diagnostics -> ECR-025;
 - broader import/export/deletion portability -> ECR-029.
 
-ECR-002 must expose durable hooks for these owners without implementing their policy prematurely.
+ECR-002 exposes durable hooks for these owners without implementing their policy prematurely.
+
+## 10. Implemented Phase 8 acceptance audit
+
+Phase 8 makes the security non-claims executable instead of relying only on prose:
+
+- `tests/boundaries.rs` scans deterministic reducer/archive production source for OS clock, random, environment, process and network dependencies;
+- the same boundary suite scans every `ecra-run/src/*.rs` module for prohibited provider/network/process call surfaces;
+- committed ECR-002 textual fixtures are scanned for high-confidence private-key, bearer-token and credential markers;
+- README/threat-model acceptance tests require the explicit statements that Actor is not Principal authentication, receipt is not verification, missing receipt remains UNKNOWN, projection is not history, LedgerDigest is not hostile-tamper protection, budget is not authority, and `.ecra` is not a protected secret container;
+- `scripts/check-core-unsafe.sh`, `scripts/check-core-deps.sh`, `scripts/check-run-unsafe.sh`, and `scripts/check-run-deps.sh` remain mandatory exact-head CI gates.
+
+These tests do not authorize real sensitive persistence, provider execution, authenticity claims, independent verification, or policy decisions. They only prove that ECR-002 stays inside its bounded local durability contract.
+
+## 11. Post-implementation security disposition
+
+The T068/T069 re-check against constitution G1–G15 and platform risks R-006/R-019/R-033/R-039/R-042/R-052/R-053 found no failed constitutional gate, no unowned ECR-002 security requirement and no implicitly accepted Critical risk. Remaining risk ownership stays downstream exactly as listed above.

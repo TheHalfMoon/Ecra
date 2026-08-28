@@ -1,8 +1,9 @@
 # Research: Durable Run, Ledger & Budgets
 
 **Feature:** ECR-002  
-**Status:** PLANNING_RESEARCH_COMPLETE  
-**Date:** 2026-08-27
+**Status:** PLANNING_RESEARCH_COMPLETE_WITH_IMPLEMENTATION_RESOLUTION  
+**Date:** 2026-08-27  
+**Implementation resolution recorded:** 2026-08-28
 
 This research resolves the implementation-shaping questions for ECR-002. Sources are used as standards/dependency/concept references only; no donor source is copied into Ecra.
 
@@ -11,7 +12,7 @@ This research resolves the implementation-shaping questions for ECR-002. Sources
 | Question | Decision |
 |---|---|
 | Authoritative run truth | Append-only, per-run ordered event history; mutable projections are rebuildable/non-authoritative |
-| Local database | SQLite through `rusqlite` with bundled SQLite candidate, WAL, `synchronous=FULL`, `BEGIN IMMEDIATE`-equivalent writes |
+| Local database | SQLite through `rusqlite` with bundled SQLite, WAL, `synchronous=FULL`, `BEGIN IMMEDIATE`-equivalent writes |
 | Alternative reviewed | `redb` is credible/crash-safe/pure Rust but rejected for ECR-002 because Ecra would have to build more schema/query/migration/constraint infrastructure itself |
 | Attempt safety | Durable attempt preparation before provider invocation; missing receipt after recovery remains unresolved/UNKNOWN |
 | Replay | Pure deterministic reducer over accepted ordered events; no OS clock/random/I/O in reducer |
@@ -46,17 +47,19 @@ Decision:
 
 Upstream:
 - https://github.com/rusqlite/rusqlite
-- release candidate studied: `rusqlite` 0.40.1
+- release candidate studied during planning: `rusqlite` 0.40.1
 
 Observed upstream facts at planning time:
 - `rusqlite` 0.40.1 uses MIT licensing.
 - `libsqlite3-sys` is likewise MIT; the `bundled` feature compiles the embedded SQLite source, which upstream describes as public domain.
 - Upstream 0.40.1 bundles SQLite 3.53.2 and recommends bundled SQLite for applications that control their own database because it avoids depending on a missing/old system SQLite.
 
-Decision:
-- Plan for exact locked `rusqlite = 0.40.1` with minimal required features plus `bundled` unless implementation-time lock/security review reveals a blocker.
+Planning decision:
+- Plan for exact locked `rusqlite = 0.40.1` with minimal required features plus `bundled` unless implementation-time lock/security review reveals a blocker or newer compatible patch release is selected by the implementation review.
 - The native C SQLite boundary is intentionally outside `ecra-core`; it lives only in the ECR-002 I/O crate.
 - Dependency lock/license/provenance and transitive review are implementation tasks, not pre-authorized by this research.
+
+Implementation resolution is recorded in Section 15: the exact locked implementation selected `rusqlite 0.40.2` without changing the architecture decision or bundled SQLite version.
 
 ## 4. Pure-Rust alternative: redb
 
@@ -183,7 +186,7 @@ Suspension reasons are explicit and may include:
 - reconciliation_required;
 - cancellation_in_progress;
 - runtime_interruption;
-- other_versioned_reason.
+- bounded versioned `other` reason.
 
 State is reducer-derived from events; mutable UI/database status does not independently transition the run.
 
@@ -225,7 +228,7 @@ Time:
 ## 10. Portable `.ecra` artifact
 
 References:
-- ZIP implementation candidate: https://github.com/zip-rs/zip2
+- ZIP implementation: https://github.com/zip-rs/zip2
 - docs: https://docs.rs/zip/8.6.0/zip/
 - format basis documented by upstream: PKWARE APPNOTE 6.3.9.
 
@@ -300,9 +303,9 @@ Rejected constitutionally. Stronger hostile-rewriter authenticity needs ECR-031 
 
 ## 14. Implementation-time dependency review candidates
 
-These are candidates, not authorization:
+The table below is historical planning input, not final dependency authority:
 
-| Package | Candidate | Planned feature posture | License observed | Purpose |
+| Package | Candidate studied | Planned feature posture | License observed | Purpose |
 |---|---:|---|---|---|
 | `rusqlite` | 0.40.1 | minimal + `bundled` | MIT | local SQLite adapter |
 | bundled SQLite | 3.53.2 via candidate above | upstream bundled C source | public domain per upstream | database engine |
@@ -310,3 +313,19 @@ These are candidates, not authorization:
 | `tempfile` | exact lock TBD | dev-only | MIT OR Apache-2.0 upstream commonly; verify exact | crash/store/archive tests |
 
 Existing ECR-001 dependencies remain governed by their locked ledger. No dependency is added to `ecra-core` by this plan.
+
+## 15. Implementation resolution
+
+Implementation-time lock/license/security review selected and exact-head CI verified:
+
+```text
+rusqlite            0.40.2, default-features=false, features=["bundled"]
+libsqlite3-sys      0.38.2
+bundled SQLite      3.53.2
+zip                 8.6.0, default-features=false
+tempfile            3.27.0, dev-only
+proptest            1.11.0, dev-only/workspace-aligned
+Cargo.lock SHA-256  b720472bf40a554ab61afb74eae95dd625bc6b2604e47a632991faea630e42c6
+```
+
+The `rusqlite` patch-level change from the planning candidate `0.40.1` to exact locked `0.40.2` does not alter the selected SQLite architecture, bundled SQLite version, native-boundary rationale, or public ECR-002 contract. Final dependency/license provenance is owned by `research/donor-license-ledger.md`; the ECR-002 CI dependency-evidence step and dependency scripts enforce the runtime boundary.

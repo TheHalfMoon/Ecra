@@ -8,17 +8,15 @@
 
 | ID | Slice | Lifecycle | Notes |
 |---|---|---|---|
-| ECR-001 | Trusted Domain Kernel | `CLOSED_CANONICAL` | PR #1 merged as `d1021616…`; post-merge and closure-ledger main gates passed |
+| ECR-001 | Trusted Domain Kernel | `CLOSED_CANONICAL` | closure-ledger head `85e4bf65…`; CI `33099434232` passed |
 
-ECR-001 is a satisfied roadmap dependency. Final closure-ledger head `85e4bf657b6c33e3f88d83e92e7a35279d177349` passed CI `33099434232`.
-
-## Active dependency-eligible slice
+## Active slice
 
 | ID | Slice | Lifecycle | Depends on | Evidence |
 |---|---|---|---|---|
-| ECR-002 | Durable Run, Ledger & Budgets | `TASKS_READY` | ECR-001 | complete Spec Kit package on main; analyze reports zero blocking planning drift and T001–T073 are ordered/path-traceable |
+| ECR-002 | Durable Run, Ledger & Budgets | `IMPLEMENTING` | ECR-001 | canonical planning base `5caf5dc4…` passed CI `33103802150`; branch `002-durable-run-ledger`; Phase 1 T001–T008 active |
 
-ECR-002 is now implementation-authorized only within its bounded feature branch/PR and its explicit synthetic/non-sensitive scope. Dependency eligibility does not authorize ECR-031/ECR-004/ECR-003 or real sensitive persistence.
+ECR-002 is restricted to the package's local synthetic/non-sensitive durability scope. No downstream dependency is satisfied until ECR-002 becomes `CLOSED_CANONICAL`.
 
 ## Planned critical path
 
@@ -47,23 +45,13 @@ ECR-002 is now implementation-authorized only within its bounded feature branch/
 
 ## Deferred / cross-cutting program
 
-Follow exact dependencies in `roadmap.md` for ECR-022 through ECR-030:
-
-- ECR-022 Optional Sync & Multi-Device — `DEFERRED`.
-- ECR-023 Extension Registry & Trust — `DEFERRED`.
-- ECR-024 Release, Update & Supply Chain — `PLANNED`.
-- ECR-025 Privacy, Telemetry & Diagnostics — `PLANNED`.
-- ECR-026 Accessibility, Internationalization & Human UX Quality — `PLANNED`.
-- ECR-027 Search/Content Compliance & Source Policy — `PLANNED`.
-- ECR-028 Public Benchmark & Research Program — `PLANNED`.
-- ECR-029 Migration, Import & Export — `DEFERRED`.
-- ECR-030 Ecosystem Gateway — `DEFERRED`.
+Follow exact dependencies in `roadmap.md` for ECR-022 through ECR-030. Deferred items remain deferred unless governance explicitly changes them.
 
 ## Wave view
 
 ```text
 A. Trusted substrate
-   ECR-001 [CLOSED] → ECR-002 [TASKS_READY] → ECR-031/ECR-004 → ECR-003 → ECR-005
+   ECR-001 [CLOSED] → ECR-002 [IMPLEMENTING] → ECR-031/ECR-004 → ECR-003 → ECR-005
 
 B. Browser wedge
    ECR-006 → ECR-007 → ECR-008
@@ -76,9 +64,6 @@ D. Skills
 
 E. Ecosystem/work surfaces
    ECR-016/ECR-017 → ECR-018/ECR-019/ECR-020/ECR-021
-
-F. Cross-cutting product maturity
-   ECR-022–ECR-030 according to exact roadmap dependencies
 ```
 
 ## Update rule

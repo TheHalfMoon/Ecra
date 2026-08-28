@@ -2,7 +2,7 @@
 
 **Status:** CANONICAL_IMPLEMENTATION_LEDGER  
 **Created:** 2026-08-27  
-**Updated:** 2026-08-27 for ECR-001 locked dependency review
+**Updated:** 2026-08-28 for ECR-002 Phase 8 exact locked-dependency evidence
 
 This ledger separates **conceptual reference**, **dependency candidate**, **locked dependency**, and **source-reuse candidate**. Listing a project here never authorizes copying its source. Source reuse requires exact-file review, license compatibility, notice handling, and an implementation change that records what was copied/modified.
 
@@ -102,6 +102,53 @@ The versions below are the exact packages committed in `Cargo.lock` for ECR-001.
 - `uuid` is used for parsing/storage of strong opaque identifiers. ECR-001 does not treat UUID version/display text as authority and does not require random generation.
 - Future dependency additions or feature changes require a new ledger delta and must pass the direct-dependency allowlist before merge.
 
+## ECR-002 Locked Dependency Review
+
+ECR-002 extends the workspace with `ecra-run` while leaving the ECR-001 `ecra-core` direct dependency boundary unchanged. The committed generated `Cargo.lock` has SHA-256 `b720472bf40a554ab61afb74eae95dd625bc6b2604e47a632991faea630e42c6`. `scripts/check-run-deps.sh` owns the ECR-002 direct-runtime allowlist and native SQLite exception; `scripts/check-run-unsafe.sh` keeps Ecra-authored Rust code under `#![forbid(unsafe_code)]`.
+
+| Package / component | Exact locked version | Scope | License/status | ECR-002 role | Source/native boundary |
+|---|---:|---|---|---|---|
+| `ecra-core` | workspace path | runtime | Ecra source | imports ECR-001 trusted domain types | no duplication of ECR-001 semantics |
+| `serde` | 1.0.229 | runtime | MIT OR Apache-2.0 | strict typed wire serialization | dependency API only |
+| `serde_json` | 1.0.151 | runtime | MIT OR Apache-2.0 | JSON parsing/value support | dependency API only |
+| `serde_jcs` | 0.2.0 | runtime | MIT OR Apache-2.0 | RFC 8785 canonical event/archive JSON | dependency API only |
+| `sha2` | 0.11.0 | runtime | MIT OR Apache-2.0 | domain-separated ledger/content bindings | dependency API only |
+| `thiserror` | 2.0.20 | runtime | MIT OR Apache-2.0 | typed run/store/archive errors | dependency API only |
+| `rusqlite` | 0.40.2 | runtime | MIT | bounded SQLite adapter | dependency API only; `default-features = false`, `bundled` enabled |
+| `libsqlite3-sys` | 0.38.2 | transitive native runtime | MIT | FFI/build boundary used by `rusqlite` | native dependency outside Ecra-authored Rust unsafe boundary |
+| bundled SQLite | 3.53.2 | native runtime source embedded by `libsqlite3-sys` | public domain | local durable storage engine | compiled by dependency build; no SQLite source copied into Ecra |
+| `zip` | 8.6.0 | runtime | MIT | strict Stored-only `.ecra` reader/writer substrate | dependency API only; `default-features = false` |
+| `proptest` | 1.11.0 | dev-only | MIT OR Apache-2.0 | reducer/budget/archive properties | test dependency API only |
+| `tempfile` | 3.27.0 | dev-only | MIT OR Apache-2.0 | isolated SQLite/archive tests | test dependency API only |
+
+### ECR-002 review notes
+
+- `rusqlite` and `zip` are exact-pinned in `crates/ecra-run/Cargo.toml`; the committed generated lockfile is the transitive version authority.
+- The `bundled` `rusqlite` feature intentionally selects `libsqlite3-sys`'s embedded SQLite instead of ambient system SQLite. For `libsqlite3-sys 0.38.2`, the bundled amalgamation identifies SQLite `3.53.2`.
+- `rusqlite` and `libsqlite3-sys` are MIT licensed; the bundled SQLite amalgamation is public domain according to upstream licensing documentation.
+- `zip 8.6.0` is MIT licensed. Ecra disables its default features and owns the stricter ECR-002 archive profile: Stored entries only, deterministic metadata/order, hard parser limits, and fail-closed validation. Dependency capability does not widen the Ecra contract.
+- The native SQLite C/FFI implementation is explicitly outside Ecra-authored `#![forbid(unsafe_code)]`; this is a reviewed native dependency boundary, not an unsafe exception inside `ecra-run` source.
+- ECR-002 does not copy/adapt implementation source from rusqlite, libsqlite3-sys, SQLite, zip, Rig, AgentFS, Restate, or other donors into Ecra. Public dependency APIs and independently written Ecra code are used.
+- No network, browser, model, provider, process-execution, telemetry, authentication, authorization, or verification dependency is authorized by this delta.
+- Any feature/version/native-boundary change requires a new ledger delta plus exact-head dependency/unsafe gate evidence.
+
+### ECR-002 Phase 8 locked-dependency evidence
+
+The Phase 8 implementation candidate was gated on exact head `af5d8d580b29af450807b32281b79f04e17c1aa7` by ECR-002 CI run `33151825178`, job `98785357882`, with all build, rustfmt, strict Clippy, workspace tests, ECR-001 regression targets, ECR-002 contract targets, rustdoc, offline replay, core/run unsafe+dependency checks, and dependency-evidence steps successful.
+
+```text
+rustc 1.98.0 (88d9e12ae 2026-08-18)
+cargo 1.98.0 (797e8a9bc 2026-08-05)
+Cargo.lock SHA-256  b720472bf40a554ab61afb74eae95dd625bc6b2604e47a632991faea630e42c6
+rusqlite             =0.40.2, default-features=false, features=["bundled"]
+libsqlite3-sys       0.38.2
+bundled SQLite       3.53.2
+zip                   =8.6.0, default-features=false
+archive profile       Stored-only; Ecra-owned deterministic metadata/order and fail-closed limits
+```
+
+The dependency-evidence step also re-read the direct runtime tree as `ecra-core`, `rusqlite`, `serde`, `serde_jcs`, `serde_json`, `sha2`, `thiserror`, and `zip`; it introduced no new runtime provider/network/process dependency. The exact final Phase 8 ledger head remains subject to its own full gate before T060–T066 are marked complete.
+
 ## Durable Execution References With Licensing Caution
 
 | Project | Role | Observed license | Status | Ecra use / constraint |
@@ -153,4 +200,4 @@ Before a candidate becomes a locked dependency:
 
 ## Current Authorization
 
-ECR-001 is authorized to use only the locked runtime/dev dependency set recorded above within the trusted-domain-kernel slice and subject to its dependency boundary. This does not authorize source copying. Browser, runtime, protocol, model, policy, persistence, telemetry, sandbox and other later-slice dependencies remain governed by their owning ECR package and require separate review.
+ECR-001 remains authorized only for its locked trusted-domain dependency set. ECR-002 is additionally authorized for the locked `ecra-run` dependency delta recorded above, including the bounded bundled-SQLite native boundary and Stored-only ZIP substrate. Neither authorization permits copied donor source, ambient network/provider execution, real sensitive-state persistence, authentication/trust-root semantics, authorization/declassification policy, or independent verification/reconciliation behavior. Later-slice dependencies remain governed by their owning ECR package and require separate review.

@@ -2,14 +2,14 @@
 
 **Feature:** ECR-002 — Durable Run, Ledger & Budgets  
 **Contract version:** 1.0  
-**Status:** NORMATIVE_PLANNING  
+**Status:** NORMATIVE_IMPLEMENTED  
 **Depends on:** ECR-001 canonical domain contract
 
 This contract defines the public persisted/interchange semantics for the ECR-002 run ledger. It does not authorize execution, authenticate a principal, independently verify an outcome, or protect secrets at rest.
 
 ## 1. Public crate boundary
 
-Planned crate:
+Implemented crate:
 
 ```text
 crates/ecra-run
@@ -105,7 +105,7 @@ Then:
 SHA-256(domain_separator || canonical_bytes)
 ```
 
-`event_digest` itself is excluded from its own preimage. A fixed golden fixture must lock this byte/digest contract.
+`event_digest` itself is excluded from its own preimage. A fixed golden fixture locks this byte/digest contract.
 
 Integrity guarantee:
 - chain continuity and inspected-content mutation are detectable;
@@ -164,6 +164,8 @@ Terminal phases reject all later v1 events. Reopening requires a future versione
 {"kind":"runtime_interruption"}
 {"kind":"other","code":"bounded.non-empty.code"}
 ```
+
+For `kind = "other"`, `code` MUST be non-empty and MUST contain `1..=256` UTF-8 bytes. This byte bound is part of the v1 wire/parser contract and does not make the value authority or provider syntax.
 
 Resumable in v1:
 - `user_pause`;
@@ -340,7 +342,7 @@ denial
 note
 ```
 
-`note` is bounded diagnostic text and never authority/approval.
+When present, `note` MUST contain `0..=4096` UTF-8 bytes. It is bounded diagnostic text and never authority/approval. The byte bound is deterministic across supported platforms.
 
 ## 8. Attempt protocol
 
@@ -458,7 +460,7 @@ No provider/network/model/browser/process invocation occurs while a store transa
 
 ### `run_events`
 
-Planned DDL semantics:
+Implemented DDL semantics:
 
 ```sql
 CREATE TABLE run_events (
@@ -651,7 +653,7 @@ The archive is not signed/encrypted in ECR-002. Protected authenticity/confident
 
 ## 18. Sensitive-state gate
 
-The v1 implementation and committed fixtures may contain only synthetic/non-sensitive values. The API must document that durable structural capability is not product authorization to persist real secrets/private browser/workspace payloads.
+The v1 implementation and committed fixtures may contain only synthetic/non-sensitive values. The API documents that durable structural capability is not product authorization to persist real secrets/private browser/workspace payloads.
 
 No acceptance test may use real credentials, browser cookies, API keys, private documents, PHI, financial records, or real authenticated assertion material.
 
@@ -724,4 +726,4 @@ Forbidden:
 - shell/process execution in production library code;
 - OS clock/random inside deterministic reducer/digest/archive canonicalization.
 
-`ecra-run` itself must use `#![forbid(unsafe_code)]`. Native SQLite is isolated behind reviewed `rusqlite/libsqlite3-sys`; no unsafe code is added to Ecra-owned production Rust.
+`ecra-run` itself uses `#![forbid(unsafe_code)]`. Native SQLite is isolated behind reviewed `rusqlite/libsqlite3-sys`; no unsafe code is added to Ecra-owned production Rust.

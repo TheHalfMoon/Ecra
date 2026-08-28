@@ -1,6 +1,6 @@
 # Ecra Execution Guide
 
-> **Operational start-here document.** Recover live work from this file, the platform roadmap/status, the active slice package, and exact GitHub truth; do not depend on private chat state.
+> **Operational start-here document.** Recover live work from this file, platform roadmap/status, the active slice package, and exact GitHub truth; do not depend on private chat state.
 
 ## Source-of-truth order
 
@@ -23,16 +23,41 @@ ECR-001 closure-ledger head: 85e4bf657b6c33e3f88d83e92e7a35279d177349
 ECR-001 closure-ledger CI: 33099434232 — SUCCESS
 
 Active slice: ECR-002 — Durable Run, Ledger & Budgets
-Lifecycle: TASKS_READY
-Planning package commit: c83a208ad84b2d1da892a80a6911989eaff25ade
-Planning analyze: ZERO_BLOCKING_PLANNING_DRIFT_FOUND
-Tasks: T001–T073
-Implementation branch: create `002-durable-run-ledger` from exact canonical main after planning-status synchronization
+Lifecycle: IMPLEMENTING / PHASE_9_FINAL_READINESS
+Branch: 002-durable-run-ledger
+Canonical planning base: 5caf5dc4e7f26d07fabac3333713a44f0af22ea1
+PR: #2 OPEN / DRAFT
+
+Phase 1 T001–T008: VERIFIED_ON_BRANCH
+Phase 2 T009–T018: VERIFIED_ON_BRANCH
+Phase 3 T019–T026: VERIFIED_ON_BRANCH
+Phase 4 T027–T034: VERIFIED_ON_BRANCH
+Phase 5 T035–T044: VERIFIED_ON_BRANCH
+Phase 6 T045–T051: VERIFIED_ON_BRANCH
+Phase 7 T052–T059: VERIFIED_ON_BRANCH
+Phase 8 T060–T066: VERIFIED_ON_BRANCH
+Phase 9 T067–T070: COMPLETE_ON_BRANCH
+Phase 9 T071: ACTIVE
+Phase 9 T072–T073: BLOCKED_BY_DEPENDENCY_ORDER
+
+Phase 8 ledger head: e86e1822e621c0563f2764fe784902e3204b0085
+Phase 8 CI: 33152251783 — SUCCESS
+Convergence verified head: 84d8cb5a8c0a28ab7adba42d2cd049e014c8f368
+Convergence CI: 33153174953 — SUCCESS
+Convergence job: 98789740534 — SUCCESS
+
+T067 traceability mapping: COMPLETE_ON_BRANCH
+T068 constitution/risk re-check: COMPLETE_ON_BRANCH
+T069 post-implementation analyze: COMPLETE_ON_BRANCH
+T070 convergence: COMPLETE_ON_BRANCH
+T071 final exact-head readiness: ACTIVE
+T072 merge/post-merge main gate: BLOCKED_BY_T071
+T073 canonical closure: BLOCKED_BY_T072
 ```
 
-ECR-002 implementation is authorized only within the package's bounded local/synthetic/non-sensitive durability scope. This does not authorize real sensitive persistence, authentication/trust roots, authorization/declassification, independent verification/reconciliation, provider execution, distributed workflow infrastructure or multi-device sync.
+ECR-002 implementation remains authorized only inside its local/synthetic/non-sensitive durability scope. Real sensitive persistence, authentication/trust roots, authorization/declassification, independent verification/reconciliation, provider execution, distributed workflow infrastructure and multi-device sync remain outside this slice.
 
-## ECR-002 planning package
+## ECR-002 package
 
 Read in order:
 
@@ -42,68 +67,91 @@ specs/002-durable-run-ledger/spec.md
 specs/002-durable-run-ledger/research.md
 specs/002-durable-run-ledger/data-model.md
 specs/002-durable-run-ledger/contracts/run-ledger-v1.md
+specs/002-durable-run-ledger/implementation-clarifications.md
 specs/002-durable-run-ledger/threat-model.md
 specs/002-durable-run-ledger/plan.md
 specs/002-durable-run-ledger/tasks.md
 specs/002-durable-run-ledger/quickstart.md
 specs/002-durable-run-ledger/analyze.md
+specs/002-durable-run-ledger/traceability-closure.md
+specs/002-durable-run-ledger/post-implementation-analyze.md
 specs/002-durable-run-ledger/checklists/requirements.md
 ```
 
-Planning result:
+Current post-implementation result:
 
 ```text
-FR-001–FR-057: OWNED
-SC-001–SC-016: OWNED
-G1–G15: PASS / explicit N/A
-unresolved security decisions: 0
-unresolved dependency decisions: 0
-real-sensitive-state authorization: NO
+FR-001–FR-057 PASS
+SC-001–SC-014 PASS
+SC-015 PASS_BASELINE / FINAL_FEATURE_AND_POST_MERGE_MAIN_REQUIRED
+SC-016 PASS_TRACEABILITY_AND_CONVERGENCE
+G1–G15 PASS / explicit PASS-N/A
+UNOWNED_FR=0
+UNOWNED_SC=0
+FAILED_CONSTITUTION_GATES=0
+IMPLICITLY_ACCEPTED_CRITICAL_RISKS=0
+MUST_LEVEL_IMPLEMENTATION_DEFECTS_FOUND=0
 ```
 
-## ECR-002 fixed architecture decisions
+## Fixed implementation decisions
 
 ```text
 authoritative truth     append-only RunEventEnvelope history
 ordering                EventSequence only
 projection              rebuildable/non-authoritative RunState cache
 attempt safety          committed AttemptPrepared before provider invocation
-missing receipt         UNKNOWN / reconciliation-required; never inferred success/failure
+missing receipt         UNKNOWN / reconciliation-required
 integrity               domain-separated RFC8785 + SHA-256 LedgerDigest
-local store             SQLite via bounded rusqlite adapter
+local store             SQLite via rusqlite 0.40.2
+SQLite engine           bundled SQLite 3.53.2 via libsqlite3-sys 0.38.2
 SQLite durability       WAL + synchronous=FULL, asserted at open
-write transaction       BEGIN IMMEDIATE equivalent + expected-head compare
-budget accounting       typed I-JSON-safe checked integer dimensions
-portable artifact       deterministic strict Stored-only ZIP `.ecra`
-archive/store content   synthetic/non-sensitive v1 acceptance only
-hostile rewrite claim   NOT provided by plain hash chain
+write transaction       Immediate + expected-head compare
+budget accounting       typed checked I-JSON-safe integers
+portable artifact       deterministic strict Stored-only ZIP via zip 8.6.0
+ecra-run unsafe         forbidden in Ecra-authored Rust
+archive/store fixtures  synthetic/non-sensitive only
+hostile rewrite claim   not provided by plain hash chain
+Cargo.lock SHA-256      b720472bf40a554ab61afb74eae95dd625bc6b2604e47a632991faea630e42c6
 ```
 
-## ECR-002 implementation order
+## Active task order
 
 ```text
-Phase 1 T001–T008  workspace/crate/CI/dependencies
-Phase 2 T009–T018  errors/primitives/events/digest
-Phase 3 T019–T026  reducer/state machine
-Phase 4 T027–T034  budgets
-Phase 5 T035–T044  SQLite/migrations/store/projections
-Phase 6 T045–T051  attempt guard/recovery/concurrency
-Phase 7 T052–T059  deterministic .ecra
-Phase 8 T060–T066  portability/security/docs/gates
-Phase 9 T067–T073  traceability/convergence/review/merge/closure
-```
+T071 final feature-head readiness:
+  - require full ECR-002 CI SUCCESS on the exact ledger head that records T070 complete
+  - require PR head equals the verified head
+  - require mergeable state
+  - require no unresolved reviews or inline review threads
+  - classify conversation comments and require no actionable blocker
+  - move PR out of Draft only after the exact-head gate is green
+  - re-check reviews/comments/checks after Ready-for-review transition
 
-Do not skip ahead across dependency boundaries merely because files can be edited in parallel.
+T072 after T071:
+  - merge exact expected head using a non-rebase method
+  - require canonical-main ECR-002 CI SUCCESS
+
+T073 after T072:
+  - record exact merge/post-merge evidence
+  - mark ECR-002 CLOSED_CANONICAL
+  - converge roadmap/platform status/EXECUTION
+  - identify next genuinely dependency-eligible slice from canonical main
+```
 
 ## CI architecture
 
-The approved repository-scoped self-hosted macOS runner `macbook` remains the trusted execution oracle. Persistent personal runners must not execute untrusted fork PR code.
+The repository-scoped self-hosted macOS runner `macbook` remains the trusted execution oracle. Persistent personal runners must not execute untrusted fork PR code.
 
-ECR-001 workflow remains authoritative for closed core regression on `main`. ECR-002 T006 adds a trusted push-only workflow for `002-durable-run-ledger` and `main` with the full workspace, core-regression and run-specific gate surfaces.
+The trusted ECR-002 workflow is push-only for:
 
-## ECR-002 full verification target
+```text
+push: 002-durable-run-ledger
+push: main
+workflow_dispatch
+runs-on: self-hosted
+permissions: contents: read
+```
 
-When implementation exists:
+## Full target verification surface
 
 ```bash
 cargo build --workspace --locked
@@ -131,22 +179,13 @@ cargo tree -p ecra-core
 cargo tree -p ecra-run
 ```
 
-## Immediate next work
+The permanent workflow also records exact dependency/toolchain evidence and keeps explicit archive/boundaries/portability targets in the gate.
 
-```text
-A. finish lifecycle synchronization on canonical main: roadmap + platform status + spec index
-B. require canonical planning/status head CI to remain healthy
-C. create branch `002-durable-run-ledger` from exact canonical main
-D. update branch-local lifecycle to IMPLEMENTING and open Draft PR
-E. execute T001 then T002... in dependency order
-F. after each material phase, require exact-head CI and repair any actual failure
-G. complete T067–T070 convergence/analyze after implementation
-H. mark Ready only on exact-head green + clean review state
-I. merge with expected head, require post-merge main ECR-002 CI
-J. only then T073 / CLOSED_CANONICAL and re-read roadmap for next eligible slice
-```
+## Execution rule
 
-## Non-negotiable inherited invariants
+Continue T001–T073 in dependency order. Fix actual CI/review blockers and immediately resume. Do not weaken tests or boundaries to make a gate green. No force-push, rebase or destructive history rewriting. Never mark PASS, MERGED or `CLOSED_CANONICAL` without exact-head/post-merge evidence.
+
+## Non-negotiable invariants
 
 ```text
 Actor != authenticated Principal
