@@ -271,6 +271,77 @@ impl KeyRecord {
         })
     }
 
+    /// Retire one currently-active generation for historical verification or
+    /// decryption only. V1 has no reactivation transition.
+    pub fn retire(&self, retired_at: EpochMillis) -> Result<Self, IdentityError> {
+        match self.status {
+            KeyStatus::Active => {}
+            KeyStatus::RetiredVerifyOrDecryptOnly => {
+                return Err(IdentityError::new(
+                    IdentityErrorCategory::KeyState,
+                    IdentityErrorCode::KeyNotActive,
+                    Some("retire_key_not_active"),
+                ));
+            }
+            KeyStatus::Revoked => {
+                return Err(IdentityError::new(
+                    IdentityErrorCategory::KeyState,
+                    IdentityErrorCode::KeyRevoked,
+                    Some("retire_key_revoked"),
+                ));
+            }
+        }
+
+        Self::from_parts(
+            self.version,
+            self.key_id,
+            self.trust_root_id,
+            self.purpose,
+            self.algorithm,
+            self.generation,
+            KeyStatus::RetiredVerifyOrDecryptOnly,
+            self.public_material_b64url.clone(),
+            self.created_at,
+            self.activated_at,
+            Some(retired_at),
+            None,
+        )
+    }
+
+    /// Enforce the lifecycle rule for creating a new signature, envelope or
+    /// other purpose-owned protected artifact. Retired generations are never
+    /// valid for new use and revoked generations fail closed distinctly.
+    pub fn ensure_new_material_use_allowed(&self) -> Result<(), IdentityError> {
+        match self.status {
+            KeyStatus::Active => Ok(()),
+            KeyStatus::RetiredVerifyOrDecryptOnly => Err(IdentityError::new(
+                IdentityErrorCategory::KeyState,
+                IdentityErrorCode::KeyNotActive,
+                Some("retired_key_new_use"),
+            )),
+            KeyStatus::Revoked => Err(IdentityError::new(
+                IdentityErrorCategory::KeyState,
+                IdentityErrorCode::KeyRevoked,
+                Some("revoked_key_new_use"),
+            )),
+        }
+    }
+
+    /// Enforce the v1 historical compatibility rule after the caller has
+    /// already matched the key purpose to the existing artifact. Active and
+    /// retired generations may verify/decrypt existing artifacts; revoked
+    /// generations cannot be used through this compatibility path.
+    pub fn ensure_historical_use_allowed(&self) -> Result<(), IdentityError> {
+        match self.status {
+            KeyStatus::Active | KeyStatus::RetiredVerifyOrDecryptOnly => Ok(()),
+            KeyStatus::Revoked => Err(IdentityError::new(
+                IdentityErrorCategory::KeyState,
+                IdentityErrorCode::KeyRevoked,
+                Some("revoked_key_historical_use"),
+            )),
+        }
+    }
+
     #[must_use]
     pub const fn key_id(&self) -> KeyId {
         self.key_id
@@ -1086,6 +1157,47 @@ mod tests {
         assert!(json["public_material_b64url"].is_null());
         assert!(json.get("secret").is_none());
         assert!(json.get("root_key").is_none());
+    }
+
+    #[test]
+    fn retirement_is_one_way_and_timestamp_bounded() {
+        let active = signing_record(KeyStatus::Active);
+        let retired = active.retire(timestamp(1_100)).unwrap();
+        assert_eq!(retired.status(), KeyStatus::RetiredVerifyOrDecryptOnly);
+        assert_eq!(retired.retired_at(), Some(timestamp(1_100)));
+        assert_eq!(retired.key_id(), active.key_id());
+        assert_eq!(retired.generation(), active.generation());
+
+        let already_retired = retired.retire(timestamp(1_200)).unwrap_err();
+        assert_eq!(already_retired.code(), IdentityErrorCode::KeyNotActive);
+
+        let invalid_time = active.retire(timestamp(999)).unwrap_err();
+        assert_eq!(
+            invalid_time.code(),
+            IdentityErrorCode::TrustSnapshotLifecycleInvalid
+        );
+    }
+
+    #[test]
+    fn retirement_blocks_new_use_but_preserves_historical_compatibility() {
+        let active = signing_record(KeyStatus::Active);
+        active.ensure_new_material_use_allowed().unwrap();
+        active.ensure_historical_use_allowed().unwrap();
+
+        let retired = active.retire(timestamp(1_100)).unwrap();
+        let new_use = retired.ensure_new_material_use_allowed().unwrap_err();
+        assert_eq!(new_use.code(), IdentityErrorCode::KeyNotActive);
+        retired.ensure_historical_use_allowed().unwrap();
+
+        let revoked = signing_record(KeyStatus::Revoked);
+        assert_eq!(
+            revoked.ensure_new_material_use_allowed().unwrap_err().code(),
+            IdentityErrorCode::KeyRevoked
+        );
+        assert_eq!(
+            revoked.ensure_historical_use_allowed().unwrap_err().code(),
+            IdentityErrorCode::KeyRevoked
+        );
     }
 
     #[test]
