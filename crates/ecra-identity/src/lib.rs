@@ -72,6 +72,8 @@ pub mod error;
 pub mod ids;
 pub mod issuance;
 pub mod key;
+#[allow(dead_code)]
+mod store;
 pub mod validation;
 
 #[cfg(test)]
