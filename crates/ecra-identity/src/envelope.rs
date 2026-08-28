@@ -642,10 +642,9 @@ mod kdf_tests {
     use super::{
         AeadAlgorithm, EnvelopeKeyRef, IdentityErrorCategory, IdentityErrorCode,
         PROTECTED_ENVELOPE_HKDF_SALT_DOMAIN, PROTECTED_ENVELOPE_KEY_DOMAIN,
-        PROTECTED_ENVELOPE_NONCE_BYTES, PROTECTED_ENVELOPE_TAG_BYTES,
-        ProtectedInformationClass, ProtectedPurpose, SensitiveBytes, base64url_decode,
-        base64url_encode, derive_envelope_key, envelope_hkdf_info, envelope_hkdf_salt,
-        open_envelope, protect_envelope,
+        PROTECTED_ENVELOPE_NONCE_BYTES, PROTECTED_ENVELOPE_TAG_BYTES, ProtectedInformationClass,
+        ProtectedPurpose, SensitiveBytes, base64url_decode, base64url_encode, derive_envelope_key,
+        envelope_hkdf_info, envelope_hkdf_salt, open_envelope, protect_envelope,
     };
     use crate::backend::DeterministicSecureRandom;
     use crate::{KeyId, ProtectedObjectId, TrustRootId};
@@ -819,8 +818,7 @@ mod kdf_tests {
         let master = SensitiveBytes::new(vec![0x42; 32]);
         let plaintext_bytes = b"ecra-t048-authenticated-open";
         let plaintext = SensitiveBytes::new(plaintext_bytes.to_vec());
-        let mut random =
-            DeterministicSecureRandom::new(vec![0x33; PROTECTED_ENVELOPE_NONCE_BYTES]);
+        let mut random = DeterministicSecureRandom::new(vec![0x33; PROTECTED_ENVELOPE_NONCE_BYTES]);
         let envelope = protect_envelope(
             &master,
             &mut random,
@@ -850,8 +848,7 @@ mod kdf_tests {
         let wrong_master = SensitiveBytes::new(vec![0x24; 32]);
         let sentinel = b"ecra-t048-no-plaintext-on-failure";
         let plaintext = SensitiveBytes::new(sentinel.to_vec());
-        let mut random =
-            DeterministicSecureRandom::new(vec![0x44; PROTECTED_ENVELOPE_NONCE_BYTES]);
+        let mut random = DeterministicSecureRandom::new(vec![0x44; PROTECTED_ENVELOPE_NONCE_BYTES]);
         let envelope = protect_envelope(
             &master,
             &mut random,
@@ -913,7 +910,12 @@ mod kdf_tests {
         .unwrap_err();
         assert_authentication_failure(tampered_tag);
 
-        for error in [wrong_object, wrong_key_ref, wrong_key_material, tampered_tag] {
+        for error in [
+            wrong_object,
+            wrong_key_ref,
+            wrong_key_material,
+            tampered_tag,
+        ] {
             let debug = format!("{error:?}");
             let display = error.to_string();
             let sentinel_text = std::str::from_utf8(sentinel).unwrap();
