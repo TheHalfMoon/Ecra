@@ -25,6 +25,7 @@ Build the default trusted gateway between human/model intent and digital informa
 8. Ecosystem/registry work follows stable extension contracts.
 9. Custom model training is deferred until Ecra owns enough verified trajectory/evaluation data to justify it.
 10. A remote provider call (model, search, tool, protocol) is an information-disclosure boundary and must be authorized as such.
+11. High-assurance local-model/agent execution prefers Ecra-mediated world access with direct egress/credentials/ambient tools denied by default; a sandbox or protocol adapter never becomes the authority model.
 
 ## Roadmap
 
@@ -38,26 +39,26 @@ Build the default trusted gateway between human/model intent and digital informa
 | ECR-006 | Stock Firefox / WebDriver BiDi Prototype | Bounded browser control against stock Firefox with observations, receipts, origin transitions, permission brokerage experiments and takeover events | ECR-001–ECR-005, ECR-031 | PLANNED | `specs/006-firefox-bidi-prototype/` |
 | ECR-007 | Browser Foundation & Upstream Strategy | Reproducible/traceable Firefox-derived build, patch ledger, IPC threat contract, update/rebase policy, extension/profile compatibility/trust model | ECR-006 | PLANNED | `specs/007-browser-foundation/` |
 | ECR-008 | Ecra Browser Wedge | Daily human browser with Spaces/Containers as session partitions plus Ecra authority isolation, human/agent/shared tabs, trusted chrome, control ownership, permissions and visible authority | ECR-003, ECR-004, ECR-006, ECR-007, ECR-031 | PLANNED | `specs/008-browser-wedge/` |
-| ECR-009 | Search Evidence Fabric | Shared evidence contract, provider/egress abstraction, source identity/independence, snapshots/freshness, contradiction handling, local index | ECR-001, ECR-002, ECR-003, ECR-004 | PLANNED | `specs/009-search-evidence-fabric/` |
+| ECR-009 | Search Evidence Fabric | Shared evidence contract plus `EvidencePack`/context-projection inputs, provider/egress abstraction, source identity/independence, snapshots/freshness, contradiction handling and local index | ECR-001, ECR-002, ECR-003, ECR-004 | PLANNED | `specs/009-search-evidence-fabric/` |
 | ECR-010 | Workspace & Memory | Durable scoped workspace, provenance/information-flow-aware memories, derived-index lifecycle, aging/deletion/export, candidate-memory policy | ECR-001–ECR-004, ECR-009, ECR-031 | PLANNED | `specs/010-workspace-memory/` |
-| ECR-011 | Browser-Native Semantic Capabilities | Capability router across WebMCP/native APIs/compiled skills/AX-DOM/BiDi/vision fallback, with concrete action resolution before authorization | ECR-003, ECR-004, ECR-006, ECR-009 | PLANNED | `specs/011-semantic-capability-router/` |
+| ECR-011 | Browser-Native Semantic Capabilities | Capability router across WebMCP/native APIs/compiled skills/AX-DOM/BiDi/vision fallback; structured site capabilities are origin-bound `CapabilityOffer`s and resolve to concrete Ecra actions before authorization | ECR-003, ECR-004, ECR-006, ECR-009 | PLANNED | `specs/011-semantic-capability-router/` |
 | ECR-012 | Skill IR | Versioned typed executable workflow IR with artifacts/dataflow, capability requirements (not captured grants), disclosure constraints, side effects, pre/postconditions and verifiers | ECR-001–ECR-004 | PLANNED | `specs/012-skill-ir/` |
 | ECR-013 | Skill Compiler | Human or verified-agent trajectory → authority-free candidate skill → sandbox validation → versioned skill | ECR-005, ECR-010, ECR-011, ECR-012 | PLANNED | `specs/013-skill-compiler/` |
 | ECR-014 | Deterministic Replay | Low/no-model execution of compatible skills with fresh authorization, exact attempts/receipts and compatibility checks | ECR-012, ECR-013 | PLANNED | `specs/014-skill-replay/` |
 | ECR-015 | Divergence & Repair | Assumption tracking, localized repair, downstream invalidation, re-authorization/re-verification and version promotion | ECR-014 | PLANNED | `specs/015-divergence-repair/` |
 | ECR-016 | Protocol Gateway | Version-pinned MCP/ACP/A2A/Agent Skills adapters with explicit external identity/audience mapping and least-authority state exposure | ECR-001–ECR-004, ECR-009, ECR-010, ECR-012, ECR-031 | PLANNED | `specs/016-protocol-gateway/` |
-| ECR-017 | Plugin & Sandbox Runtime | Signed/versioned extension model, Wasm/process isolation, capability manifests, parser/native tiers, resource limits | ECR-003, ECR-004, ECR-005, ECR-016 | PLANNED | `specs/017-plugin-sandbox/` |
+| ECR-017 | Plugin & Sandbox Runtime | Signed/versioned extension model; replaceable Wasm/process/container/VM sandbox backends; capability manifests; parser/native tiers; resource limits; high-assurance default-deny egress projections and credential-mediation integration points | ECR-003, ECR-004, ECR-005, ECR-016 | PLANNED | `specs/017-plugin-sandbox/` |
 | ECR-018 | Terminal Execution | Human/agent terminal sessions using the same principal/capability/information-flow/receipt/verifier/run model with bounded process trees | ECR-002–ECR-005, ECR-017, ECR-031 | PLANNED | `specs/018-terminal/` |
 | ECR-019 | Developer Workspace | Repo graph/context, current docs, trust-tiered repository inspection/execution, tests/builds, browser QA, code review/release evidence | ECR-009, ECR-010, ECR-016, ECR-018 | PLANNED | `specs/019-developer-workspace/` |
 | ECR-020 | Data & Analytics | Files/SQL/API analytics with lineage, scoped disclosure, reproducible transformations, evidence-backed conclusions | ECR-004, ECR-009, ECR-010, ECR-017, ECR-031 | PLANNED | `specs/020-data-analytics/` |
-| ECR-021 | Local Model Gateway | Provider-neutral local inference with model-artifact provenance/security, bounded execution, and Ecra search/context/memory/skills/actions/verifiers | ECR-009–ECR-017, ECR-024 | PLANNED | `specs/021-local-model-gateway/` |
+| ECR-021 | Local Model Gateway | Provider-neutral local inference plus model profiles, context compilation/progressive disclosure, adaptive tool aperture, Ecra evidence/memory/skills/actions/verifiers, model-facing compatibility adapters, and preferred Ecra-mediated world-access profiles | ECR-009–ECR-017, ECR-024 | PLANNED | `specs/021-local-model-gateway/` |
 | ECR-022 | Optional Sync & Multi-Device | User-controlled encrypted sync for portable workspaces/memory/skills/policies without becoming core-required cloud | ECR-002, ECR-003, ECR-010, ECR-012, ECR-031 | DEFERRED | `specs/022-sync-multidevice/` |
 | ECR-023 | Extension Registry & Trust | Discovery, signing, provenance, review metadata and compatibility for plugins/skills/connectors/verifiers | ECR-012, ECR-016, ECR-017 | DEFERRED | `specs/023-extension-registry/` |
 | ECR-024 | Release, Update & Supply Chain | Artifact-specific reproducibility/provenance targets, SBOM, signing, update channels, security response, dependency/license automation | ECR-005, ECR-007 | PLANNED | `specs/024-release-supply-chain/` |
 | ECR-025 | Privacy, Telemetry & Diagnostics | Local diagnostics, explicit telemetry/remote-egress contracts, redaction, crash reporting, retention/export controls | ECR-002, ECR-003, ECR-008, ECR-031 | PLANNED | `specs/025-privacy-diagnostics/` |
 | ECR-026 | Accessibility, Internationalization & Human UX Quality | Accessibility, keyboard/screen-reader behavior, localization and non-AI browser-quality gates | ECR-007, ECR-008 | PLANNED | `specs/026-accessibility-i18n/` |
 | ECR-027 | Search/Content Compliance & Source Policy | robots/access policy, source licensing/attribution, caching/retention, publisher controls, parser/download safety | ECR-009, ECR-017 | PLANNED | `specs/027-search-source-policy/` |
-| ECR-028 | Public Benchmark & Research Program | Reproducible benchmark adapters/reports for web, security, information flow, long-horizon, search trust and local-model augmentation | ECR-005 plus relevant feature slices | PLANNED | `specs/028-benchmark-program/` |
+| ECR-028 | Public Benchmark & Research Program | Reproducible benchmark adapters/reports for web, security, information flow, long-horizon, search trust and local-model augmentation, including Effective Intelligence Gain against same-model baselines | ECR-005 plus relevant feature slices | PLANNED | `specs/028-benchmark-program/` |
 | ECR-029 | Migration, Import & Export | Import/export/deletion propagation for browser state, workspaces, runs, skills, memories, derived indexes and policies | ECR-008, ECR-010, ECR-012 | DEFERRED | `specs/029-portability/` |
 | ECR-030 | Ecosystem Gateway | Stable developer SDK/local API and production-quality third-party agent/model infrastructure surface | ECR-016, ECR-017, ECR-023, ECR-024, ECR-025 | DEFERRED | `specs/030-ecosystem-gateway/` |
 | ECR-031 | Identity, Trust Root & Sensitive Storage Foundations | Identity/principal assertions and on-behalf-of binding; device/user-local trust root; key lifecycle/revocation; protected sensitive-storage/authenticity envelope semantics | ECR-001, ECR-002 | PLANNED | `specs/031-identity-trust-root/` |
@@ -98,6 +99,8 @@ ECR-016 Protocol Gateway / ECR-017 Plugin Runtime
 ECR-018 Terminal → ECR-019 Developer
 ECR-020 Data
 ECR-021 Local Model Gateway
+        ↓
+ECR-028 reproducible Effective Intelligence Gain evidence
 ```
 
 ## Why These Slices Exist
@@ -124,7 +127,11 @@ The IR must be stable and independently testable before generated skills or repa
 
 ### Gateway is separated from protocols
 
-MCP/ACP/A2A are adapters. Their authentication/token semantics are mapped into Ecra identity/capability decisions; protocol credentials are not passed through or treated as ambient local authority.
+MCP/ACP/A2A and OpenAI-compatible surfaces are adapters. Their authentication/token/request semantics are mapped into Ecra identity/capability/information-flow decisions; protocol credentials are not passed through or treated as ambient local authority.
+
+### Local model gateway is a convergence layer, not a trust bypass
+
+ECR-021 is intentionally downstream of evidence, memory, semantic capabilities, protocols, sandboxing, skills and release/supply-chain work. A local model remains an untrusted proposal generator. The intended high-assurance profile can deny direct network/credential/ambient-tool access and expose the world through bounded Ecra evidence and action APIs, but Ecra policy/verification remain authoritative regardless of the sandbox backend.
 
 ## Sensitive-Data Progression Rule
 
@@ -139,14 +146,16 @@ Every affected slice MUST add/update as part of Definition of Done:
 - threat model;
 - identity/principal boundary where relevant;
 - information classification and source-to-sink/remote-egress analysis;
+- model-context disclosure analysis where model context is a sink;
 - donor/license ledger;
 - dependency/advisory review;
 - migrations/backward compatibility for persisted formats;
-- redaction/secret handling;
+- redaction/secret handling and credential mediation where relevant;
 - accessibility for user-facing flows;
 - observability without hidden telemetry;
 - cancellation/timeouts/resource budgets;
 - benchmark/acceptance fixtures;
+- bypass tests for any claimed default-deny sandbox/egress profile;
 - exact documentation for privileged behavior;
 - export/deletion/portability implications.
 
@@ -164,4 +173,4 @@ Every affected slice MUST add/update as part of Definition of Done:
 
 ## Current First Slice
 
-`ECR-001 Trusted Domain Kernel` is `CLOSED_CANONICAL`. `ECR-002 Durable Run, Ledger & Budgets` is now `TASKS_READY`: its canonical package contains specification, primary-source research, state/data model, normative run-ledger contract, slice threat model, plan, exact-path tasks T001–T073, quickstart, requirements checklist and analyze result `ZERO_BLOCKING_PLANNING_DRIFT_FOUND`. The next authorized action is a bounded ECR-002 implementation branch/PR; real sensitive persistence and downstream slices remain gated.
+`ECR-001 Trusted Domain Kernel` is `CLOSED_CANONICAL`. `ECR-002 Durable Run, Ledger & Budgets` is now `TASKS_READY`: its canonical package contains specification, primary-source research, state/data model, normative run-ledger contract, slice threat model, plan, exact-path tasks T001–T073, quickstart, requirements checklist and analyze result `ZERO_BLOCKING_PLANNING_DRIFT_FOUND`. The next authorized action is a bounded ECR-002 implementation branch/PR; real sensitive persistence and downstream slices remain gated. The local-model world-gateway direction in `research/local-model-world-gateway.md` is planning input for downstream slices and does not expand ECR-002 scope.
