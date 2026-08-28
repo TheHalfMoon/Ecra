@@ -17,8 +17,7 @@ pub const PROTECTED_ENVELOPE_NONCE_BYTES: usize = 12;
 pub const PROTECTED_ENVELOPE_TAG_BYTES: usize = 16;
 pub const PROTECTED_ENVELOPE_KEY_BYTES: usize = 32;
 pub const PROTECTED_ENVELOPE_AAD_DOMAIN: &[u8] = b"ecra.protected-envelope-aad.v1\n";
-pub const PROTECTED_ENVELOPE_HKDF_SALT_DOMAIN: &[u8] =
-    b"ecra.protected-envelope-hkdf-salt.v1\n";
+pub const PROTECTED_ENVELOPE_HKDF_SALT_DOMAIN: &[u8] = b"ecra.protected-envelope-hkdf-salt.v1\n";
 pub const PROTECTED_ENVELOPE_KEY_DOMAIN: &[u8] = b"ecra.protected-envelope-key.v1\n";
 
 /// Owned sensitive bytes with bounded in-process exposure semantics.
@@ -58,10 +57,12 @@ impl fmt::Display for SensitiveBytes {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) struct DerivedEnvelopeKey(Zeroizing<[u8; PROTECTED_ENVELOPE_KEY_BYTES]>);
 
 impl DerivedEnvelopeKey {
     #[must_use]
+    #[allow(dead_code)]
     pub(crate) fn as_bytes(&self) -> &[u8; PROTECTED_ENVELOPE_KEY_BYTES] {
         &self.0
     }
@@ -170,12 +171,14 @@ impl<'de> Deserialize<'de> for EnvelopeKeyRef {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
 enum EnvelopeObjectDomain {
     #[serde(rename = "protected_envelope")]
     ProtectedEnvelope,
 }
 
+#[allow(dead_code)]
 #[derive(Serialize)]
 struct DerivedEnvelopeKeyInfo {
     purpose: ProtectedPurpose,
@@ -183,6 +186,7 @@ struct DerivedEnvelopeKeyInfo {
     algorithm: AeadAlgorithm,
 }
 
+#[allow(dead_code)]
 pub(crate) fn derive_envelope_key(
     master_secret: &SensitiveBytes,
     key_ref: EnvelopeKeyRef,
@@ -203,6 +207,7 @@ pub(crate) fn derive_envelope_key(
     Ok(DerivedEnvelopeKey(Zeroizing::new(output)))
 }
 
+#[allow(dead_code)]
 fn envelope_hkdf_salt(key_ref: EnvelopeKeyRef) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(PROTECTED_ENVELOPE_HKDF_SALT_DOMAIN);
@@ -215,6 +220,7 @@ fn envelope_hkdf_salt(key_ref: EnvelopeKeyRef) -> [u8; 32] {
     salt
 }
 
+#[allow(dead_code)]
 fn envelope_hkdf_info(
     purpose: ProtectedPurpose,
     algorithm: AeadAlgorithm,
