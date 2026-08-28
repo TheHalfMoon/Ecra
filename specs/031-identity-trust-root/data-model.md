@@ -29,6 +29,8 @@ TrustRootId
 KeyId
 ProtectedObjectId
 AssertionNonceId
+EnrollmentId
+DelegationId
 ```
 
 Rules:
@@ -36,7 +38,59 @@ Rules:
 - IDs are identity only, never cryptographic proof;
 - display labels, usernames, email addresses, paths and protocol subject strings are not substitutes.
 
-## 3. Trust root
+## 3. Local principal enrollment and trust root
+
+### LocalPrincipalEnrollmentV1
+
+```text
+LocalPrincipalEnrollmentV1 {
+  version
+  enrollment_id: EnrollmentId
+  principal_id: PrincipalId
+  trust_root_id: TrustRootId
+  created_at: Timestamp
+  trust_state_generation: u64-safe
+  backend_binding_digest: BackendBindingDigest
+}
+```
+
+Semantics:
+- this represents an **Ecra-local installation principal**, not a legally/externally proofed human identity;
+- `principal_id` is freshly generated and never derived from OS username/email/display metadata;
+- the enrollment is usable only after its protected authoritative trust state has been created/opened successfully;
+- partial bootstrap produces no `EnrolledPrincipalHandle` or usable issuer session;
+- `backend_binding_digest` binds non-secret canonical backend identity/configuration metadata and is not itself authority.
+
+### EnrolledPrincipalHandle
+
+Opaque, non-serializable runtime handle produced only after successful protected enrollment/trust-state verification.
+
+```text
+EnrolledPrincipalHandle {
+  principal: PrincipalRef
+  enrollment_id: EnrollmentId
+  trust_root_id: TrustRootId
+  verified_trust_snapshot: VerifiedTrustSnapshot
+}
+```
+
+It must not expose raw root/private keys. Callers cannot construct it from IDs alone.
+
+### IssuerSession
+
+Opaque, non-serializable bounded issuance capability internal to ECR-031:
+
+```text
+IssuerSession {
+  enrolled_principal: EnrolledPrincipalHandle
+  assertion_signing_key_id: KeyId
+  session_created_at: Timestamp
+}
+```
+
+The assertion subject comes from `enrolled_principal.principal`; there is no caller-supplied arbitrary subject principal parameter. `IssuerSession` is identity issuance context, not an ECR-003 authorization decision.
+
+### TrustRootRecord
 
 ```text
 TrustRootRecord {
@@ -106,10 +160,52 @@ revoked
 V1 invariant:
 - one active key per `(trust_root_id, purpose)`;
 - `retired_verify_or_decrypt_only` cannot create new signatures/envelopes;
-- `revoked` cannot create new material and is rejected for assertion validation unless a future explicitly versioned historical-validation policy says otherwise;
+- `revoked` cannot create new material and is rejected for current assertion validation;
 - removal/destruction is operational key availability, not equivalent to revocation.
 
-## 5. Signature algorithm
+### ProtectedTrustStateV1
+
+Security-critical lifecycle state is protected/authenticated under the trust root/backend rather than trusted from ordinary metadata.
+
+```text
+ProtectedTrustStateV1 {
+  version
+  enrollment_id: EnrollmentId
+  principal_id: PrincipalId
+  trust_root_id: TrustRootId
+  generation: u64-safe
+  active_key_by_purpose: ordered map<KeyPurpose, KeyId>
+  key_records: bounded ordered collection<KeyRecord>
+  revoked_key_ids: bounded ordered set<KeyId>
+  previous_state_digest?: TrustStateDigest
+}
+```
+
+This state is itself stored through the protected backend/envelope contract. Ordinary DB/file rows may mirror it for audit/UI but are non-authoritative unless their bytes are authenticated as this exact protected state.
+
+### VerifiedTrustSnapshot
+
+```text
+VerifiedTrustSnapshot {
+  enrollment_id: EnrollmentId
+  principal: PrincipalRef
+  trust_root_id: TrustRootId
+  generation: u64-safe
+  active_key_by_purpose
+  key_records
+  revoked_key_ids
+  trust_state_digest: TrustStateDigest
+  verified_at: Timestamp
+}
+```
+
+Only successful authentication/opening/validation of `ProtectedTrustStateV1` may construct this type. Pure assertion validation consumes `VerifiedTrustSnapshot`, never an unsigned `TrustRootRecord`/ordinary projection.
+
+Rollback boundary:
+- stale ordinary metadata cannot override this snapshot;
+- v1 does not claim universal monotonic rollback resistance if an attacker can restore/control the entire authorized native trust-store state/root itself.
+
+## 5. Signature algorithm and v1 signing custody
 
 ```text
 SignatureAlgorithm {
@@ -118,7 +214,15 @@ SignatureAlgorithm {
 }
 ```
 
-V1 allowlist is plan/dependency locked. Candidate portable test/signing suite is `ed25519`, but platform-native non-exportable signing may require another explicitly represented algorithm. Unknown algorithms fail closed.
+V1 canonical assertion/protected-anchor signing algorithm is:
+
+```text
+ed25519
+```
+
+Unknown algorithms fail closed.
+
+The Ed25519 private signing key is generated from approved CSPRNG/key generation and persisted only as protected sensitive bytes under the native `TrustBackend`. It may be materialized only for bounded signing use and uses the selected redacted/zeroizing in-process wrapper. This v1 custody model does **not** claim Secure Enclave/non-exportable/hardware-backed signing. Native non-exportable signing is a future versioned algorithm-suite extension.
 
 Algorithm choice is part of the signed assertion/protected-anchor contract and cannot be caller-defined arbitrary text.
 
@@ -146,6 +250,8 @@ IdentityAssertionV1 {
 
 Strict unknown-field rejection applies.
 
+Issuance rule: `subject_principal_id` is sourced from `IssuerSession.enrolled_principal.principal`; arbitrary caller-selected principal IDs cannot be minted.
+
 ### AssertionIssuer
 
 ```text
@@ -172,13 +278,11 @@ V1 is single-user/desktop first and deliberately bounded:
 ```text
 OnBehalfOfBinding {
   principal_id: PrincipalId
-  delegation_id: opaque typed id/ref?
+  delegation_id: DelegationId
 }
 ```
 
-If implementation needs a separate delegation identifier, it must be typed and exact. Absence means no on-behalf-of delegation claim; it never means ANY principal.
-
-ECR-031 validates identity/delegation binding only. ECR-003 later interprets whether such delegation is permitted for an action.
+Absence means no on-behalf-of delegation claim; it never means ANY principal. ECR-031 authenticates the binding as identity evidence. ECR-003 later interprets whether such delegation is permitted for an action.
 
 ### AssertionAudience
 
@@ -216,11 +320,11 @@ IdentityValidationContext {
   expected_audience: AssertionAudience
   expected_principal_id?: PrincipalId
   replay_state: ReplayValidationInput
-  trust_snapshot: TrustSnapshotRef
+  trust_snapshot: VerifiedTrustSnapshot
 }
 ```
 
-Validation does not read ambient time/environment/network state.
+Validation does not read ambient time/environment/network state and does not accept raw/unsigned trust metadata in place of the verified snapshot.
 
 ### ValidatedIdentityContext
 
@@ -235,6 +339,7 @@ ValidatedIdentityContext {
   on_behalf_of?: ValidatedOnBehalfOf
   evaluated_at: Timestamp
   assertion_digest: IdentityAssertionDigest
+  trust_state_digest: TrustStateDigest
 }
 ```
 
@@ -249,7 +354,7 @@ DeclassificationDecision
 Secret bytes
 ```
 
-`IdentityAssertionDigest` is domain-specific and distinct from `ContentDigest`, `ActionDigest` and `LedgerDigest`.
+`IdentityAssertionDigest` and `TrustStateDigest` are domain-specific and distinct from `ContentDigest`, `ActionDigest` and `LedgerDigest`.
 
 ## 8. Trust backend interface model
 
@@ -272,17 +377,15 @@ A capability value is evidence about the selected backend contract, not a securi
 `TrustBackend` minimum operation families:
 
 ```text
-create_or_open_root
-create_key
-sign_or_mac
-verify_if_backend_owned?  // only if backend contract requires it
-protect_root_secret / unprotect_root_secret OR equivalent protected operation
-delete_or_revoke_backend_material where safe
+bootstrap_or_open_enrollment
+protect_secret / open_protected_secret
+store_protected_trust_state / open_protected_trust_state
 capabilities
 health/locked status
+delete_backend_material where safe
 ```
 
-The implementation plan may narrow operations. Generic `export_private_key()` is forbidden from the trusted v1 interface.
+V1 canonical signing itself uses the protected Ed25519 software key after bounded authenticated opening; there is no generic `export_private_key()` API and no arbitrary principal-mint API.
 
 ## 9. Protected envelope
 
@@ -312,6 +415,8 @@ Closed enum, e.g.:
 ```text
 identity_state
 trust_state
+assertion_signing_key
+protected_anchor_signing_key
 consumer_sensitive_blob
 ledger_anchor_material
 ```
@@ -374,7 +479,7 @@ DerivedKeyContext {
 }
 ```
 
-HKDF `info` is canonical/domain-separated and prevents derived keys being reused across cryptographic purposes. Salt/IKM handling is frozen in the contract and implementation clarification if the native backend cannot expose suitable key material directly.
+HKDF `info` is canonical/domain-separated and prevents derived keys being reused across cryptographic purposes. If a native backend cannot legitimately expose suitable IKM, the implementation must use an equivalent backend-protected wrapping/operation design after contract convergence; it must never extract hardware-protected material merely to satisfy this formula.
 
 ## 11. Protected authenticity anchor
 
@@ -386,7 +491,7 @@ ProtectedAnchorV1 {
   key_id
   purpose
   payload_digest
-  algorithm
+  algorithm: ed25519
   signature_or_mac
 }
 ```
@@ -405,7 +510,7 @@ It is distinct from outcome verification.
 
 ### Payload binding
 
-Canonical protected-anchor signing/MAC input:
+Canonical protected-anchor signing input:
 
 ```text
 "ecra.protected-anchor.v1" || JCS({purpose, trust_root_id, key_id, payload_digest, algorithm})
@@ -424,7 +529,7 @@ ReplayValidationInput {
 }
 ```
 
-The pure validator consumes replay state but does not own the durable replay database. If v1 issues single-use assertions, the plan must assign durable nonce state to an explicit ECR-031 store and use ECR-002-compatible durability patterns without making the run ledger identity authority.
+The pure validator consumes replay state but does not own the durable replay database. If v1 issues single-use assertions, the plan must assign durable nonce state to an explicit ECR-031 protected store and use ECR-002-compatible durability patterns without making the run ledger identity authority.
 
 ## 13. Timestamp model
 
@@ -459,6 +564,8 @@ cryptographic_authentication
 protected_storage
 corruption
 platform_unavailable
+bootstrap
+issuance
 ```
 
 Candidate codes include:
@@ -474,6 +581,11 @@ assertion_delegation_invalid
 assertion_replay_rejected
 trust_root_unavailable
 trust_root_locked
+trust_snapshot_authentication_failed
+trust_snapshot_stale_or_mismatched
+bootstrap_incomplete
+issuer_session_unavailable
+subject_principal_override_rejected
 key_not_found
 key_not_active
 key_revoked
@@ -489,25 +601,26 @@ Errors must not include plaintext, secret bytes, private keys, decrypted values 
 
 ## 15. Persistence model
 
-ECR-031 may persist only metadata and protected envelopes needed for its own trust state. Any SQLite/file store must:
-- version schemas;
-- validate all untrusted bytes on read;
-- use atomic/crash-safe replacement or transactional semantics;
-- keep raw protected backend keys out of ordinary DB rows;
-- have migration/corruption fixtures;
-- avoid mixing identity authority into ECR-002 run projections.
+ECR-031 may persist only metadata and protected envelopes needed for its own trust state.
 
-The exact store choice remains a plan/dependency task, not a license to reuse SQLite without threat analysis.
+Authoritative rule:
+- `ProtectedTrustStateV1` authenticated/opened under the selected native trust backend/root is authoritative for security-critical key generation/status/revocation;
+- ordinary SQLite/files may contain versioned audit/projection metadata but cannot independently authorize key state;
+- stale ordinary metadata cannot reactivate a key;
+- any SQLite/file store must validate bytes, use crash-safe atomicity/transactions, keep raw protected keys out of rows and have migration/corruption fixtures;
+- identity authority never comes from ECR-002 run projections.
+
+The exact projection/store choice remains an implementation decision bounded by this authority rule.
 
 ## 16. Platform-specific metadata
 
 ### macOS
 
-Opaque Keychain persistent reference/tag/access-control metadata only. No assumption that every key is Secure Enclave-backed. `synchronizing_store=false` is required for the v1 local-only path.
+Opaque Data Protection Keychain persistent reference/tag/access-control metadata only. `synchronizing_store=false` is required for the v1 local-only path. V1 stores/protects wrapped Ed25519 signing/master secrets in Keychain and does not claim Secure Enclave Ed25519 signing.
 
 ### Windows
 
-Opaque DPAPI-protected blob/metadata or CNG handle if research requires asymmetric native keys. Default DPAPI backend capability reports user+machine binding accurately.
+Opaque DPAPI-protected blob/metadata if implemented. Default DPAPI backend capability reports user+machine binding accurately. Native non-exportable signing, if ever added, requires separate CNG/NCrypt research/contract.
 
 ### Linux
 
@@ -515,6 +628,6 @@ Opaque Secret Service item/object reference and **non-secret** lookup attributes
 
 ## 17. Serialization and limits
 
-All untrusted serialized structures must have hard byte/count/depth limits before expensive cryptographic or allocation work. Exact limits are frozen in the contract/implementation clarification before implementation and covered by hostile-input tests.
+All untrusted serialized structures must have hard byte/count/depth limits before expensive cryptographic or allocation work. Exact limits are frozen in the contract before implementation and covered by hostile-input tests.
 
 No unbounded certificate chain, delegation list, attribute map or metadata bag is part of v1.
