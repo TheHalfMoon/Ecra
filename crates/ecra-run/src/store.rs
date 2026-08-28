@@ -56,8 +56,8 @@ impl RunStore {
             RunReducer::apply(&current, envelope)?
         };
 
-        let event_json = to_jcs_vec(envelope)
-            .map_err(|error| RunError::serialization(error.to_string()))?;
+        let event_json =
+            to_jcs_vec(envelope).map_err(|error| RunError::serialization(error.to_string()))?;
         let sequence = i64::try_from(envelope.sequence().get()).map_err(|_| {
             RunError::new(
                 RunErrorCategory::Storage,
@@ -265,10 +265,9 @@ fn validate_expected_head(
 ) -> Result<(), RunError> {
     let matches = match (expected, actual) {
         (ExpectedRunHead::Genesis, None) => true,
-        (
-            ExpectedRunHead::At { sequence, digest },
-            Some((actual_sequence, actual_digest)),
-        ) => sequence == actual_sequence && digest == actual_digest,
+        (ExpectedRunHead::At { sequence, digest }, Some((actual_sequence, actual_digest))) => {
+            sequence == actual_sequence && digest == actual_digest
+        }
         _ => false,
     };
     if matches {
@@ -397,8 +396,7 @@ fn verify_content_digest(digest: &ContentDigest, bytes: &[u8]) -> Result<(), Run
             "ECR-002 blob storage supports only canonical sha256 ContentDigest values",
         ));
     }
-    let actual = Sha256::digest(bytes);
-    let actual_hex = format!("{actual:x}");
+    let actual_hex = sha256_hex(bytes);
     if actual_hex != digest.hex() {
         return Err(RunError::new(
             RunErrorCategory::Integrity,
@@ -407,4 +405,15 @@ fn verify_content_digest(digest: &ContentDigest, bytes: &[u8]) -> Result<(), Run
         ));
     }
     Ok(())
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let digest = Sha256::digest(bytes);
+    let mut hex = String::with_capacity(64);
+    for byte in digest {
+        hex.push(char::from(HEX[usize::from(byte >> 4)]));
+        hex.push(char::from(HEX[usize::from(byte & 0x0f)]));
+    }
+    hex
 }

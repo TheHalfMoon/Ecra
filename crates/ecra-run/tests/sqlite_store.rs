@@ -1,7 +1,7 @@
 use ecra_core::{ContentDigest, EpochMillis, RunId, to_jcs_vec};
 use ecra_run::{
-    BudgetAmount, ExpectedRunHead, LedgerDigest, RunErrorCode, RunEvent, RunEventEnvelope, RunPhase,
-    RunStore,
+    BudgetAmount, ExpectedRunHead, LedgerDigest, RunErrorCode, RunEvent, RunEventEnvelope,
+    RunPhase, RunStore,
 };
 use rusqlite::{Connection, params};
 use sha2::{Digest, Sha256};
@@ -44,7 +44,13 @@ fn expected(envelope: &RunEventEnvelope) -> ExpectedRunHead {
 }
 
 fn sha256_digest(bytes: &[u8]) -> ContentDigest {
-    let hex = format!("{:x}", Sha256::digest(bytes));
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let digest = Sha256::digest(bytes);
+    let mut hex = String::with_capacity(64);
+    for byte in digest {
+        hex.push(char::from(HEX[usize::from(byte >> 4)]));
+        hex.push(char::from(HEX[usize::from(byte & 0x0f)]));
+    }
     ContentDigest::new("sha256", hex).expect("content digest")
 }
 
@@ -82,7 +88,10 @@ fn configured_store_appends_atomically_and_loads_authoritative_history() {
         .load_state(created.run_id())
         .expect("load state")
         .expect("state exists");
-    assert_eq!(derived.canonical_bytes().unwrap(), running_state.canonical_bytes().unwrap());
+    assert_eq!(
+        derived.canonical_bytes().unwrap(),
+        running_state.canonical_bytes().unwrap()
+    );
 }
 
 #[test]
@@ -250,7 +259,10 @@ fn synthetic_content_addressed_blobs_validate_size_digest_and_storage_budget() {
     store
         .put_blob(&digest, size, bytes, Some(size))
         .expect("put exact synthetic blob");
-    assert_eq!(store.get_blob(&digest).expect("get blob"), Some(bytes.to_vec()));
+    assert_eq!(
+        store.get_blob(&digest).expect("get blob"),
+        Some(bytes.to_vec())
+    );
     store
         .put_blob(&digest, size, bytes, Some(size))
         .expect("idempotent put");

@@ -37,7 +37,8 @@ impl SqliteConfiguration {
 }
 
 pub(crate) fn open_configured(path: impl AsRef<Path>) -> Result<Connection, RunError> {
-    let connection = Connection::open(path).map_err(|error| map_sqlite("open SQLite store", error))?;
+    let connection =
+        Connection::open(path).map_err(|error| map_sqlite("open SQLite store", error))?;
     connection
         .pragma_update(None, "journal_mode", "WAL")
         .map_err(|error| map_sqlite("set journal_mode=WAL", error))?;
@@ -73,9 +74,7 @@ pub(crate) fn open_configured(path: impl AsRef<Path>) -> Result<Connection, RunE
     Ok(connection)
 }
 
-pub(crate) fn read_configuration(
-    connection: &Connection,
-) -> Result<SqliteConfiguration, RunError> {
+pub(crate) fn read_configuration(connection: &Connection) -> Result<SqliteConfiguration, RunError> {
     let journal_mode: String = connection
         .pragma_query_value(None, "journal_mode", |row| row.get(0))
         .map_err(|error| map_sqlite("read journal_mode", error))?;
