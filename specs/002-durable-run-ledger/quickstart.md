@@ -1,7 +1,7 @@
 # Quickstart / Verification: ECR-002 Durable Run, Ledger & Budgets
 
 **Feature:** ECR-002  
-**Purpose:** exact reproducible verification surface for planning and implementation
+**Purpose:** exact reproducible verification surface for implementation, convergence and canonical closure
 
 ## 1. Toolchain
 
@@ -12,7 +12,7 @@ rustc --version
 cargo --version
 ```
 
-Expected major toolchain contract: Rust 1.98.x / Edition 2024.
+Expected toolchain contract: Rust 1.98.x / Edition 2024. The Phase 8 dependency evidence recorded Rust/Cargo 1.98.0.
 
 ## 2. Full workspace gate
 
@@ -38,7 +38,7 @@ ECR-002 must not weaken the closed ECR-001 zero-I/O/dependency/unsafe contract.
 
 ## 4. ECR-002 dedicated gates
 
-When the crate exists:
+Run all dedicated targets:
 
 ```bash
 cargo test -p ecra-run --test event_contract --locked
@@ -51,16 +51,19 @@ cargo test -p ecra-run --test crash_recovery --locked
 cargo test -p ecra-run --test archive --locked
 cargo test -p ecra-run --test portability --locked
 cargo test -p ecra-run --test boundaries --locked
+cargo test -p ecra-run --locked
 bash scripts/check-run-unsafe.sh
 bash scripts/check-run-deps.sh
 cargo tree -p ecra-run
 ```
 
+The trusted `.github/workflows/ecr-002.yml` invokes the same full workspace, regression, ECR-002 contract, rustdoc, offline, unsafe/dependency and locked-dependency evidence surface on the feature branch and `main`.
+
 ## 5. Required behavioral evidence
 
 ### Deterministic reducer
 
-The reducer tests must prove the same accepted event history reduced at least 1,000 times yields identical canonical RunState bytes/digest.
+The reducer tests prove the same accepted event history reduced at least 1,000 times yields identical canonical RunState bytes/digest.
 
 ### Attempt crash matrix
 
@@ -88,7 +91,7 @@ Delete `run_heads`, rebuild from `run_events`, and require byte-equivalent deriv
 
 ### SQLite configuration
 
-Tests must read back:
+Tests read back:
 
 ```text
 journal_mode = wal
@@ -157,6 +160,10 @@ manifest/content/ledger digest mismatch
 unsupported version
 ```
 
+### Formatting portability
+
+LF, CRLF and compact JSON representations of the same accepted envelope must parse to the same typed value and produce identical reducer state and deterministic archive bytes.
+
 ## 6. Migration gate
 
 For each database schema migration fixture:
@@ -176,25 +183,29 @@ Newer unsupported schema fails closed.
 
 ## 7. Sensitive-state and egress audit
 
-Repository acceptance fixtures must contain no real:
+Repository acceptance fixtures contain no real:
 - credentials/API tokens;
 - browser cookies/session secrets;
 - private documents/PHI/financial records;
 - production identity assertions/approvals.
 
-Production ECR-002 library code must perform no network/telemetry/model/browser/provider/process execution.
+`crates/ecra-run/tests/boundaries.rs` also enforces high-confidence secret-marker checks and production source scans proving no network/telemetry/model/browser/provider/process execution call surface.
 
 ## 8. Dependency/license evidence
 
-Before PR readiness record exact lockfile versions and licenses for:
-- `rusqlite`;
-- `libsqlite3-sys`;
-- bundled SQLite version/license status;
-- `zip`;
-- any new transitive/runtime direct dependency;
-- dev-only `tempfile` if used.
+Current exact verified boundary:
 
-No source-copying may be hidden as dependency usage.
+```text
+rusqlite            0.40.2, default-features=false, bundled
+libsqlite3-sys      0.38.2
+bundled SQLite      3.53.2
+zip                 8.6.0, default-features=false
+tempfile            3.27.0, dev-only
+proptest            1.11.0, dev-only/workspace-aligned
+Cargo.lock SHA-256  b720472bf40a554ab61afb74eae95dd625bc6b2604e47a632991faea630e42c6
+```
+
+License/provenance/native-boundary evidence is recorded in `research/donor-license-ledger.md`. No source-copying is hidden as dependency usage.
 
 ## 9. Exact-head rule
 
