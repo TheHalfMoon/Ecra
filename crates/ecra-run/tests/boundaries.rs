@@ -128,11 +128,13 @@ fn library_has_no_network_provider_or_process_call_surface() {
 
 #[test]
 fn committed_ecr002_text_fixtures_have_no_secret_markers() {
-    let fixture_root =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../contracts/ecra-run-v1");
+    let fixture_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../contracts/ecra-run-v1");
     let mut checked = 0_usize;
     scan_fixture_tree(&fixture_root, &mut checked);
-    assert!(checked > 0, "fixture audit must inspect committed text fixtures");
+    assert!(
+        checked > 0,
+        "fixture audit must inspect committed text fixtures"
+    );
 }
 
 #[test]
