@@ -108,6 +108,8 @@ Phase 9 T067–T073  blocked
 
 Phase 6 semantic mutation starts only after a full exact-head ECR-002 gate passes on this Phase 5 ledger state.
 
+Phase 6 candidate implementation was materialized and passed its focused pre-commit gate at implementation commit `2105f1f4853b7c7b4f0a48484ba635d0eddbdd67`; T045–T051 remain ACTIVE until the permanent full exact-head gate passes on the candidate-plus-ledger head.
+
 Immediate work:
 
 ```text
