@@ -1,8 +1,9 @@
 # Tasks: Identity, Trust Root & Sensitive Storage Foundations
 
 **Feature:** ECR-031  
-**Status:** PLANNING / TASKS_CANDIDATE / PASS_1_REMEDIATED  
+**Status:** TASKS_READY  
 **Dependencies:** ECR-001/ECR-002 `CLOSED_CANONICAL`  
+**Analyze:** Pass 2 `ZERO_BLOCKING_PLANNING_DRIFT_FOUND`; implementation branch requires exact green synchronized planning head.  
 **Execution rule:** `[x]` requires the linked requirement/evidence, not merely compiling code. `VERIFIED_ON_BRANCH` is not `CLOSED_CANONICAL`.
 
 ## Phase 1 — Workspace, dependency and CI boundaries
