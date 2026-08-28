@@ -1,16 +1,17 @@
 # ECR-002 Implementation Clarifications
 
-**Status:** ACTIVE_IMPLEMENTATION_CLARIFICATIONS  
+**Status:** FOLDED_INTO_PRIMARY_CONTRACT  
 **Created:** 2026-08-27  
+**Folded:** 2026-08-28  
 **Owner:** ECR-002 convergence
 
-These clarifications exist only where implementation exposed a real numeric underspecification. They must be folded into `data-model.md` and `contracts/run-ledger-v1.md` before `CLOSED_CANONICAL` so this file does not remain a competing normative contract.
+This file records the implementation-time underspecification that was resolved during ECR-002. It is retained as convergence history only and is no longer a competing normative contract. The exact rules below are now frozen in `data-model.md` and `contracts/run-ledger-v1.md`.
 
 ## C1 — Bounded diagnostic strings
 
-The planning contract says `SuspensionReason::other.code` and `intervention_recorded.note` are bounded but did not freeze numeric byte limits.
+The planning contract said `SuspensionReason::other.code` and `intervention_recorded.note` were bounded but did not freeze numeric byte limits.
 
-ECR-002 v1 implementation therefore fixes:
+ECR-002 v1 implementation fixed and the primary normative documents now contain:
 
 ```text
 SuspensionReason::other.code   1..=256 UTF-8 bytes
@@ -25,13 +26,11 @@ Rationale:
 
 These limits do not make either field authentication, authorization, approval, policy, verification, or provider syntax.
 
-## Convergence requirement
-
-Before ECR-002 closure:
+## Convergence disposition
 
 ```text
-fold C1 into data-model.md
-fold C1 into contracts/run-ledger-v1.md
-update analyze/traceability evidence
-mark this file FOLDED_INTO_PRIMARY_CONTRACT
+fold C1 into data-model.md                    COMPLETE
+fold C1 into contracts/run-ledger-v1.md      COMPLETE
+update analyze/traceability evidence         COMPLETE / post-implementation-analyze.md + traceability-closure.md
+clarification normative authority            NONE — historical record only
 ```
