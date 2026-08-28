@@ -2,9 +2,9 @@ use std::any::TypeId;
 
 use ecra_core::{ContentDigest, EpochMillis, SchemaVersion, VerificationReceipt};
 use ecra_identity::{
-    KeyId, KeyPurpose, KeyRecord, KeyStatus, ProtectedAnchorPayloadDigest,
-    ProtectedAnchorPurpose, ProtectedAnchorV1, SignatureAlgorithm, TrustRootId,
-    canonical_protected_anchor_input, protected_anchor_input_digest_bytes,
+    KeyId, KeyPurpose, KeyRecord, KeyStatus, ProtectedAnchorPayloadDigest, ProtectedAnchorPurpose,
+    ProtectedAnchorV1, SignatureAlgorithm, TrustRootId, canonical_protected_anchor_input,
+    protected_anchor_input_digest_bytes,
 };
 use ed25519_dalek::SigningKey;
 use serde::Serialize;
@@ -180,10 +180,8 @@ fn signed_anchor_mutations_fail_verification() {
 
 #[test]
 fn ledger_head_anchor_uses_ecr002_golden_digest_without_redefining_it() {
-    let ecr002_digest = include_str!(
-        "../../../contracts/ecra-run-v1/expected/run-created-golden.sha256"
-    )
-    .trim();
+    let ecr002_digest =
+        include_str!("../../../contracts/ecra-run-v1/expected/run-created-golden.sha256").trim();
     assert_eq!(ecr002_digest, ECR002_RUN_CREATED_LEDGER_DIGEST);
 
     let anchor =
