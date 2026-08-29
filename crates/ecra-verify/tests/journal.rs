@@ -176,10 +176,9 @@ fn query_materialization_exact_max_is_accepted_and_max_plus_one_is_typed() {
     let transaction = connection.transaction().expect("fixture transaction");
     let mut previous = None;
     for index in 0..MAX_MATERIALIZED_JOURNAL_ENTRIES {
-        let sequence = VerificationJournalSequence::new(
-            u64::try_from(index + 1).expect("sequence fits u64"),
-        )
-        .expect("journal sequence");
+        let sequence =
+            VerificationJournalSequence::new(u64::try_from(index + 1).expect("sequence fits u64"))
+                .expect("journal sequence");
         let entry = VerificationJournalEntryV1::new(
             sequence,
             previous.clone(),
@@ -207,7 +206,10 @@ fn query_materialization_exact_max_is_accepted_and_max_plus_one_is_typed() {
 
     let store = VerificationStore::open(&path).expect("reopen exact-max store");
     assert_eq!(
-        store.load_entries().expect("exact max materialization").len(),
+        store
+            .load_entries()
+            .expect("exact max materialization")
+            .len(),
         MAX_MATERIALIZED_JOURNAL_ENTRIES
     );
     drop(store);

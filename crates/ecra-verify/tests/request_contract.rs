@@ -178,7 +178,10 @@ fn request_exact_resource_maxima_are_accepted_and_max_plus_one_is_typed() {
         None,
     ))
     .expect_err("evidence max+1 must fail");
-    assert_eq!(evidence_error.code(), VerifyErrorCode::ResourceLimitExceeded);
+    assert_eq!(
+        evidence_error.code(),
+        VerifyErrorCode::ResourceLimitExceeded
+    );
 
     let rule_error = VerificationRequestV1::from_fields(bounded_fields(
         Vec::new(),

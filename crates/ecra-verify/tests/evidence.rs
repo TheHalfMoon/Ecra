@@ -1,6 +1,7 @@
 use ecra_core::{
     ActorId, ContentDigest, EpochMillis, EvidenceId, EvidenceKind, EvidenceRef, Fact, ReceiptId,
-    VerificationId, VerificationMethod, VerificationOutcome, VerificationReceipt, VerificationTarget,
+    VerificationId, VerificationMethod, VerificationOutcome, VerificationReceipt,
+    VerificationTarget,
 };
 use ecra_verify::{
     DecisionGradeReasonV1, DecisionGradeRuleV1, DecisionGradeStatusV1, FreshnessRuleV1,
@@ -226,8 +227,7 @@ fn aggregate_exact_receipt_max_is_accepted_and_max_plus_one_is_typed() {
         .map(|index| {
             VerificationReceipt::new(
                 verification_id(10_000 + index),
-                ActorId::parse_str("00000000-0000-0000-0000-000000000001")
-                    .expect("actor id"),
+                ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
                 target.clone(),
                 VerificationMethod::Other,
                 VerificationOutcome::NotEvaluated,
