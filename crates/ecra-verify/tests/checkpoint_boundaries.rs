@@ -7,16 +7,17 @@ use ecra_verify::{
 #[test]
 fn checkpoint_exposes_no_authority_or_execution_surface() {
     let checkpoint = VerificationCheckpointV1::from_fields(VerificationCheckpointFieldsV1 {
-        id: CheckpointId::parse_str("00000000-0000-0000-0000-000000006101")
-            .expect("checkpoint id"),
+        id: CheckpointId::parse_str("00000000-0000-0000-0000-000000006101").expect("checkpoint id"),
         label: "verification only".to_owned(),
-        requirements: vec![VerificationRequirementV1::new(
-            VerificationTarget::Claim(
-                ClaimRef::new("checkpoint", "boundary").expect("claim target"),
-            ),
-            vec![VerificationAggregateStateV1::Verified],
-        )
-        .expect("requirement")],
+        requirements: vec![
+            VerificationRequirementV1::new(
+                VerificationTarget::Claim(
+                    ClaimRef::new("checkpoint", "boundary").expect("claim target"),
+                ),
+                vec![VerificationAggregateStateV1::Verified],
+            )
+            .expect("requirement"),
+        ],
     })
     .expect("checkpoint");
 

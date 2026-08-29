@@ -120,18 +120,15 @@ fn checkpoint_fixture_matrix_is_fail_closed() {
             ));
             match state.as_str() {
                 "absent" => {}
-                "verified" => aggregates.push(aggregate(
-                    case_target,
-                    &[VerificationOutcome::Verified],
-                )),
-                "rejected" => aggregates.push(aggregate(
-                    case_target,
-                    &[VerificationOutcome::Rejected],
-                )),
-                "inconclusive" => aggregates.push(aggregate(
-                    case_target,
-                    &[VerificationOutcome::Inconclusive],
-                )),
+                "verified" => {
+                    aggregates.push(aggregate(case_target, &[VerificationOutcome::Verified]))
+                }
+                "rejected" => {
+                    aggregates.push(aggregate(case_target, &[VerificationOutcome::Rejected]))
+                }
+                "inconclusive" => {
+                    aggregates.push(aggregate(case_target, &[VerificationOutcome::Inconclusive]))
+                }
                 "conflicted" => aggregates.push(aggregate(
                     case_target,
                     &[VerificationOutcome::Verified, VerificationOutcome::Rejected],
@@ -196,10 +193,7 @@ fn absent_rejected_and_inconclusive_do_not_satisfy_verified_requirement() {
     let checkpoint = checkpoint(vec![
         requirement(absent.clone(), VerificationAggregateStateV1::Verified),
         requirement(rejected.clone(), VerificationAggregateStateV1::Verified),
-        requirement(
-            inconclusive.clone(),
-            VerificationAggregateStateV1::Verified,
-        ),
+        requirement(inconclusive.clone(), VerificationAggregateStateV1::Verified),
     ]);
     let aggregates = vec![
         aggregate(rejected, &[VerificationOutcome::Rejected]),
