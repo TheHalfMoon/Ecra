@@ -34,11 +34,8 @@ fn parse_receipt_id(value: &str) -> ReceiptId {
 }
 
 fn evidence(index: usize) -> EvidenceRef {
-    let id = EvidenceId::parse_str(&format!(
-        "00000000-0000-0000-0000-{:012}",
-        500 + index
-    ))
-    .expect("valid evidence id");
+    let id = EvidenceId::parse_str(&format!("00000000-0000-0000-0000-{:012}", 500 + index))
+        .expect("valid evidence id");
     EvidenceRef::new(id, EvidenceKind::Other)
 }
 
@@ -94,8 +91,12 @@ fn invalid_fixture_cases_fail_closed() {
 
     for case in cases {
         let encoded = serde_json::to_vec(&case.request).expect("serialize invalid fixture case");
-        VerificationRequestV1::from_json_slice(&encoded)
-            .unwrap_err_or_else(|| panic!("invalid fixture unexpectedly accepted: {}", case.name));
+        let result = VerificationRequestV1::from_json_slice(&encoded);
+        assert!(
+            result.is_err(),
+            "invalid fixture unexpectedly accepted: {}",
+            case.name
+        );
     }
 }
 
@@ -122,8 +123,7 @@ fn evidence_count_limit_is_checked_before_receipt_construction() {
     let fields = VerificationRequestFieldsV1 {
         receipt_id: VerificationId::parse_str("00000000-0000-0000-0000-000000000601")
             .expect("verification id"),
-        verifier: ActorId::parse_str("00000000-0000-0000-0000-000000000001")
-            .expect("actor id"),
+        verifier: ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
         verifier_principal: None,
         target: VerificationTarget::Receipt(parse_receipt_id(
             "00000000-0000-0000-0000-000000000602",
@@ -146,11 +146,9 @@ fn validated_request_constructs_only_the_canonical_receipt_shape() {
     let fields = VerificationRequestFieldsV1 {
         receipt_id: VerificationId::parse_str("00000000-0000-0000-0000-000000000701")
             .expect("verification id"),
-        verifier: ActorId::parse_str("00000000-0000-0000-0000-000000000001")
-            .expect("actor id"),
+        verifier: ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
         verifier_principal: Some(PrincipalRef::new(
-            PrincipalId::parse_str("00000000-0000-0000-0000-000000000002")
-                .expect("principal id"),
+            PrincipalId::parse_str("00000000-0000-0000-0000-000000000002").expect("principal id"),
         )),
         target: VerificationTarget::Receipt(parse_receipt_id(
             "00000000-0000-0000-0000-000000000702",
@@ -181,21 +179,4 @@ fn validated_request_constructs_only_the_canonical_receipt_shape() {
     assert_eq!(receipt_json["notes"], request_json["notes"]);
     assert!(receipt_json.get("rule_id").is_none());
     assert!(receipt_json.get("verified").is_none());
-}
-
-trait ExpectErrOrElse<T> {
-    fn unwrap_err_or_else<F>(self, failure: F)
-    where
-        F: FnOnce();
-}
-
-impl<T> ExpectErrOrElse<T> for Result<T, ecra_verify::VerifyError> {
-    fn unwrap_err_or_else<F>(self, failure: F)
-    where
-        F: FnOnce(),
-    {
-        if self.is_ok() {
-            failure();
-        }
-    }
 }
