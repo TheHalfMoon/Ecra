@@ -5,7 +5,7 @@
 **Dependencies:** ECR-001 `CLOSED_CANONICAL`, ECR-002 `CLOSED_CANONICAL`  
 **Canonical implementation base:** `4fb61f8b41267983fc460c666fddd7781d91653c`  
 **Implementation branch:** `004-verification-receipts-impl`  
-**Implementation PR:** pending first-diff PR creation  
+**Implementation PR:** #6 (Draft)  
 **Constitution:** v1.1.0
 
 ECR-004 planning became canonical through merged PR #5. The exact canonical planning head `4fb61f8b41267983fc460c666fddd7781d91653c` then passed both required dependency regressions:
@@ -15,7 +15,7 @@ ECR-001 CI  33237289643  SUCCESS  exact head 4fb61f8b41267983fc460c666fddd7781d9
 ECR-002 CI  33237289693  SUCCESS  exact head 4fb61f8b41267983fc460c666fddd7781d91653c
 ```
 
-Therefore implementation branch `004-verification-receipts-impl` was legally created from that exact canonical SHA. No implementation work may claim a later phase until its exact task/gate evidence exists.
+Therefore implementation branch `004-verification-receipts-impl` was legally created from that exact canonical SHA.
 
 ## Frozen v1 boundaries
 
@@ -45,76 +45,69 @@ IC-001 authorizes only read-only accessors for already-existing canonical ECR-00
 
 IC-002 + FR-046 + SC-013 freeze a read-only compatibility boundary: ECR-004 records effect truth and advisory new-attempt semantics only. It does not clear ECR-002 unresolved state, append an ECR-002 event/receipt, resume/complete the existing run, or schedule a retry.
 
-### Analyze Pass 3
+## Phase 1 — workspace, dependency and CI boundary
+
+T001–T004 are implemented on the branch:
+
+- T001 exact dependency/license/advisory/MSRV admission is recorded in `research.md` and `research/donor-license-ledger.md`;
+- T002 added dependency-minimal `crates/ecra-verify` with `#![forbid(unsafe_code)]` and explicit pure-logic/local-journal separation;
+- T003 added `scripts/check-verify-unsafe.sh` and `scripts/check-verify-deps.sh`;
+- T004 added permanent trusted push-only `.github/workflows/ecr-004.yml` with `contents: read` only;
+- the temporary branch-only lockfile bootstrap changed only `Cargo.lock` and was removed before the Phase 1 acceptance head.
+
+T005 exact-head evidence:
 
 ```text
-FR_TOTAL=46
-FR_OWNED=46
-FR_UNOWNED=0
-SC_TOTAL=13
-SC_OWNED=13
-SC_UNOWNED=0
-MUST_LEVEL_PLANNING_GAPS=0
-FAILED_CONSTITUTION_GATES=0
-CROSS_ARTIFACT_BLOCKING_CONTRADICTIONS=0
-RESULT=ZERO_BLOCKING_PLANNING_DRIFT_FOUND
+HEAD   e223ba5fbf8c375c580e7a93f524be3fd4c311fa
+RUN    33237728338
+JOB    99061549466
+RESULT SUCCESS
 ```
 
-## T001 dependency admission
+Every required step succeeded on that exact head: locked metadata/build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, ECR-002 regressions, ECR-004 Phase 1 targets, rustdoc, offline replay, ECR-001/ECR-002/ECR-004 unsafe/dependency boundaries, and ECR-004 dependency/toolchain evidence.
 
-Implementation-time review is recorded in `research.md` on this branch.
-
-Accepted runtime boundary:
-
-```text
-ecra-core        workspace path
-ecra-run         workspace path
-serde            1.0.229 / derive
-serde_json       1.0.151
-serde_jcs        0.2.0
-sha2             0.11.0
-thiserror        2.0.20
-uuid             1.26.0 / serde only
-rusqlite         =0.40.2 / default-features=false / bundled
-```
-
-Accepted dev-only boundary:
-
-```text
-proptest         1.11.0
-tempfile         3.27.0
-```
-
-Rejected for ECR-004: ZIP, URL parsing, network/browser/model/provider/process/protocol/policy/telemetry/identity-backend runtimes, duplicate canonicalization/hash/DB libraries, and donor source reuse.
-
-Current advisory review explicitly covers the existing `libsqlite3-sys`/`sha2` historical advisories and the August 2026 malicious `arrayref`/`proc-macro1` supply-chain campaign. No matching `arrayref`/`proc-macro1` dependency path was found in the authorization state.
-
-T001 is not marked complete until the donor/license ledger delta is committed on this branch.
+Phase 1 is therefore `VERIFIED_ON_BRANCH`; this is not `CLOSED_CANONICAL` for ECR-004.
 
 ## Current execution state
 
 ```text
-CURRENT_TASK                    T001
+CURRENT_TASK                    T006
 CURRENT_STATE                   IMPLEMENTING
 IMPLEMENTATION_BASE             4fb61f8b41267983fc460c666fddd7781d91653c
 IMPLEMENTATION_BRANCH           004-verification-receipts-impl
-IMPLEMENTATION_PR               PENDING_FIRST_DIFF_CREATION
-T001_RESEARCH_REVIEW            RECORDED
-T001_DONOR_LEDGER_DELTA         PENDING
-T002                            NOT_REACHED
-PHASE_1_EXACT_HEAD_GATE         NOT_REACHED
+IMPLEMENTATION_PR               6_DRAFT
+T001                             COMPLETE
+T002                             COMPLETE
+T003                             COMPLETE
+T004                             COMPLETE
+T005                             COMPLETE_EXACT_HEAD
+PHASE_1_HEAD                     e223ba5fbf8c375c580e7a93f524be3fd4c311fa
+PHASE_1_RUN                      33237728338
+PHASE_1_JOB                      99061549466
+PHASE_1_RESULT                   SUCCESS
+T006                             ELIGIBLE
+T007_PLUS                        NOT_REACHED
 ```
 
 ## Canonical next order
 
 ```text
-1. Complete T001 donor/license ledger delta.
-2. Open Draft implementation PR from this branch to main.
-3. T002 add dependency-minimal ecra-verify workspace crate.
-4. T003 add unsafe/dependency boundary scripts.
-5. T004 add permanent ECR-004 trusted push-only CI.
-6. T005 require exact-head Phase 1 gate SUCCESS before T006.
+T006 IDs/version/errors
+  ↓
+T007 strict VerificationRequestV1
+  ↓
+T008 fixtures/tests
+  ↓
+T009 request -> canonical VerificationReceipt
+  ↓
+T010 architecture/type boundaries
+  ↓
+T011 exact-head Phase 2 gate
+  ↓
+T011A canonical EvidenceRef read-only accessors + unchanged ECR-001 semantics
 ```
+
+No Phase 3 evidence logic starts before T011A completes and its exact regression evidence exists.
 
 ## Parallel ECR-031 boundary
 
