@@ -7,9 +7,10 @@ use ecra_run::{
     RecoveryReason, RunEvent, RunEventEnvelope, RunReducer, RunState, ensure_retry_allowed,
 };
 use ecra_verify::{
-    MAX_RECONCILIATION_NOTES_BYTES, MAX_RECONCILIATION_SUPPORT_IDS, ReconciliationId,
-    ReconciliationInputV1, ReconciliationOutcomeV1, ReconciliationRecordFieldsV1,
-    ReconciliationRecordV1, RetryDispositionV1, VerifyErrorCode, reconcile, retry_disposition,
+    MAX_RECONCILIATION_AVAILABLE_RECEIPTS, MAX_RECONCILIATION_NOTES_BYTES,
+    MAX_RECONCILIATION_SUPPORT_IDS, ReconciliationId, ReconciliationInputV1,
+    ReconciliationOutcomeV1, ReconciliationRecordFieldsV1, ReconciliationRecordV1,
+    RetryDispositionV1, VerifyErrorCode, reconcile, retry_disposition,
 };
 use proptest::prelude::*;
 
@@ -304,6 +305,38 @@ fn exact_run_attempt_action_and_support_binding_fail_closed() {
 }
 
 #[test]
+fn reconciliation_available_receipt_query_is_bounded() {
+    let intent = safe_intent();
+    let attempt = attempt_for_intent(&intent, 52_500);
+    let (_, state) = unresolved_history(&attempt);
+    let available = (0..=MAX_RECONCILIATION_AVAILABLE_RECEIPTS)
+        .map(|index| {
+            receipt(
+                1_000 + u64::try_from(index).expect("index"),
+                &attempt,
+                VerificationOutcome::Verified,
+                true,
+            )
+        })
+        .collect::<Vec<_>>();
+    let error = reconcile(
+        ReconciliationInputV1 {
+            id: reconciliation_id(52_501),
+            run_id: state.run_id(),
+            attempt: attempt.clone(),
+            action: attempt.action().clone(),
+            verification_receipts: vec![available[0].id()],
+            reconciled_at: None,
+            notes: None,
+        },
+        &state,
+        &available,
+    )
+    .expect_err("over-limit receipt source must fail before indexing");
+    assert_eq!(error.code(), VerifyErrorCode::ResourceLimitExceeded);
+}
+
+#[test]
 fn unknown_support_rules_follow_ic003_without_fabrication() {
     let intent = safe_intent();
     let attempt = attempt_for_intent(&intent, 53_001);
@@ -365,7 +398,12 @@ fn no_effect_record(
     attempt_tail: u64,
     receipt_tail: u64,
     record_tail: u64,
-) -> (RunState, ActionAttemptRef, ReconciliationRecordV1) {
+) -> (
+    RunState,
+    ActionAttemptRef,
+    ReconciliationRecordV1,
+    VerificationReceipt,
+) {
     let attempt = attempt_for_intent(intent, attempt_tail);
     let (_, state) = unresolved_history(&attempt);
     let rejected = receipt(receipt_tail, &attempt, VerificationOutcome::Rejected, true);
@@ -378,16 +416,24 @@ fn no_effect_record(
     );
     assert_eq!(record.outcome(), ReconciliationOutcomeV1::NoEffectConfirmed);
     assert!(state.unresolved_attempts().contains(&attempt.id()));
-    (state, attempt, record)
+    (state, attempt, record, rejected)
 }
 
 #[test]
 fn retry_disposition_matrix_is_advisory_and_fail_closed() {
     let safe = safe_intent();
-    let (safe_state, safe_attempt, safe_record) = no_effect_record(&safe, 54_001, 10, 54_101);
+    let (safe_state, safe_attempt, safe_record, safe_receipt) =
+        no_effect_record(&safe, 54_001, 10, 54_101);
     assert_eq!(
-        retry_disposition(&safe, &safe_attempt, &safe_state, Some(&safe_record), None)
-            .expect("safe advisory"),
+        retry_disposition(
+            &safe,
+            &safe_attempt,
+            &safe_state,
+            Some(&safe_record),
+            std::slice::from_ref(&safe_receipt),
+            None,
+        )
+        .expect("safe advisory"),
         RetryDispositionV1::SemanticallyRetryable
     );
 
@@ -396,13 +442,15 @@ fn retry_disposition_matrix_is_advisory_and_fail_closed() {
         serde_json::json!({"class":"idempotent_with_key","key_ref":"phase5-key"}),
         serde_json::json!({"mutation":"local","reversibility":"reversible"}),
     );
-    let (keyed_state, keyed_attempt, keyed_record) = no_effect_record(&keyed, 54_002, 11, 54_102);
+    let (keyed_state, keyed_attempt, keyed_record, keyed_receipt) =
+        no_effect_record(&keyed, 54_002, 11, 54_102);
     assert_eq!(
         retry_disposition(
             &keyed,
             &keyed_attempt,
             &keyed_state,
             Some(&keyed_record),
+            std::slice::from_ref(&keyed_receipt),
             Some("phase5-key"),
         )
         .expect("same-key advisory"),
@@ -414,6 +462,7 @@ fn retry_disposition_matrix_is_advisory_and_fail_closed() {
             &keyed_attempt,
             &keyed_state,
             Some(&keyed_record),
+            std::slice::from_ref(&keyed_receipt),
             Some("mutated-key"),
         )
         .expect("mutated key advisory"),
@@ -451,11 +500,18 @@ fn retry_disposition_matrix_is_advisory_and_fail_closed() {
     .enumerate()
     {
         let offset = u64::try_from(index).expect("index");
-        let (state, attempt, record) =
+        let (state, attempt, record, evidence_receipt) =
             no_effect_record(&intent, 54_010 + offset, 20 + offset, 54_110 + offset);
         assert_eq!(
-            retry_disposition(&intent, &attempt, &state, Some(&record), None)
-                .expect("nonblind advisory"),
+            retry_disposition(
+                &intent,
+                &attempt,
+                &state,
+                Some(&record),
+                std::slice::from_ref(&evidence_receipt),
+                None,
+            )
+            .expect("nonblind advisory"),
             RetryDispositionV1::RequiresExplicitNonblindPath
         );
         assert!(state.unresolved_attempts().contains(&attempt.id()));
@@ -475,6 +531,7 @@ fn retry_disposition_matrix_is_advisory_and_fail_closed() {
             &safe_attempt,
             &safe_state,
             Some(&effect_record),
+            std::slice::from_ref(&effect_receipt),
             None,
         )
         .expect("duplicate advisory"),
@@ -488,13 +545,14 @@ fn retry_disposition_matrix_is_advisory_and_fail_closed() {
             &safe_attempt,
             &safe_state,
             Some(&unknown_record),
+            &[],
             None,
         )
         .expect("unknown advisory"),
         RetryDispositionV1::ReconciliationRequired
     );
     assert_eq!(
-        retry_disposition(&safe, &safe_attempt, &safe_state, None, None)
+        retry_disposition(&safe, &safe_attempt, &safe_state, None, &[], None)
             .expect("missing reconciliation advisory"),
         RetryDispositionV1::ReconciliationRequired
     );
@@ -532,6 +590,17 @@ fn strict_record_json_rejects_unknown_fields_and_outcome_tampering() {
         .validate_against(&state, std::slice::from_ref(&verified))
         .expect_err("tampered outcome must fail against evidence");
     assert_eq!(error.code(), VerifyErrorCode::VerificationConflict);
+
+    let retry_error = retry_disposition(
+        &intent,
+        &attempt,
+        &state,
+        Some(&parsed),
+        std::slice::from_ref(&verified),
+        None,
+    )
+    .expect_err("retry advisory must revalidate a supplied reconciliation record");
+    assert_eq!(retry_error.code(), VerifyErrorCode::VerificationConflict);
 }
 
 #[test]
