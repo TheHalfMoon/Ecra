@@ -40,73 +40,109 @@ jobs:
 
           evidence = Path('crates/ecra-core/src/evidence.rs')
           text = evidence.read_text()
-          needle = '''    #[must_use]\n    pub const fn kind(&self) -> EvidenceKind {\n        self.kind\n    }\n}'''
-          replacement = '''    #[must_use]\n    pub const fn kind(&self) -> EvidenceKind {\n        self.kind\n    }\n\n    #[must_use]\n    pub const fn artifact(&self) -> Option<ArtifactId> {\n        self.artifact\n    }\n\n    #[must_use]\n    pub const fn observation(&self) -> Option<ObservationId> {\n        self.observation\n    }\n\n    #[must_use]\n    pub const fn receipt(&self) -> Option<ReceiptId> {\n        self.receipt\n    }\n\n    #[must_use]\n    pub fn external_ref(&self) -> Option<&str> {\n        self.external_ref.as_deref()\n    }\n\n    #[must_use]\n    pub const fn content_digest(&self) -> Option<&ContentDigest> {\n        self.content_digest.as_ref()\n    }\n\n    #[must_use]\n    pub const fn as_of(&self) -> Option<EpochMillis> {\n        self.as_of\n    }\n}'''
+          needle = """    #[must_use]
+              pub const fn kind(&self) -> EvidenceKind {
+                  self.kind
+              }
+          }"""
+          replacement = """    #[must_use]
+              pub const fn kind(&self) -> EvidenceKind {
+                  self.kind
+              }
+
+              #[must_use]
+              pub const fn artifact(&self) -> Option<ArtifactId> {
+                  self.artifact
+              }
+
+              #[must_use]
+              pub const fn observation(&self) -> Option<ObservationId> {
+                  self.observation
+              }
+
+              #[must_use]
+              pub const fn receipt(&self) -> Option<ReceiptId> {
+                  self.receipt
+              }
+
+              #[must_use]
+              pub fn external_ref(&self) -> Option<&str> {
+                  self.external_ref.as_deref()
+              }
+
+              #[must_use]
+              pub const fn content_digest(&self) -> Option<&ContentDigest> {
+                  self.content_digest.as_ref()
+              }
+
+              #[must_use]
+              pub const fn as_of(&self) -> Option<EpochMillis> {
+                  self.as_of
+              }
+          }"""
           if text.count(needle) != 1:
               raise SystemExit('EvidenceRef accessor insertion anchor was not unique')
           evidence.write_text(text.replace(needle, replacement, 1))
 
           information = Path('crates/ecra-core/tests/information_evidence.rs')
-          marker = 'fn evidence_ref_read_only_accessors_preserve_wire_and_canonical_bytes()'
-          if marker in information.read_text():
+          if 'fn evidence_ref_read_only_accessors_preserve_wire_and_canonical_bytes()' in information.read_text():
               raise SystemExit('information_evidence T011A test already present')
-          information.write_text(information.read_text() + r'''
+          information.write_text(information.read_text() + """
 
-#[test]
-fn evidence_ref_read_only_accessors_preserve_wire_and_canonical_bytes() {
-    let fixture = include_str!(
-        "../../../contracts/ecra-domain-v1/valid/evidence-snapshot.json"
-    );
-    let evidence: EvidenceRef = serde_json::from_str(fixture).expect("valid snapshot evidence");
-    let json_before = serde_json::to_vec(&evidence).expect("serialize evidence before access");
-    let jcs_before = ecra_core::to_jcs_vec(&evidence).expect("canonicalize evidence before access");
+          #[test]
+          fn evidence_ref_read_only_accessors_preserve_wire_and_canonical_bytes() {
+              let fixture = include_str!(
+                  "../../../contracts/ecra-domain-v1/valid/evidence-snapshot.json"
+              );
+              let evidence: EvidenceRef = serde_json::from_str(fixture).expect("valid snapshot evidence");
+              let json_before = serde_json::to_vec(&evidence).expect("serialize evidence before access");
+              let jcs_before = ecra_core::to_jcs_vec(&evidence).expect("canonicalize evidence before access");
 
-    assert!(evidence.artifact().is_none());
-    assert!(evidence.observation().is_none());
-    assert!(evidence.receipt().is_none());
-    assert_eq!(evidence.external_ref(), Some("snapshot:example-report-v1"));
-    assert_eq!(
-        evidence.content_digest().expect("content digest").hex(),
-        "0000000000000000000000000000000000000000000000000000000000000000"
-    );
-    assert_eq!(evidence.as_of().expect("as-of").get(), 1900);
+              assert!(evidence.artifact().is_none());
+              assert!(evidence.observation().is_none());
+              assert!(evidence.receipt().is_none());
+              assert_eq!(evidence.external_ref(), Some("snapshot:example-report-v1"));
+              assert_eq!(
+                  evidence.content_digest().expect("content digest").hex(),
+                  "0000000000000000000000000000000000000000000000000000000000000000"
+              );
+              assert_eq!(evidence.as_of().expect("as-of").get(), 1900);
 
-    let json_after = serde_json::to_vec(&evidence).expect("serialize evidence after access");
-    let jcs_after = ecra_core::to_jcs_vec(&evidence).expect("canonicalize evidence after access");
-    assert_eq!(json_before, json_after);
-    assert_eq!(jcs_before, jcs_after);
-}
-''')
+              let json_after = serde_json::to_vec(&evidence).expect("serialize evidence after access");
+              let jcs_after = ecra_core::to_jcs_vec(&evidence).expect("canonicalize evidence after access");
+              assert_eq!(json_before, json_after);
+              assert_eq!(jcs_before, jcs_after);
+          }
+          """)
 
           contracts = Path('crates/ecra-core/tests/contract_fixtures.rs')
-          marker = 'fn evidence_ref_accessors_do_not_change_contract_round_trip()'
-          if marker in contracts.read_text():
+          if 'fn evidence_ref_accessors_do_not_change_contract_round_trip()' in contracts.read_text():
               raise SystemExit('contract_fixtures T011A test already present')
-          contracts.write_text(contracts.read_text() + r'''
+          contracts.write_text(contracts.read_text() + """
 
-#[test]
-fn evidence_ref_accessors_do_not_change_contract_round_trip() {
-    let fixture = include_str!(
-        "../../../contracts/ecra-domain-v1/valid/evidence-snapshot.json"
-    );
-    let evidence: ecra_core::EvidenceRef =
-        serde_json::from_str(fixture).expect("valid evidence fixture");
-    let before = serde_json::to_value(&evidence).expect("serialize evidence");
+          #[test]
+          fn evidence_ref_accessors_do_not_change_contract_round_trip() {
+              let fixture = include_str!(
+                  "../../../contracts/ecra-domain-v1/valid/evidence-snapshot.json"
+              );
+              let evidence: ecra_core::EvidenceRef =
+                  serde_json::from_str(fixture).expect("valid evidence fixture");
+              let before = serde_json::to_value(&evidence).expect("serialize evidence");
 
-    let _ = evidence.artifact();
-    let _ = evidence.observation();
-    let _ = evidence.receipt();
-    let _ = evidence.external_ref();
-    let _ = evidence.content_digest();
-    let _ = evidence.as_of();
+              let _ = evidence.artifact();
+              let _ = evidence.observation();
+              let _ = evidence.receipt();
+              let _ = evidence.external_ref();
+              let _ = evidence.content_digest();
+              let _ = evidence.as_of();
 
-    let encoded = serde_json::to_string(&evidence).expect("serialize evidence after access");
-    let round_trip: ecra_core::EvidenceRef =
-        serde_json::from_str(&encoded).expect("round trip evidence");
-    let after = serde_json::to_value(&round_trip).expect("serialize round trip evidence");
-    assert_eq!(before, after);
-}
-''')
+              let encoded = serde_json::to_string(&evidence).expect("serialize evidence after access");
+              let round_trip: ecra_core::EvidenceRef =
+                  serde_json::from_str(&encoded).expect("round trip evidence");
+              let after = serde_json::to_value(&round_trip).expect("serialize round trip evidence");
+              assert_eq!(before, after);
+          }
+          """)
           PY
           cargo fmt --all
           changed="$(git status --porcelain)"
