@@ -49,7 +49,7 @@ ECR-002 owns synthetic/non-sensitive local run durability, budgets, recovery and
 ### ECR-031 — Identity, Trust Root & Sensitive Storage Foundations
 
 Directory: `031-identity-trust-root/`  
-Canonical planning lifecycle: `TASKS_READY`.  
+Canonical `main` STATUS marker (unchanged by this ECR-004 planning PR): `TASKS_READY_PENDING_EXACT_GREEN_HEAD`.  
 Dependencies: ECR-001 + ECR-002 `CLOSED_CANONICAL`.  
 Analyze Pass 2: `a3c7d563c139c65886f169f9181c07a997038f1f` — `ZERO_BLOCKING_PLANNING_DRIFT_FOUND`.
 
@@ -90,7 +90,7 @@ Frozen v1 boundaries include:
 - ChaCha20-Poly1305/HKDF protected-envelope direction subject to exact dependency verification;
 - authorization remains ECR-003; independent outcome verification remains ECR-004.
 
-Live implementation state is not represented by the old canonical planning snapshot alone. PR #4 / branch `031-identity-trust-root` is active; exact live branch `STATUS.md`, `EXECUTION.md`, Actions and PR truth govern its current task frontier. At the latest verified live state, T064/T068 are blocked by the trusted macOS runner's missing Apple code-signing identity/provisioning profile/developer account/team; no legacy/plaintext/ad-hoc fallback is authorized.
+The canonical main marker above is not a substitute for current branch execution truth. PR #4 / branch `031-identity-trust-root` is active and has progressed beyond that historical planning marker; exact live branch `STATUS.md`, `EXECUTION.md`, Actions and PR truth govern its current task frontier. At the latest verified live state, T064/T068 are blocked by the trusted macOS runner's missing Apple code-signing identity/provisioning profile/developer account/team; no legacy/plaintext/ad-hoc fallback is authorized. This ECR-004 planning PR does not reclassify or rewrite ECR-031's canonical STATUS.
 
 ### ECR-004 — Verification & Reconciliation
 
