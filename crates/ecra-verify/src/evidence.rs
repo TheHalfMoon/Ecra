@@ -139,14 +139,27 @@ pub fn assess_request(
 
         let immutable = item.artifact().is_some() || item.content_digest().is_some();
         any_immutable |= immutable;
-        any_independent_non_model |= !matches!(item.kind(), EvidenceKind::ModelJudgment)
-            && (immutable || item.observation().is_some() || item.external_ref().is_some());
+        any_independent_non_model |= !matches!(
+            item.kind(),
+            EvidenceKind::ModelJudgment | EvidenceKind::NetworkReceipt
+        ) && (immutable || item.observation().is_some() || item.external_ref().is_some());
 
-        let is_same_receipt = match request.target() {
+        // An immutable digest or artifact can bind an executor receipt without
+        // making that receipt an independent evaluation. For receipt targets,
+        // the exact receipt cannot prove itself. For action/attempt targets, a
+        // NetworkReceipt remains executor-observed evidence and needs a second,
+        // independently evaluated evidence item before a conclusive claim can
+        // be decision grade.
+        let self_attesting_execution_evidence = match request.target() {
             VerificationTarget::Receipt(target) => item.receipt() == Some(*target),
-            _ => false,
+            VerificationTarget::Action(_) | VerificationTarget::ActionAttempt(_) => {
+                matches!(item.kind(), EvidenceKind::NetworkReceipt)
+            }
+            VerificationTarget::Fact(_)
+            | VerificationTarget::Artifact(_)
+            | VerificationTarget::Claim(_) => false,
         };
-        if !is_same_receipt || immutable || item.observation().is_some() {
+        if !self_attesting_execution_evidence {
             only_self_attesting_receipt = false;
         }
 
@@ -187,7 +200,7 @@ pub fn assess_request(
             return Err(VerifyError::new(
                 VerifyErrorCategory::Evidence,
                 VerifyErrorCode::SelfAttestingReceipt,
-                "an execution receipt cannot alone prove its own conclusive verification claim",
+                "executor-observed receipt evidence cannot alone prove its own conclusive verification claim",
             ));
         }
         if request.method() == VerificationMethod::IndependentModelJudgment
