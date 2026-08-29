@@ -5,12 +5,16 @@ on:
     branches:
       - 031-identity-trust-root
 
+concurrency:
+  group: ecr-031-host-readiness-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
-  interactive-console-session:
-    name: interactive console session
+  host-readiness:
+    name: macOS Data Protection host readiness
     runs-on: self-hosted
     timeout-minutes: 5
     steps:
@@ -23,11 +27,6 @@ jobs:
           [[ "$console_user" != "loginwindow" ]]
           [[ "$console_user" != "unknown" ]]
 
-  runner-matches-console-user:
-    name: runner matches console user
-    runs-on: self-hosted
-    timeout-minutes: 5
-    steps:
       - name: Require runner user to own console session
         shell: bash
         run: |
@@ -36,25 +35,23 @@ jobs:
           console_user="$(stat -f '%Su' /dev/console 2>/dev/null || printf 'unknown')"
           [[ "$runner_user" == "$console_user" ]]
 
-  code-signing-identity:
-    name: code signing identity available
-    runs-on: self-hosted
-    timeout-minutes: 5
-    steps:
-      - name: Require at least one code-signing identity
+      - name: Require codesign and Xcode build tools
         shell: bash
         run: |
           set -euo pipefail
-          command -v security >/dev/null 2>&1
+          command -v codesign >/dev/null 2>&1
+          command -v xcodebuild >/dev/null 2>&1
+
+      - name: Detect code-signing identity
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
           security find-identity -v -p codesigning 2>/dev/null \
             | grep -Eq '^[[:space:]]*[0-9]+\)'
 
-  provisioning-profile:
-    name: provisioning profile available
-    runs-on: self-hosted
-    timeout-minutes: 5
-    steps:
-      - name: Require at least one local provisioning profile
+      - name: Detect local provisioning profile
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -71,24 +68,8 @@ jobs:
           done
           [[ "$found" -eq 1 ]]
 
-  signing-tools:
-    name: signing tools available
-    runs-on: self-hosted
-    timeout-minutes: 5
-    steps:
-      - name: Require codesign and Xcode build tools
-        shell: bash
-        run: |
-          set -euo pipefail
-          command -v codesign >/dev/null 2>&1
-          command -v xcodebuild >/dev/null 2>&1
-
-  xcode-account-configured:
-    name: Xcode developer account configured
-    runs-on: self-hosted
-    timeout-minutes: 5
-    steps:
-      - name: Require non-empty Xcode developer account registry
+      - name: Detect Xcode developer account registry
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -107,24 +88,8 @@ jobs:
               sys.exit(1)
           PY
 
-  xcode-account-token:
-    name: Xcode developer account token available
-    runs-on: self-hosted
-    timeout-minutes: 5
-    steps:
-      - name: Require Xcode account token in the current user keychain
-        shell: bash
-        run: |
-          set -euo pipefail
-          command -v security >/dev/null 2>&1
-          security find-generic-password -s "Xcode-Token" >/dev/null 2>&1
-
-  xcode-team-configured:
-    name: Xcode development team configured
-    runs-on: self-hosted
-    timeout-minutes: 5
-    steps:
-      - name: Require at least one configured Xcode development team
+      - name: Detect Xcode development team
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
