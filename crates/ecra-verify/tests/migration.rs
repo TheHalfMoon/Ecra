@@ -47,11 +47,11 @@ fn initialization_failure_rolls_back_version_and_new_tables() {
     let connection = Connection::open(&path).expect("create fixture");
     connection
         .execute_batch(
-            "CREATE TABLE verification_meta (wrong TEXT NOT NULL);
-             INSERT INTO verification_meta (wrong) VALUES ('existing');
+            "CREATE TABLE checkpoint_index (wrong TEXT NOT NULL);
+             INSERT INTO checkpoint_index (wrong) VALUES ('existing');
              PRAGMA user_version = 0;",
         )
-        .expect("prepare conflicting fixture");
+        .expect("prepare late conflicting fixture");
     drop(connection);
 
     let error = VerificationStore::open(&path)
@@ -64,8 +64,15 @@ fn initialization_failure_rolls_back_version_and_new_tables() {
         .query_row("PRAGMA user_version", [], |row| row.get(0))
         .expect("user version");
     let original: String = connection
-        .query_row("SELECT wrong FROM verification_meta", [], |row| row.get(0))
-        .expect("original row");
+        .query_row("SELECT wrong FROM checkpoint_index", [], |row| row.get(0))
+        .expect("original conflicting row");
+    let meta_count: i64 = connection
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='verification_meta'",
+            [],
+            |row| row.get(0),
+        )
+        .expect("meta table count");
     let journal_count: i64 = connection
         .query_row(
             "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='verification_journal'",
@@ -73,9 +80,18 @@ fn initialization_failure_rolls_back_version_and_new_tables() {
             |row| row.get(0),
         )
         .expect("journal table count");
+    let receipt_index_count: i64 = connection
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='verification_receipt_index'",
+            [],
+            |row| row.get(0),
+        )
+        .expect("receipt index table count");
     assert_eq!(version, 0);
     assert_eq!(original, "existing");
+    assert_eq!(meta_count, 0);
     assert_eq!(journal_count, 0);
+    assert_eq!(receipt_index_count, 0);
 }
 
 #[test]
