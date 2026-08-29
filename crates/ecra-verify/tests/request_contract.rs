@@ -1,12 +1,13 @@
 use std::collections::HashSet;
 
 use ecra_core::{
-    ActorId, EvidenceId, EvidenceKind, EvidenceRef, PrincipalId, PrincipalRef, ReceiptId,
-    SchemaVersion, VerificationId, VerificationMethod, VerificationOutcome, VerificationTarget,
+    ActorId, ContentDigest, EvidenceId, EvidenceKind, EvidenceRef, PrincipalId, PrincipalRef,
+    ReceiptId, SchemaVersion, VerificationId, VerificationMethod, VerificationOutcome,
+    VerificationTarget,
 };
 use ecra_verify::{
-    CheckpointId, MAX_EVIDENCE_REFS_PER_REQUEST, ReconciliationId, VerificationRequestFieldsV1,
-    VerificationRequestV1, VerifyErrorCode,
+    CheckpointId, DecisionGradeRuleV1, MAX_EVIDENCE_REFS_PER_REQUEST, ReconciliationId,
+    VerificationRequestFieldsV1, VerificationRequestV1, VerifyErrorCode, verify_request,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -36,7 +37,12 @@ fn parse_receipt_id(value: &str) -> ReceiptId {
 fn evidence(index: usize) -> EvidenceRef {
     let id = EvidenceId::parse_str(&format!("00000000-0000-0000-0000-{:012}", 500 + index))
         .expect("valid evidence id");
-    EvidenceRef::new(id, EvidenceKind::Other)
+    let digest = ContentDigest::new(
+        "sha256",
+        "0000000000000000000000000000000000000000000000000000000000000000",
+    )
+    .expect("valid content digest");
+    EvidenceRef::new(id, EvidenceKind::Other).with_content_digest(digest)
 }
 
 #[test]
@@ -161,7 +167,8 @@ fn validated_request_constructs_only_the_canonical_receipt_shape() {
         notes: Some("bounded note".to_owned()),
     };
     let request = VerificationRequestV1::from_fields(fields).expect("valid request");
-    let receipt = request.to_receipt().expect("canonical receipt");
+    let receipt = verify_request(&request, DecisionGradeRuleV1::standard())
+        .expect("canonical decision-grade receipt");
     let request_json = serde_json::to_value(&request).expect("serialize request");
     let receipt_json = serde_json::to_value(&receipt).expect("serialize receipt");
 
