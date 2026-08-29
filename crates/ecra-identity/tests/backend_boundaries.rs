@@ -145,6 +145,32 @@ fn production_backend_selection_has_no_plaintext_or_test_fallback_variant() {
     assert!(selection.contains("target_os = \"macos\""));
     assert!(selection.contains("target_os = \"windows\""));
     assert!(selection.contains("target_os = \"linux\""));
+    assert!(selection.contains("windows::unsupported_backend"));
+    assert!(selection.contains("linux::unsupported_backend"));
+}
+
+#[test]
+fn native_backend_assurance_cannot_be_silently_upgraded() {
+    let macos = include_str!("../src/platform/macos.rs");
+    assert!(macos.contains("use_protected_keychain()"));
+    assert!(macos.contains("set_access_synchronized(Some(false))"));
+    assert!(macos.contains("with_user_scoped(true)"));
+    assert!(macos.contains("with_locked_state_observable(true)"));
+    assert!(!macos.contains("with_hardware_backed_private_operations(true)"));
+    assert!(!macos.contains("with_non_exportable_private_key(true)"));
+    assert!(!macos.contains("with_user_presence_gate(true)"));
+    assert!(!macos.contains("with_biometric_gate(true)"));
+    assert!(!macos.contains("with_synchronizing_store(true)"));
+
+    for source in [
+        include_str!("../src/platform/windows.rs"),
+        include_str!("../src/platform/linux.rs"),
+    ] {
+        assert!(source.contains("BackendUnsupported"));
+        assert!(source.contains("_unverified"));
+        assert!(!source.contains("with_hardware_backed_private_operations(true)"));
+        assert!(!source.contains("with_non_exportable_private_key(true)"));
+    }
 }
 
 #[test]
