@@ -110,6 +110,7 @@ jobs:
           run_identity_target anchor
           run_identity_target redaction
           run_identity_target backend_boundaries
+          run_identity_target macos_backend
           run_identity_target macos_keychain
 
       - name: Rustdoc tests
