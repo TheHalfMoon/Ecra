@@ -22,9 +22,10 @@
 **Why:** ECR-002 is `CLOSED_CANONICAL`; its v1 run event/reducer/archive semantics are already dependency truth. Verification is orthogonal to execution truth. A sidecar avoids making old run-event readers reject new variants and avoids making verification overwrite provider-observed execution state.
 
 **Rejected:**
-- `RunEvent::VerificationRecorded` in ECR-002 v1;
+- `RunEvent::VerificationRecorded` or a reconciliation-resolution event in ECR-002 v1;
 - clearing unresolved attempts by rewriting ECR-002 state;
-- synthesizing `ReceiptRecorded` after external reconciliation.
+- synthesizing `ReceiptRecorded` after external reconciliation;
+- weakening `RunResumed`, `ExecutionCompleted`, or blind-retry guards after reconciliation.
 
 ## R3 — New crate boundary: ecra-verify
 
@@ -91,9 +92,9 @@ Conflicted   >=1 Verified and >=1 Rejected
 - `no_effect_confirmed` — independent evidence confirms the attempted effect did not occur;
 - `still_unknown` — evidence is insufficient/conflicted.
 
-**Why:** this resolves the externally relevant effect claim without inventing provider response data.
+**Why:** this records the independently evaluated external-effect claim without inventing provider response data or changing durable execution history.
 
-## R10 — Retry semantics remain split from authorization
+## R10 — Retry disposition is advisory and cannot resolve the closed ECR-002 run
 
 **Decision:** ECR-004 may compute a `RetryDispositionV1` from exact ECR-001 retry/idempotency semantics plus reconciliation outcome:
 
@@ -105,7 +106,11 @@ no_effect_confirmed + requires_same_idempotency_key -> semantically_retryable_sa
 no_effect_confirmed + never_blind_retry -> still_requires_explicit_nonblind_path
 ```
 
-This result is advisory runtime safety state only. It is not `CapabilityGrant`, approval, authorization lease, or executor command.
+This result is advisory runtime safety metadata only. `semantically_retryable` means only that a future owning runtime/policy path may consider proposing a **new attempt** under the applicable action semantics. It is not `CapabilityGrant`, approval, authorization lease, executor command, or permission to resume the existing ECR-002 run.
+
+**Closed ECR-002 boundary:** a prepared-without-receipt attempt remains in ECR-002 `unresolved_attempts` after every ECR-004 reconciliation outcome. ECR-004 does not clear `PreparedAttemptState::unresolved`, append `ReceiptRecorded`, append a new run event, make `RunResumed`/`ExecutionCompleted` legal, or schedule a retry. Only an explicitly versioned future ECR-002 repair/resolution protocol could change that durable execution-state rule.
+
+**Why:** canonical ECR-002 v1 removes an unresolved marker only when a real receipt is recorded for the exact attempt. Treating sidecar no-effect evidence as equivalent to a provider receipt would counterfeit execution truth and silently reopen a `CLOSED_CANONICAL` state machine.
 
 ## R11 — Sidecar journal and integrity scope
 
