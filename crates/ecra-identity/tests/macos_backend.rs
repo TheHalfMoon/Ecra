@@ -40,9 +40,9 @@ fn t064_live_acceptance_requires_signed_provisioned_app_like_host() {
     assert!(!harness.contains("codesign --force --sign -"));
     assert!(!harness.contains("set_access_synchronized(Some(true))"));
 
-    assert!(workflow.contains(
-        "run: bash scripts/run-ecr031-macos-live-acceptance.sh --readiness-only"
-    ));
+    assert!(
+        workflow.contains("run: bash scripts/run-ecr031-macos-live-acceptance.sh --readiness-only")
+    );
     assert!(workflow.contains("run: bash scripts/run-ecr031-macos-live-acceptance.sh"));
     assert!(!workflow.contains(
         "platform::macos::tests::data_protection_keychain_roundtrips_all_v1_secret_purposes"
@@ -51,8 +51,9 @@ fn t064_live_acceptance_requires_signed_provisioned_app_like_host() {
         "platform::macos::tests::native_keychain_bootstrap_publishes_and_reopens_same_identity"
     ));
 
-    assert!(readiness.contains(
-        "run: bash scripts/run-ecr031-macos-live-acceptance.sh --readiness-only"
-    ));
+    assert!(
+        readiness
+            .contains("run: bash scripts/run-ecr031-macos-live-acceptance.sh --readiness-only")
+    );
     assert!(!readiness.contains("continue-on-error: true\n        shell: bash\n        run: |\n          set -euo pipefail\n          security find-identity"));
 }
