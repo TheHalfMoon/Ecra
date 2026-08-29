@@ -118,7 +118,8 @@ Rules:
 - `effect_confirmed` requires non-conflicted conclusive evidence of effect presence;
 - `no_effect_confirmed` requires non-conflicted conclusive evidence of effect absence;
 - `still_unknown` is mandatory for absent, insufficient, or conflicting evidence;
-- no outcome creates `ActionReceipt`.
+- no outcome creates `ActionReceipt`;
+- no outcome removes the attempt from ECR-002 `unresolved_attempts`, mutates `PreparedAttemptState`, appends an ECR-002 event, resumes/completes the existing run, or schedules execution.
 
 ## 7. Retry disposition contract
 
@@ -139,7 +140,27 @@ requires_explicit_nonblind_path
 
 This output is not authorization. A caller must still pass later owning authorization/execution gates.
 
-## 8. Journal digest contract
+`semantically_retryable` and `semantically_retryable_same_key` mean only that the reconciliation evidence does not itself prove a duplicate effect and that ECR-001 semantics may permit a future **new-attempt proposal**. They MUST NOT be interpreted as permission to call ECR-002 blind-retry helpers for the unresolved prior attempt or as proof that the existing ECR-002 run is resumable.
+
+## 8. ECR-002 compatibility contract
+
+For every reconciliation outcome, ECR-004 v1 MUST preserve the supplied ECR-002 execution state exactly for reconciliation purposes:
+
+```text
+prior attempt remains prepared
+prior attempt remains unreceipted when it was unreceipted
+prior attempt remains unresolved when it was unresolved
+RunState unresolved_attempts is unchanged
+RunPhase is unchanged
+no RunEvent is emitted
+no ActionReceipt is synthesized
+```
+
+Tests must prove ECR-002 `RunResumed`, `ExecutionCompleted`, and blind-retry guards remain fail-closed for the unresolved prior attempt after ECR-004 records `effect_confirmed` or `no_effect_confirmed`.
+
+A future explicitly versioned ECR-002 repair/resolution protocol may consume ECR-004 evidence. That protocol is outside ECR-004 v1 and MUST NOT be simulated by side effects, adapters, or undocumented state mutation.
+
+## 9. Journal digest contract
 
 Domain separator:
 
@@ -166,7 +187,7 @@ entry_digest = SHA-256(domain_separator || canonical_material)
 
 Sequence starts at 1 and increments by exactly 1. Genesis requires `previous_digest = null`; successors require exact prior digest. The digest chain is an integrity mechanism only; no hostile complete-store rewrite resistance is claimed without a protected anchor owned elsewhere.
 
-## 9. Journal body variants
+## 10. Journal body variants
 
 ```json
 { "kind": "verification_receipt", "value": { "receipt": {} } }
@@ -176,7 +197,7 @@ Sequence starts at 1 and increments by exactly 1. Genesis requires `previous_dig
 
 Unknown variant/field/version rejects.
 
-## 10. Persistence contract
+## 11. Persistence contract
 
 - append-only canonical journal entries;
 - ordinary SQL `UPDATE`/`DELETE` of canonical journal rows must be rejected by the store API and protected by schema triggers where practical;
@@ -186,7 +207,7 @@ Unknown variant/field/version rejects.
 - crash before commit leaves no partial canonical entry;
 - corruption, sequence break, previous-digest mismatch, entry-digest mismatch, unknown newer schema, and malformed canonical JSON fail closed.
 
-## 11. Resource limits
+## 12. Resource limits
 
 Initial v1 maxima:
 
@@ -204,7 +225,7 @@ MAX_QUERY_ENTRIES = 4096
 
 Implementations may choose stricter limits only through documented compatibility review; widening requires explicit contract/version review.
 
-## 12. Error contract
+## 13. Error contract
 
 Machine-readable categories must cover at least:
 
@@ -240,6 +261,6 @@ resource_limit_exceeded
 
 Display strings are diagnostic only; callers must not parse them for behavior.
 
-## 13. Security boundary
+## 14. Security boundary
 
-ECR-004 v1 accepts explicit evidence metadata/records and local fixture stores only. It does not fetch URLs, invoke providers/models/tools, execute processes, read browser state, authorize disclosure, validate identity assertions, or store raw secrets.
+ECR-004 v1 accepts explicit evidence metadata/records and local fixture stores only. It does not fetch URLs, invoke providers/models/tools, execute processes, read browser state, authorize disclosure, validate identity assertions, store raw secrets, resolve ECR-002 run state, or execute retries.
