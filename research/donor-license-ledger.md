@@ -2,7 +2,7 @@
 
 **Status:** CANONICAL_IMPLEMENTATION_LEDGER  
 **Created:** 2026-08-27  
-**Updated:** 2026-08-29 for ECR-004 T001 dependency admission
+**Updated:** 2026-08-29 for ECR-004 T044 final implementation reconciliation
 
 This ledger separates **conceptual reference**, **dependency candidate**, **locked dependency**, and **source-reuse candidate**. Listing a project here never authorizes copying its source. Source reuse requires exact-file review, license compatibility, notice handling, and an implementation change that records what was copied/modified.
 
@@ -181,13 +181,33 @@ ECR-004 implementation is authorized from exact canonical base `4fb61f8b41267983
 
 ### ECR-004 rejected dependency/source set
 
-- `zip` — REJECT; ECR-004 has no archive ownership and ECR-002 retains `.ecra` portability.
-- `url` — REJECT; ECR-004 treats external evidence locators as canonical opaque metadata and performs no fetch.
+- `zip` — REJECT as an ECR-004 direct dependency/owned capability; ECR-002 retains `.ecra` archive ownership.
+- `url` — REJECT as an ECR-004 direct dependency/owned capability; ECR-004 performs no fetch.
 - browser/network/HTTP/model/provider/process-execution/protocol/policy/authorization/identity-backend/telemetry/async-runtime/remote-database crates — REJECT.
 - duplicate canonicalization/hash/UUID/SQLite libraries — REJECT; existing locked primitives are sufficient.
 - donor source copying/vendor adoption — REJECT; public dependency APIs and independently written Ecra code only.
 
-T001 authorizes only the exact set above. T002/T003/T004 must prove the new local crate and boundary checks do not introduce an unexpected dependency path before semantic implementation begins.
+T001 authorizes only the exact ECR-004 direct set above. Inherited transitive packages owned by canonical `ecra-core`/`ecra-run` do not become ECR-004-owned capabilities or widen the slice boundary.
+
+### ECR-004 T044 final implementation reconciliation
+
+Exact implementation evidence:
+
+```text
+HEAD                 67207e1bc91434555bfe31997f4af9f641324a76
+ECR-004 CI run       33250358128
+ECR-004 CI job       99094901800
+RESULT               SUCCESS
+rustc                 1.98.0 (88d9e12ae 2026-08-18)
+cargo                 1.98.0 (797e8a9bc 2026-08-05)
+Cargo.lock SHA-256    b8112ece8111599af10b92bc2a2e54dd006985ec32a300e47c5f8c356383a2f6
+```
+
+The exact-head direct normal dependency tree for `ecra-verify` is `ecra-core`, `ecra-run`, `rusqlite 0.40.2`, `serde 1.0.229`, `serde_jcs 0.2.0`, `serde_json 1.0.151`, `sha2 0.11.0`, `thiserror 2.0.20`, and `uuid 1.26.0`. Dev-only dependencies remain `proptest 1.11.0` and `tempfile 3.27.0`.
+
+`url 2.5.8` and `zip 8.6.0` occur only through the already-canonical upstream workspace crates `ecra-core` and `ecra-run`. ECR-004 neither declares them directly nor adopts their URL-fetch/archive capability. No new browser/network/model/provider/process/policy/authorization/identity/telemetry runtime dependency entered `ecra-verify`.
+
+No donor implementation source was copied, adapted, vendored, or imported for ECR-004. Public dependency APIs and independently written Ecra code are used. Exact-head `scripts/check-verify-unsafe.sh` and `scripts/check-verify-deps.sh` both passed. T044 is therefore `IMPLEMENTATION_DEPENDENCY_AND_DONOR_RECONCILED`.
 
 ## Durable Execution References With Licensing Caution
 
@@ -240,4 +260,4 @@ Before a candidate becomes a locked dependency:
 
 ## Current Authorization
 
-ECR-001 remains authorized only for its locked trusted-domain dependency set. ECR-002 is additionally authorized for the locked `ecra-run` dependency delta recorded above, including the bounded bundled-SQLite native boundary and Stored-only ZIP substrate. ECR-004 is authorized on implementation branch `004-verification-receipts-impl` only for the T001 dependency set recorded above, reusing the existing SQLite native boundary without ZIP or any provider/runtime expansion. None of these authorizations permits copied donor source, ambient network/provider execution, real sensitive-state persistence, authentication/trust-root semantics, authorization/declassification policy, fabricated executor receipts, or mutation of ECR-002 unresolved execution state. Later-slice dependencies remain governed by their owning ECR package and require separate review.
+ECR-001 remains authorized only for its locked trusted-domain dependency set. ECR-002 is additionally authorized for the locked `ecra-run` dependency delta recorded above, including the bounded bundled-SQLite native boundary and Stored-only ZIP substrate. ECR-004 is authorized on implementation branch `004-verification-receipts-impl` only for the T001 direct dependency set recorded above, reusing the existing SQLite native boundary without adopting ZIP/URL as ECR-004 direct capabilities and without any provider/runtime expansion. None of these authorizations permits copied donor source, ambient network/provider execution, real sensitive-state persistence, authentication/trust-root semantics, authorization/declassification policy, fabricated executor receipts, or mutation of ECR-002 unresolved execution state. Later-slice dependencies remain governed by their owning ECR package and require separate review.
