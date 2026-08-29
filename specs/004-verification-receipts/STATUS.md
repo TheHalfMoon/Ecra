@@ -31,9 +31,9 @@ ECR-002 CI  33237289693  SUCCESS  exact head 4fb61f8b41267983fc460c666fddd7781d9
 - **IC-002:** reconciliation evidence resolves effect truth only and cannot resolve ECR-002 v1 run state.
 - **IC-003:** `verification_receipts` is normally non-empty. The sole empty-support exception is a `still_unknown` record produced because no supporting verification receipt exists. `effect_confirmed` and `no_effect_confirmed` always require at least one resolved supporting receipt; absence of evidence can never prove no effect.
 
-## Phase 1 — workspace, dependency and CI boundary
+## Verified branch checkpoints
 
-T001–T004 are implemented. T005 exact-head evidence:
+### Phase 1 — T001–T005
 
 ```text
 HEAD   e223ba5fbf8c375c580e7a93f524be3fd4c311fa
@@ -42,13 +42,7 @@ JOB    99061549466
 RESULT SUCCESS
 ```
 
-Every required Phase 1 step succeeded: locked metadata/build, rustfmt, strict Clippy, workspace tests, ECR-001/ECR-002 regressions, ECR-004 targets, rustdoc, offline replay, all unsafe/dependency boundaries and dependency/toolchain evidence.
-
-Phase 1 is `VERIFIED_ON_BRANCH`; ECR-004 is not yet `CLOSED_CANONICAL`.
-
-## Phase 2 — strict request contract
-
-T006–T010 are implemented. T011 exact-head evidence:
+### Phase 2 — T006–T011
 
 ```text
 HEAD   40c18b4bcf1e6c124587cdfbc0e423822eb5b138
@@ -57,9 +51,7 @@ JOB    99082565826
 RESULT SUCCESS
 ```
 
-T011A then added only the IC-001 read-only canonical `EvidenceRef` accessors. ECR-001 field/wire/schema/validation semantics were not changed, the temporary branch-only write-capable bootstrap workflow was removed before acceptance, and regression tests preserve JSON/JCS behavior.
-
-T011A exact-head evidence:
+### T011A — IC-001 read-only ECR-001 accessors
 
 ```text
 HEAD   75cac2aed9099d7ba82295c442b37764b284302c
@@ -68,23 +60,7 @@ JOB    99083386559
 RESULT SUCCESS
 ```
 
-Phase 2 including T011A is `VERIFIED_ON_BRANCH`.
-
-## Phase 3 — decision-grade evidence and deterministic aggregation
-
-T012–T016 are implemented:
-
-- decision-grade assessment requires evidence binding and fail-closes conclusive outcomes without immutable binding;
-- explicit freshness rules use only supplied `as_of` evidence metadata and supplied evaluation time, with no ambient clock or remote fetch;
-- an execution receipt cannot alone prove its own conclusive verification claim;
-- independent model judgment does not outrank missing independent non-model evidence;
-- conclusive canonical `VerificationReceipt` construction is routed through decision-grade assessment rather than a bypass;
-- aggregate state is deterministic across `Absent`, `Verified`, `Rejected`, `Inconclusive`, and `Conflicted`;
-- aggregate views retain the complete sorted receipt-ID set plus sorted per-outcome receipt-ID sets;
-- `Verified + Rejected` is always `Conflicted`; `NotEvaluated` alone is `Absent`; no last-write-wins rule exists;
-- aggregation fixtures, all six three-receipt permutations, 1,000 identical aggregate evaluations, and ECR-001 Fact non-mutation evidence are covered by tests.
-
-T017 exact-head evidence:
+### Phase 3 — T012–T017
 
 ```text
 HEAD   f5181ca4f903f2d039463b03b3e328b1fa9c30dd
@@ -93,24 +69,9 @@ JOB    99085187943
 RESULT SUCCESS
 ```
 
-Phase 3 is `VERIFIED_ON_BRANCH`; ECR-004 remains Draft and is not `CLOSED_CANONICAL`.
+Phase 3 covers decision-grade evidence, explicit freshness, immutable evidence binding, self-attestation rejection, model-judgment fail-closed behavior, deterministic aggregate states, per-outcome receipt-ID retention, conflict fixtures, permutation invariance, 1,000 byte-equivalent evaluations, and ECR-001 non-mutation proof.
 
-## Phase 4 — critical verification checkpoints
-
-T018–T021 are implemented:
-
-- strict bounded checkpoint and requirement contracts;
-- duplicate exact target rejection;
-- deterministic canonical requirement ordering and deterministic checkpoint evaluation;
-- explicit satisfied, unsatisfied and conflicted target sets;
-- `Absent`, `Inconclusive` and `Conflicted` cannot satisfy a v1 requirement;
-- specialized negative requirements may explicitly accept `Rejected`;
-- checkpoints expose no authority, policy, approval, declassification, secret or executor surface;
-- valid/invalid fixtures cover all-satisfied, absent, rejected, inconclusive, conflicted, duplicate-target, over-limit and false-completion cases.
-
-Intermediate Phase 4 heads failed only rustfmt/Clippy quality gates and were repaired forward-only without suppressions or semantic weakening.
-
-T022 exact-head evidence:
+### Phase 4 — T018–T022
 
 ```text
 HEAD   412de3f481d84154c5c2a85f11c6a6da0c89e35a
@@ -119,14 +80,43 @@ JOB    99086690683
 RESULT SUCCESS
 ```
 
-Every required Phase 4 step succeeded on the exact head: locked metadata/build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, ECR-002 regressions, ECR-004 targets, rustdoc, offline replay, unsafe/dependency boundaries and dependency/toolchain evidence.
+Phase 4 covers strict bounded checkpoints, duplicate-target rejection, canonical ordering, deterministic satisfied/unsatisfied/conflicted views, prohibited satisfying states, specialized negative requirements, authority-surface exclusion, and the full checkpoint fixture matrix.
 
-Phase 4 is `VERIFIED_ON_BRANCH`; ECR-004 remains Draft and is not `CLOSED_CANONICAL`.
+### Phase 5 — T023–T030
+
+T023–T029 implement and test:
+
+- strict bounded `ReconciliationRecordV1` and closed reconciliation outcomes;
+- exact `RunId` + durable unresolved `ActionAttemptRef` + underlying `ActionRef` binding against read-only ECR-002 `RunState`;
+- canonical support receipt resolution with missing/duplicate/cross-target rejection and deterministic support-ID retention;
+- `effect_confirmed`, `no_effect_confirmed`, and `still_unknown` derived from exact supporting verification evidence rather than caller-selected outcome;
+- IC-003 evidence-absent `still_unknown` without fabricated support IDs;
+- immutable evidence requirement for conclusive reconciliation;
+- byte/semantic non-mutation proof for ECR-002 state across all reconciliation outcomes;
+- unresolved prepared attempt membership remains unchanged and no provider `ActionReceipt` or ECR-002 `RunEvent` is synthesized;
+- same-run `RunResumed`, `ExecutionCompleted`, and blind-retry guards remain blocked for the unresolved prior attempt;
+- `RetryDispositionV1` remains advisory only for a future new-attempt proposal;
+- duplicate-effect block, reconciliation-required, safe semantic retry, exact same-key semantic retry, key mutation rejection, external-reconciliation and never-blind paths are covered by the retry matrix.
+
+Intermediate Phase 5 heads failed only rustfmt quality gates and were repaired forward-only without suppressions or semantic weakening.
+
+T030 exact-head evidence:
+
+```text
+HEAD   fb3fdf1ce113a55d3d7276f54681a7f55dc542b3
+RUN    33247815573
+JOB    99088239340
+RESULT SUCCESS
+```
+
+Every required Phase 5 gate succeeded on the exact head: locked metadata/build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, ECR-002 regressions, ECR-004 targets, rustdoc, offline replay, unsafe/dependency boundaries and dependency/toolchain evidence.
+
+Phase 5 is `VERIFIED_ON_BRANCH`; ECR-004 remains Draft and is not `CLOSED_CANONICAL`.
 
 ## Current execution state
 
 ```text
-CURRENT_TASK                    T023
+CURRENT_TASK                    T031
 CURRENT_STATE                   IMPLEMENTING
 IMPLEMENTATION_BASE             4fb61f8b41267983fc460c666fddd7781d91653c
 IMPLEMENTATION_BRANCH           004-verification-receipts-impl
@@ -136,32 +126,35 @@ T006_T011                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
 T011A                           COMPLETE_WITH_EXACT_HEAD_EVIDENCE
 T012_T017                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
 T018_T022                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
-PHASE_4_HEAD                    412de3f481d84154c5c2a85f11c6a6da0c89e35a
-PHASE_4_RUN                     33247226826
-PHASE_4_JOB                     99086690683
-PHASE_4_RESULT                  SUCCESS
-T023                            ELIGIBLE
-T024_PLUS                       ORDERED_BY_TASK_GRAPH
+T023_T030                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
+PHASE_5_HEAD                    fb3fdf1ce113a55d3d7276f54681a7f55dc542b3
+PHASE_5_RUN                     33247815573
+PHASE_5_JOB                     99088239340
+PHASE_5_RESULT                  SUCCESS
+T031                            ELIGIBLE
+T032_PLUS                       ORDERED_BY_TASK_GRAPH
 ```
 
 ## Canonical next order
 
 ```text
-T023 strict reconciliation record/outcome contract
+T031 strict verification journal entry and digest chain
   ↓
-T024 exact RunId/attempt/action binding against read-only RunState
+T032 canonical digest goldens and mutation tests
   ↓
-T025 supporting verification receipt resolution
+T033 transactional SQLite v1 journal/index store
   ↓
-T026 fail-closed effect/no-effect/still-unknown rules
+T034 append-only truth and rebuildable projection enforcement
   ↓
-T027 ECR-002 non-mutation and architecture proof
+T035 expected-head concurrency
   ↓
-T028 retry disposition advisory
+T036 corruption/migration/projection recovery matrix
   ↓
-T029 exhaustive reconciliation/retry matrix
+T037 restart/reopen deterministic replay
   ↓
-T030 exact-head Phase 5 gate
+T038 synthetic/non-sensitive sentinel boundaries
+  ↓
+T039 exact-head Phase 6 gate
 ```
 
 ## Parallel ECR-031 boundary
