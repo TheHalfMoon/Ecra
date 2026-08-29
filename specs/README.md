@@ -44,12 +44,12 @@ Final closure-convergence main head `aadc19c972e619222d426674d7542dd9c00dbe44` p
 
 ECR-002 owns synthetic/non-sensitive local run durability, budgets, recovery and deterministic `.ecra` interchange. It does not authorize real sensitive persistence, authentication/trust roots, authorization, independent verification, or provider execution.
 
-## Active slice
+## Active / independently ready trusted-substrate slices
 
 ### ECR-031 — Identity, Trust Root & Sensitive Storage Foundations
 
 Directory: `031-identity-trust-root/`  
-Lifecycle: `TASKS_READY_PENDING_EXACT_GREEN_HEAD`.  
+Canonical planning lifecycle: `TASKS_READY`.  
 Dependencies: ECR-001 + ECR-002 `CLOSED_CANONICAL`.  
 Analyze Pass 2: `a3c7d563c139c65886f169f9181c07a997038f1f` — `ZERO_BLOCKING_PLANNING_DRIFT_FOUND`.
 
@@ -87,14 +87,65 @@ Frozen v1 boundaries include:
 - authenticated `ProtectedTrustStateV1` as lifecycle/revocation authority;
 - `EnrolledPrincipalHandle` + `VerifiedTrustSnapshot` -> fixed, non-serializable `IssuerSession`; no arbitrary-principal mint;
 - portable Ed25519 software signing key protected by native backend at rest, without Secure Enclave/hardware-backed/non-exportable signing claim;
-- ChaCha20-Poly1305/HKDF protected-envelope direction subject to T001 exact dependency re-verification;
+- ChaCha20-Poly1305/HKDF protected-envelope direction subject to exact dependency verification;
 - authorization remains ECR-003; independent outcome verification remains ECR-004.
 
-Implementation branch/PR MUST NOT be created until the final synchronized planning head passes both permanent ECR-001 and ECR-002 workflows. The branch must be created from that exact green SHA.
+Live implementation state is not represented by the old canonical planning snapshot alone. PR #4 / branch `031-identity-trust-root` is active; exact live branch `STATUS.md`, `EXECUTION.md`, Actions and PR truth govern its current task frontier. At the latest verified live state, T064/T068 are blocked by the trusted macOS runner's missing Apple code-signing identity/provisioning profile/developer account/team; no legacy/plainttext/ad-hoc fallback is authorized.
 
-## Other dependency-eligible work
+### ECR-004 — Verification & Reconciliation
 
-ECR-004 — Verification & Reconciliation — is independently planning-eligible from ECR-001/ECR-002, but remains a separate slice. ECR-031 is selected first on the critical path because ECR-003 additionally depends on it.
+Directory: `004-verification-receipts/`  
+Lifecycle: `TASKS_READY` in this planning convergence; implementation remains unauthorized until this package is canonical on `main` and the exact resulting canonical planning head passes required ECR-001/ECR-002 regressions.  
+Dependencies: ECR-001 + ECR-002 `CLOSED_CANONICAL`.
+
+Package:
+
+```text
+STATUS.md
+spec.md
+research.md
+data-model.md
+contracts/verification-reconciliation-v1.md
+threat-model.md
+plan.md
+tasks.md
+quickstart.md
+implementation-clarifications.md
+analyze.md
+checklists/requirements.md
+```
+
+Planning result:
+
+```text
+FR-001–FR-045 OWNED
+SC-001–SC-012 OWNED
+G1–G15 PASS / explicit PASS-N/A
+UNOWNED_FR=0
+UNOWNED_SC=0
+MUST_LEVEL_PLANNING_GAPS=0
+FAILED_CONSTITUTION_GATES=0
+PASS_1_BLOCKERS_REMEDIATED=1/1
+ANALYZE=ZERO_BLOCKING_PLANNING_DRIFT_FOUND
+```
+
+Frozen v1 boundaries include:
+- ECR-001 `VerificationReceipt` remains the only canonical independent verification record;
+- `ActionReceipt` remains executor-observed evidence and cannot self-verify;
+- `Fact`/artifact/run metadata do not receive a competing verified flag;
+- deterministic aggregate states preserve verification conflict;
+- critical verification checkpoints are exact-target requirements, not authority;
+- UNKNOWN reconciliation never fabricates an `ActionReceipt` or mutates ECR-002 run-event truth;
+- retry disposition is fail-closed safety metadata, not execution authorization;
+- ECR-002 `RunEvent` v1 wire contract remains unchanged;
+- a separate append-only ECR-004 journal stores synthetic/non-sensitive evidence metadata/references/digests only;
+- journal digest chaining is normal integrity/corruption detection, not hostile complete-store tamper resistance;
+- no browser/network/model/provider/process/policy execution dependency enters ECR-004 v1;
+- IC-001 permits only read-only accessors for already-existing canonical ECR-001 `EvidenceRef` metadata, with unchanged wire/canonical semantics and mandatory ECR-001 regressions.
+
+## Dependency boundary
+
+ECR-004 is independently eligible from ECR-001/ECR-002 and therefore may progress even while ECR-031 has a separate native-host blocker. This independence must not be used to absorb ECR-031 scope or persist real sensitive evidence. ECR-003 remains blocked until ECR-031 is `CLOSED_CANONICAL`; ECR-005 remains blocked by its complete dependency set.
 
 ## Future slices
 
