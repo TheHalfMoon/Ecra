@@ -139,10 +139,11 @@ pub fn assess_request(
 
         let immutable = item.artifact().is_some() || item.content_digest().is_some();
         any_immutable |= immutable;
-        any_independent_non_model |= !matches!(
-            item.kind(),
-            EvidenceKind::ModelJudgment | EvidenceKind::NetworkReceipt
-        ) && (immutable || item.observation().is_some() || item.external_ref().is_some());
+        any_independent_non_model |=
+            !matches!(
+                item.kind(),
+                EvidenceKind::ModelJudgment | EvidenceKind::NetworkReceipt
+            ) && (immutable || item.observation().is_some() || item.external_ref().is_some());
 
         // An immutable digest or artifact can bind an executor receipt without
         // making that receipt an independent evaluation. For receipt targets,
