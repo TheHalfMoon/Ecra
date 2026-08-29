@@ -3,7 +3,8 @@
 **Slice:** ECR-031  
 **Lifecycle:** IMPLEMENTING / BLOCKED_EXTERNAL_NATIVE_ACCEPTANCE  
 **Dependencies:** ECR-001 `CLOSED_CANONICAL`, ECR-002 `CLOSED_CANONICAL`  
-**Canonical implementation base / current canonical main:** `f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0`  
+**Canonical implementation base:** `f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0`  
+**Current canonical main:** `0e2ff8c687c93e6f158da6984a7a6915339b5f3f`  
 **Implementation branch:** `031-identity-trust-root`  
 **Draft implementation PR:** #4  
 **Constitution:** v1.1.0
@@ -33,13 +34,16 @@ The only failing step was `macOS Data Protection Keychain live acceptance`. Both
 
 T064 is therefore the current blocking task. T068 cannot close until T064 succeeds, and Phase 8 remains dependency-blocked by T068.
 
+Canonical repository truth has advanced independently while this branch remains blocked: ECR-004 is now `CLOSED_CANONICAL` and canonical `main` is `0e2ff8c687c93e6f158da6984a7a6915339b5f3f`. That advancement does not satisfy T064 and does not authorize ECR-003/ECR-005 or any later slice to bypass ECR-031.
+
 ```text
 CURRENT_TASK                    T064_LIVE_MACOS_ACCEPTANCE
 CURRENT_STATE                   BLOCKED_EXTERNAL_NATIVE_ACCEPTANCE
 NEXT_IF_UNBLOCKED               T064 → T068 → T069
 FEATURE_BRANCH                  031-identity-trust-root
 DRAFT_PR                        #4
-CANONICAL_MAIN_BASE             f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0
+CANONICAL_IMPLEMENTATION_BASE   f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0
+CURRENT_CANONICAL_MAIN          0e2ff8c687c93e6f158da6984a7a6915339b5f3f
 PHASE6_LEDGER_HEAD              64c34744dd05b9850d8c9657a87e46913bd23412
 PHASE6_ECR031_CI_RUN            33200973225
 PHASE6_ECR031_RESULT            SUCCESS
@@ -47,6 +51,9 @@ PHASE7_NON_NATIVE_EVIDENCE_HEAD 4f2c150d2e5fd882d8554cd32a8aea4d4c5da639
 PHASE7_ECR031_CI_RUN            33235282966
 PHASE7_NON_NATIVE_GATES         SUCCESS
 PHASE7_NATIVE_ACCEPTANCE        FAILURE
+LATEST_READINESS_RUN            33235609984
+LATEST_READINESS_ATTEMPT        4
+LATEST_READINESS_JOB            99122182202
 ```
 
 ## T064 external host blocker
@@ -56,7 +63,12 @@ The trusted self-hosted `macbook` runner has the required interactive user conte
 Readiness evidence:
 
 - run `33235282975`: interactive console session `SUCCESS`; runner matches console user `SUCCESS`; signing tools available `SUCCESS`; code-signing identity check `FAILURE`; local provisioning-profile check `FAILURE`;
-- run `33235454670`: Xcode developer-account registry check `FAILURE`; Xcode development-team check `FAILURE`; code-signing identity check `FAILURE`; provisioning-profile check `FAILURE`; signing tools check `SUCCESS`.
+- run `33235454670`: Xcode developer-account registry check `FAILURE`; Xcode development-team check `FAILURE`; code-signing identity check `FAILURE`; provisioning-profile check `FAILURE`; signing tools check `SUCCESS`;
+- run `33235609984`, attempt `2`, job `99114614854`: same external Apple assets absent after ECR-004 canonical closure;
+- run `33235609984`, attempt `3`, job `99121242472`: same external Apple assets absent on trusted runner `macbook`;
+- run `33235609984`, attempt `4`, job `99122182202`, executed at `2026-08-29T15:37:36Z`: console user, runner-user match, `codesign`, and `xcodebuild` passed; code-signing identity, local provisioning profile, Xcode developer-account registry, and Xcode development-team registry remained absent.
+
+The latest live readiness result therefore remains fail-closed at the external host prerequisite boundary. The workflow's diagnostic job concludes `SUCCESS` because the asset-detection probes are evidence-producing diagnostics; the individual probe logs are authoritative for asset presence and continue to show the four required Apple assets as absent.
 
 This means repository automation cannot create the missing assets by Xcode Automatic Signing because the runner user has no configured Apple developer account/team from which Xcode could obtain a development certificate and provisioning profile.
 
@@ -130,4 +142,4 @@ T069 → T070 → T071 → T072 → T073 → T074
 T075 → T076 → T077 → T078 → T079 → T080 → T081 → T082
 ```
 
-ECR-003 remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`. ECR-004 remains separately dependency-eligible and outside this slice. No Phase 8/9 work may be represented as eligible merely to bypass T064/T068.
+ECR-003 remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`. ECR-004 is `CLOSED_CANONICAL`. ECR-005 remains blocked by ECR-003/ECR-031 despite ECR-004 closure. No Phase 8/9 work or later slice may be represented as eligible merely to bypass T064/T068.
