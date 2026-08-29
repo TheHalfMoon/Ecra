@@ -7,9 +7,8 @@ use ecra_run::{
     RecoveryReason, RunEvent, RunEventEnvelope, RunReducer, RunState, ensure_retry_allowed,
 };
 use ecra_verify::{
-    ReconciliationId, ReconciliationInputV1, ReconciliationOutcomeV1,
-    ReconciliationRecordFieldsV1, ReconciliationRecordV1, RetryDispositionV1, VerifyErrorCode,
-    reconcile, retry_disposition,
+    ReconciliationId, ReconciliationInputV1, ReconciliationOutcomeV1, ReconciliationRecordFieldsV1,
+    ReconciliationRecordV1, RetryDispositionV1, VerifyErrorCode, reconcile, retry_disposition,
 };
 
 fn genesis() -> RunEventEnvelope {
@@ -87,13 +86,11 @@ fn verification_id(tail: u64) -> VerificationId {
 }
 
 fn evidence_id(tail: u64) -> EvidenceId {
-    EvidenceId::parse_str(&format!("00000000-0000-0000-0000-{tail:012}"))
-        .expect("evidence id")
+    EvidenceId::parse_str(&format!("00000000-0000-0000-0000-{tail:012}")).expect("evidence id")
 }
 
 fn artifact_id(tail: u64) -> ArtifactId {
-    ArtifactId::parse_str(&format!("00000000-0000-0000-0000-{tail:012}"))
-        .expect("artifact id")
+    ArtifactId::parse_str(&format!("00000000-0000-0000-0000-{tail:012}")).expect("artifact id")
 }
 
 fn receipt(
@@ -165,7 +162,11 @@ fn all_outcomes_preserve_ecr002_state_and_same_run_guards() {
             vec![rejected],
             ReconciliationOutcomeV1::NoEffectConfirmed,
         ),
-        (Vec::new(), Vec::new(), ReconciliationOutcomeV1::StillUnknown),
+        (
+            Vec::new(),
+            Vec::new(),
+            ReconciliationOutcomeV1::StillUnknown,
+        ),
     ];
 
     for (index, (support, available, expected)) in cases.into_iter().enumerate() {
@@ -177,7 +178,10 @@ fn all_outcomes_preserve_ecr002_state_and_same_run_guards() {
             51_000 + u64::try_from(index).expect("index"),
         );
         assert_eq!(record.outcome(), expected);
-        assert_eq!(state.canonical_bytes().expect("canonical state after"), before);
+        assert_eq!(
+            state.canonical_bytes().expect("canonical state after"),
+            before
+        );
         assert!(state.unresolved_attempts().contains(&attempt.id()));
         let prepared = state
             .prepared_attempts()
@@ -205,8 +209,7 @@ fn exact_run_attempt_action_and_support_binding_fail_closed() {
     let (_, state) = unresolved_history(&attempt);
     let verified = receipt(3, &attempt, VerificationOutcome::Verified, true);
 
-    let wrong_run = RunId::parse_str("00000000-0000-0000-0000-000000099999")
-        .expect("wrong run id");
+    let wrong_run = RunId::parse_str("00000000-0000-0000-0000-000000099999").expect("wrong run id");
     let error = reconcile(
         ReconciliationInputV1 {
             id: reconciliation_id(52_101),
@@ -391,8 +394,7 @@ fn retry_disposition_matrix_is_advisory_and_fail_closed() {
         serde_json::json!({"class":"idempotent_with_key","key_ref":"phase5-key"}),
         serde_json::json!({"mutation":"local","reversibility":"reversible"}),
     );
-    let (keyed_state, keyed_attempt, keyed_record) =
-        no_effect_record(&keyed, 54_002, 11, 54_102);
+    let (keyed_state, keyed_attempt, keyed_record) = no_effect_record(&keyed, 54_002, 11, 54_102);
     assert_eq!(
         retry_disposition(
             &keyed,
@@ -447,12 +449,8 @@ fn retry_disposition_matrix_is_advisory_and_fail_closed() {
     .enumerate()
     {
         let offset = u64::try_from(index).expect("index");
-        let (state, attempt, record) = no_effect_record(
-            &intent,
-            54_010 + offset,
-            20 + offset,
-            54_110 + offset,
-        );
+        let (state, attempt, record) =
+            no_effect_record(&intent, 54_010 + offset, 20 + offset, 54_110 + offset);
         assert_eq!(
             retry_disposition(&intent, &attempt, &state, Some(&record), None)
                 .expect("nonblind advisory"),

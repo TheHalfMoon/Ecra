@@ -430,10 +430,7 @@ pub fn retry_disposition(
     validate_state_binding(state.run_id(), attempt, &action, state)?;
 
     let outcome = if let Some(record) = reconciliation {
-        if record.run_id != state.run_id()
-            || record.attempt != *attempt
-            || record.action != action
-        {
+        if record.run_id != state.run_id() || record.attempt != *attempt || record.action != action {
             return Err(binding_error(
                 "retry advisory reconciliation does not bind the exact prior attempt",
             ));
