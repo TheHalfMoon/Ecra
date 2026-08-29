@@ -90,13 +90,14 @@ Frozen v1 boundaries include:
 - ChaCha20-Poly1305/HKDF protected-envelope direction subject to exact dependency verification;
 - authorization remains ECR-003; independent outcome verification remains ECR-004.
 
-Live implementation state is not represented by the old canonical planning snapshot alone. PR #4 / branch `031-identity-trust-root` is active; exact live branch `STATUS.md`, `EXECUTION.md`, Actions and PR truth govern its current task frontier. At the latest verified live state, T064/T068 are blocked by the trusted macOS runner's missing Apple code-signing identity/provisioning profile/developer account/team; no legacy/plainttext/ad-hoc fallback is authorized.
+Live implementation state is not represented by the old canonical planning snapshot alone. PR #4 / branch `031-identity-trust-root` is active; exact live branch `STATUS.md`, `EXECUTION.md`, Actions and PR truth govern its current task frontier. At the latest verified live state, T064/T068 are blocked by the trusted macOS runner's missing Apple code-signing identity/provisioning profile/developer account/team; no legacy/plaintext/ad-hoc fallback is authorized.
 
 ### ECR-004 — Verification & Reconciliation
 
 Directory: `004-verification-receipts/`  
 Lifecycle: `TASKS_READY` in this planning convergence; implementation remains unauthorized until this package is canonical on `main` and the exact resulting canonical planning head passes required ECR-001/ECR-002 regressions.  
-Dependencies: ECR-001 + ECR-002 `CLOSED_CANONICAL`.
+Dependencies: ECR-001 + ECR-002 `CLOSED_CANONICAL`.  
+Planning PR: #5.
 
 Package:
 
@@ -118,14 +119,16 @@ checklists/requirements.md
 Planning result:
 
 ```text
-FR-001–FR-045 OWNED
-SC-001–SC-012 OWNED
+ANALYZE_PASS=3
+PASS_1_BLOCKER_A-001=REMEDIATED
+PASS_2_REVIEW_BLOCKER_A-002=REMEDIATED
+FR-001–FR-046 OWNED
+SC-001–SC-013 OWNED
 G1–G15 PASS / explicit PASS-N/A
 UNOWNED_FR=0
 UNOWNED_SC=0
 MUST_LEVEL_PLANNING_GAPS=0
 FAILED_CONSTITUTION_GATES=0
-PASS_1_BLOCKERS_REMEDIATED=1/1
 ANALYZE=ZERO_BLOCKING_PLANNING_DRIFT_FOUND
 ```
 
@@ -136,12 +139,15 @@ Frozen v1 boundaries include:
 - deterministic aggregate states preserve verification conflict;
 - critical verification checkpoints are exact-target requirements, not authority;
 - UNKNOWN reconciliation never fabricates an `ActionReceipt` or mutates ECR-002 run-event truth;
-- retry disposition is fail-closed safety metadata, not execution authorization;
-- ECR-002 `RunEvent` v1 wire contract remains unchanged;
+- `effect_confirmed`, `no_effect_confirmed`, and `still_unknown` are ECR-004 effect evidence only;
+- every reconciliation outcome leaves ECR-002 prepared/unreceipted/unresolved state, `unresolved_attempts`, and `RunPhase` unchanged;
+- `semantically_retryable*` is fail-closed advisory metadata for a future new-attempt proposal only, not same-run resume/schedule/execution authorization;
+- ECR-002 `RunEvent` v1 wire contract remains unchanged and no sidecar projection represents ECR-002 run resolution;
 - a separate append-only ECR-004 journal stores synthetic/non-sensitive evidence metadata/references/digests only;
 - journal digest chaining is normal integrity/corruption detection, not hostile complete-store tamper resistance;
 - no browser/network/model/provider/process/policy execution dependency enters ECR-004 v1;
-- IC-001 permits only read-only accessors for already-existing canonical ECR-001 `EvidenceRef` metadata, with unchanged wire/canonical semantics and mandatory ECR-001 regressions.
+- IC-001 permits only read-only accessors for already-existing canonical ECR-001 `EvidenceRef` metadata, with unchanged wire/canonical semantics and mandatory ECR-001 regressions;
+- IC-002 explicitly prohibits ECR-004 from clearing ECR-002 unresolved attempts or counterfeiting a run-repair protocol.
 
 ## Dependency boundary
 
