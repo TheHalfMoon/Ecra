@@ -33,7 +33,7 @@ Build the default trusted gateway between human/model intent and digital informa
 | ECR-001 | Trusted Domain Kernel | Versioned zero-I/O domain types/invariants for actor/principal refs, origin/resource/scope, information labels, capability request/grant, provenance, action/action-attempt refs, receipts and verification | — | CLOSED_CANONICAL | `specs/001-trusted-domain-kernel/` |
 | ECR-002 | Durable Run, Ledger & Budgets | Serializable run machine, unique execution attempts, append-only integrity-chained local ledger, portable `.ecra` fixture/run artifact, cancellation/resource budgets | ECR-001 | CLOSED_CANONICAL | `specs/002-durable-run-ledger/` |
 | ECR-003 | Authority, Information Flow, Policy & Secrets | Fail-closed capability and source-to-sink disclosure evaluation, immutable authorization decision/lease, approval binding, origin authority, secret handles, policy adapter | ECR-001, ECR-002, ECR-031 | PLANNED | `specs/003-authority-policy-secrets/` |
-| ECR-004 | Verification & Reconciliation | Independent verifier framework, executor-observed vs verified outcomes, UNKNOWN handling, reconciliation, critical-point verification, immutable decision-grade evidence | ECR-001, ECR-002 | TASKS_READY | `specs/004-verification-receipts/` |
+| ECR-004 | Verification & Reconciliation | Independent verifier framework, executor-observed vs verified outcomes, UNKNOWN handling, reconciliation, critical-point verification, immutable decision-grade evidence | ECR-001, ECR-002 | IMPLEMENTING | `specs/004-verification-receipts/` |
 | ECR-005 | Evaluation & Threat Harness | Golden fixtures plus security/information-flow/durability/resource-bound/verification benchmark harness used by later slices | ECR-001, ECR-002, ECR-003, ECR-004, ECR-031 | PLANNED | `specs/005-evaluation-threat-harness/` |
 | ECR-006 | Stock Firefox / WebDriver BiDi Prototype | Bounded browser control against stock Firefox with observations, receipts, origin transitions, permission brokerage experiments and takeover events | ECR-001–ECR-005, ECR-031 | PLANNED | `specs/006-firefox-bidi-prototype/` |
 | ECR-007 | Browser Foundation & Upstream Strategy | Reproducible/traceable Firefox-derived build, patch ledger, IPC threat contract, update/rebase policy, extension/profile compatibility/trust model | ECR-006 | PLANNED | `specs/007-browser-foundation/` |
@@ -60,7 +60,7 @@ Build the default trusted gateway between human/model intent and digital informa
 | ECR-028 | Public Benchmark & Research Program | Reproducible benchmark adapters/reports for web, security, information flow, long-horizon, search trust and local-model augmentation | ECR-005 plus relevant feature slices | PLANNED | `specs/028-benchmark-program/` |
 | ECR-029 | Migration, Import & Export | Import/export/deletion propagation for browser state, workspaces, runs, skills, memories, derived indexes and policies | ECR-008, ECR-010, ECR-012 | DEFERRED | `specs/029-portability/` |
 | ECR-030 | Ecosystem Gateway | Stable developer SDK/local API and production-quality third-party agent/model infrastructure surface | ECR-016, ECR-017, ECR-023, ECR-024, ECR-025 | DEFERRED | `specs/030-ecosystem-gateway/` |
-| ECR-031 | Identity, Trust Root & Sensitive Storage Foundations | Identity/principal assertions and on-behalf-of binding; device/user-local trust root; key lifecycle/revocation; protected sensitive-storage/authenticity envelope semantics | ECR-001, ECR-002 | TASKS_READY | `specs/031-identity-trust-root/` |
+| ECR-031 | Identity, Trust Root & Sensitive Storage Foundations | Identity/principal assertions and on-behalf-of binding; device/user-local trust root; key lifecycle/revocation; protected sensitive-storage/authenticity envelope semantics | ECR-001, ECR-002 | IMPLEMENTING | `specs/031-identity-trust-root/` |
 
 ## Critical Path
 
@@ -68,10 +68,10 @@ Build the default trusted gateway between human/model intent and digital informa
 ECR-001 Trusted Domain Kernel [CLOSED_CANONICAL]
   ↓
 ECR-002 Durable Run, Ledger & Budgets [CLOSED_CANONICAL]
-  ├───────────────────────────────┐
-  ↓                               ↓
-ECR-031 Identity / Trust Root     ECR-004 Verification
-[TASKS_READY; exact-head CI gate] [TASKS_READY; canonical-planning gate]
+  ├────────────────────────────────┐
+  ↓                                ↓
+ECR-031 Identity / Trust Root      ECR-004 Verification
+[IMPLEMENTING; native blocked]      [IMPLEMENTING; final convergence]
   ↓
 ECR-003 Authority / Information Flow / Policy
   └───────────┬──────────┘
@@ -128,7 +128,7 @@ MCP/ACP/A2A are adapters. Their authentication/token semantics are mapped into E
 
 ## Sensitive-Data Progression Rule
 
-ECR-002 may persist only synthetic/non-sensitive fixtures and local test runs in its v1 acceptance/product authorization. ECR-031 defines the protected local identity/trust/storage substrate, but its `TASKS_READY` planning state alone does not authorize downstream slices to persist real authenticated browser secrets, sensitive workspace content, or equivalent high-value state. ECR-004's independently ready planning package likewise authorizes only synthetic/non-sensitive evidence metadata/reference persistence in its v1 acceptance. Downstream sensitive-state use remains gated by implemented ECR-031 plus relevant ECR-003/ECR-025 contracts.
+ECR-002 may persist only synthetic/non-sensitive fixtures and local test runs in its v1 acceptance/product authorization. ECR-031 defines the protected local identity/trust/storage substrate but is not yet `CLOSED_CANONICAL`; downstream slices therefore may not infer protected real-sensitive-state authorization from its implementation progress. ECR-004 v1 likewise persists only synthetic/non-sensitive evidence metadata/references/digests. Downstream sensitive-state use remains gated by the implemented/closed protection, policy and privacy owners required by each slice.
 
 A hash/integrity chain may detect accidental/local corruption under its stated assumptions. Do not claim hostile tamper resistance unless a protected trust anchor, MAC/signature or external anchor supports the claim.
 
@@ -156,18 +156,18 @@ Every affected slice MUST add/update as part of Definition of Done:
 - `PLANNING_REWORK` — review found blocking planning defects; implementation is forbidden until corrected and re-analyzed.
 - `SPEC_READY` — complete `spec.md` with no unresolved blocking clarification.
 - `PLAN_READY` — research/data model/contracts/plan complete and constitution gates pass.
-- `TASKS_READY` — traceable executable `tasks.md` exists and the latest analyze pass has no critical planning defect. Repository execution rules may still require an exact-head CI gate before the implementation branch is created.
-- `IMPLEMENTING` — implementation branch/PR active.
+- `TASKS_READY` — traceable executable `tasks.md` exists and the latest analyze pass has no critical planning defect. Repository execution rules may still require an exact-head CI gate before implementation branch creation.
+- `IMPLEMENTING` — implementation branch/PR active, including verification/convergence/review work before canonical closure.
 - `BLOCKED` — dependency or evidence gate prevents safe continuation.
-- `CLOSED_CANONICAL` — exact implemented state satisfies spec, plan, tasks, tests, analysis/convergence and documentation.
+- `CLOSED_CANONICAL` — exact implemented state satisfies spec, plan, tasks, tests, analysis/convergence, documentation, merge and required post-merge evidence.
 - `DEFERRED` — intentionally outside current critical path; may not be pulled forward without explicit dependency/strategy review.
 
 ## Current Slice
 
-`ECR-001 Trusted Domain Kernel` and `ECR-002 Durable Run, Ledger & Budgets` are `CLOSED_CANONICAL`. ECR-002's final closure-convergence head `aadc19c972e619222d426674d7542dd9c00dbe44` passed ECR-002 CI `33155302100` and ECR-001 regression CI `33155302026`.
+`ECR-001 Trusted Domain Kernel` and `ECR-002 Durable Run, Ledger & Budgets` are `CLOSED_CANONICAL`.
 
-`ECR-031 Identity, Trust Root & Sensitive Storage Foundations` is `TASKS_READY` in canonical planning. Its live implementation branch/PR state is tracked by `EXECUTION.md`, its slice `STATUS.md`, PR #4 and exact Actions truth rather than by this architectural row.
+`ECR-031 Identity, Trust Root & Sensitive Storage Foundations` has an active implementation PR but remains blocked on external native macOS Data Protection Keychain acceptance. Its exact live state is governed by its package, PR #4 and Actions truth.
 
-`ECR-004 Verification & Reconciliation` is `TASKS_READY`: FR-001–FR-046 and SC-001–SC-013 are owned; Analyze Pass 3 found zero blocking planning drift after A-001/IC-001 and A-002/IC-002 were remediated; G1–G15 pass/are explicitly N/A. IC-002 freezes the important execution boundary that reconciliation evidence never clears ECR-002 `unresolved_attempts` or makes the same v1 run resumable/retryable. This planning state must become canonical and the exact resulting `main` head must pass required ECR-001/ECR-002 regressions before an ECR-004 implementation branch is created.
+`ECR-004 Verification & Reconciliation` has an active implementation PR #6. T045 Phase 7 exact-head CI succeeded on `90ed1bbeafea72ee655bc58a96e94696096f360e` (run `33251037913`, job `99096645538`). T046/T047 own full FR/SC/constitution traceability; T048 found bounded documentation-only drift; T049 converges those docs and lifecycle records before T050 final exact-head gate. It is **not** `CLOSED_CANONICAL` until T052 merge and T053 post-merge evidence complete.
 
-ECR-003 remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`.
+ECR-003 remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`. ECR-005 remains blocked until every listed dependency, including ECR-003/ECR-004/ECR-031, is canonically closed.
