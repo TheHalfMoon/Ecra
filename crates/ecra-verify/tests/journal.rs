@@ -12,8 +12,7 @@ const JOURNAL_DOMAIN: &[u8] = b"ecra/verification-journal/v1\0";
 
 fn golden_receipt() -> VerificationReceipt {
     VerificationReceipt::new(
-        VerificationId::parse_str("00000000-0000-0000-0000-000000090001")
-            .expect("verification id"),
+        VerificationId::parse_str("00000000-0000-0000-0000-000000090001").expect("verification id"),
         ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
         VerificationTarget::Claim(ClaimRef::new("journal", "golden").expect("claim target")),
         VerificationMethod::Other,
