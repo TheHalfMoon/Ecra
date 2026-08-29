@@ -8,8 +8,8 @@
 //! evidence.
 //!
 //! Semantic verification modules remain pure. Local journal I/O is isolated
-//! behind the later `store` module and must not leak provider/runtime behavior
-//! into verification logic.
+//! behind the `store` module and must not leak provider/runtime behavior into
+//! verification logic.
 
 pub mod aggregate;
 pub mod checkpoint;
@@ -19,6 +19,7 @@ pub mod ids;
 pub mod journal;
 pub mod reconcile;
 pub mod request;
+pub mod store;
 
 pub use aggregate::{
     MAX_RECEIPTS_PER_TARGET, VerificationAggregateStateV1, VerificationAggregateViewV1,
@@ -47,6 +48,10 @@ pub use reconcile::{
 pub use request::{
     MAX_EVIDENCE_REFS_PER_REQUEST, MAX_NOTES_BYTES, MAX_RULE_ID_BYTES, VerificationRequestFieldsV1,
     VerificationRequestV1,
+};
+pub use store::{
+    ECR_VERIFY_SCHEMA_VERSION, ExpectedVerificationHead, MAX_MATERIALIZED_JOURNAL_ENTRIES,
+    VerificationSnapshotV1, VerificationStore,
 };
 
 /// Phase 1 remains inspectable as implementation history; returning `true`

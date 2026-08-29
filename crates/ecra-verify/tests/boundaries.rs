@@ -83,3 +83,28 @@ fn reconciliation_has_no_execution_or_ecr002_mutation_surface() {
         TypeId::of::<ActionReceipt>()
     );
 }
+
+#[test]
+fn verification_journal_store_has_no_execution_or_canonical_mutation_api() {
+    let store_source = include_str!("../src/store.rs");
+    let journal_source = include_str!("../src/journal.rs");
+    for prohibited in [
+        "RunEvent",
+        "ActionReceipt",
+        "CapabilityGrant",
+        "pub fn update",
+        "pub fn delete",
+        "pub fn execute",
+        "pub fn schedule",
+        "pub fn resume",
+    ] {
+        assert!(
+            !store_source.contains(prohibited),
+            "verification store contains prohibited surface: {prohibited}"
+        );
+        assert!(
+            !journal_source.contains(prohibited),
+            "verification journal contains prohibited surface: {prohibited}"
+        );
+    }
+}
