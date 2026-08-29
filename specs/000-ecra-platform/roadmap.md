@@ -71,7 +71,7 @@ ECR-002 Durable Run, Ledger & Budgets [CLOSED_CANONICAL]
   ├────────────────────────────────┐
   ↓                                ↓
 ECR-031 Identity / Trust Root      ECR-004 Verification
-[IMPLEMENTING; native blocked]      [IMPLEMENTING; final convergence]
+[IMPLEMENTING; native blocked]      [IMPLEMENTING; review remediation]
   ↓
 ECR-003 Authority / Information Flow / Policy
   └───────────┬──────────┘
@@ -168,6 +168,6 @@ Every affected slice MUST add/update as part of Definition of Done:
 
 `ECR-031 Identity, Trust Root & Sensitive Storage Foundations` has an active implementation PR but remains blocked on external native macOS Data Protection Keychain acceptance. Its exact live state is governed by its package, PR #4 and Actions truth.
 
-`ECR-004 Verification & Reconciliation` has an active implementation PR #6. T045 Phase 7 exact-head CI succeeded on `90ed1bbeafea72ee655bc58a96e94696096f360e` (run `33251037913`, job `99096645538`). T046/T047 own full FR/SC/constitution traceability; T048 found bounded documentation-only drift; T049 converges those docs and lifecycle records before T050 final exact-head gate. It is **not** `CLOSED_CANONICAL` until T052 merge and T053 post-merge evidence complete.
+`ECR-004 Verification & Reconciliation` is in active T051 review remediation on non-draft PR #7. Draft PR #6 was closed unmerged solely as a review-container recovery after the connected ready-for-review mutation failed against the live GitHub GraphQL schema; PR #7 preserves the same implementation branch. The pre-review final gate passed on exact head `882b4ef7358aef6c416dd1b9dd67602e86334a06` (run `33251589848`, job `99098084666`), but Cubic review then produced actionable findings. Those findings are being repaired forward-only, so historical T050 green is no longer final evidence. A renewed complete exact-head gate and zero-actionable-review snapshot are mandatory before T052. ECR-004 is **not** `CLOSED_CANONICAL` until merge and T053 post-merge evidence complete.
 
 ECR-003 remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`. ECR-005 remains blocked until every listed dependency, including ECR-003/ECR-004/ECR-031, is canonically closed.
