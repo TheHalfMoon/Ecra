@@ -187,8 +187,7 @@ fn action_attempt_network_receipt_cannot_self_verify() {
     ))
     .expect("action intent");
     let attempt = ActionAttemptRef::new(
-        ActionAttemptId::parse_str("00000000-0000-0000-0000-000000003100")
-            .expect("attempt id"),
+        ActionAttemptId::parse_str("00000000-0000-0000-0000-000000003100").expect("attempt id"),
         intent.action_ref().expect("action ref"),
     );
     let request = VerificationRequestV1::from_fields(VerificationRequestFieldsV1 {
@@ -263,8 +262,7 @@ fn verification_of_fact_target_does_not_mutate_fact_assessment_axes() {
         notes: None,
     })
     .expect("fact-targeted request");
-    let receipt =
-        verify_request(&request, DecisionGradeRuleV1::standard()).expect("verification");
+    let receipt = verify_request(&request, DecisionGradeRuleV1::standard()).expect("verification");
     assert_eq!(receipt.target(), &VerificationTarget::Fact(fact_id));
 
     let after = serde_json::to_vec(&fact).expect("serialize fact after verification");
