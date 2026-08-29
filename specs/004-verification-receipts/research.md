@@ -1,8 +1,9 @@
 # Research: ECR-004 Verification & Reconciliation
 
-**Status:** DECISIONS_FROZEN_FOR_PLANNING  
-**Base:** `f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0`  
-**Dependencies:** ECR-001/ECR-002 `CLOSED_CANONICAL`
+**Status:** IMPLEMENTATION_DEPENDENCIES_REVIEWED  
+**Canonical implementation base:** `4fb61f8b41267983fc460c666fddd7781d91653c`  
+**Dependencies:** ECR-001/ECR-002 `CLOSED_CANONICAL`  
+**Implementation branch:** `004-verification-receipts-impl`
 
 ## R1 — Reuse the canonical VerificationReceipt
 
@@ -29,16 +30,9 @@
 
 ## R3 — New crate boundary: ecra-verify
 
-**Decision:** implementation should add `crates/ecra-verify` depending on `ecra-core` and `ecra-run`. Pure verification/aggregation/reconciliation logic stays separate from local journal I/O. No browser/network/model/provider/process/policy crate is allowed.
+**Decision:** implementation adds `crates/ecra-verify` depending only on `ecra-core`, `ecra-run`, and the exact already-locked dependency set accepted by T001 below. Pure verification/aggregation/reconciliation logic stays separate from local journal I/O. No browser/network/model/provider/process/policy crate is allowed.
 
 **Why:** ECR-004 needs canonical domain types from ECR-001 and durable attempt/retry truth from ECR-002 while remaining independently auditable. A dedicated crate prevents verification logic from becoming an executor/provider adapter.
-
-**Dependency posture:**
-- `ecra-core`: required canonical targets/receipts/evidence;
-- `ecra-run`: required `RunState`, retry/idempotency/recovery truth;
-- `serde`, `serde_json`, `sha2`: already repository-approved primitives if required for strict records/digests;
-- `rusqlite`: already accepted by ECR-002 and may be reused for a local append-only verification journal after exact dependency re-verification;
-- no new external runtime/provider dependency is planned.
 
 ## R4 — Verification request is construction input, not new truth
 
@@ -110,8 +104,6 @@ This result is advisory runtime safety metadata only. `semantically_retryable` m
 
 **Closed ECR-002 boundary:** a prepared-without-receipt attempt remains in ECR-002 `unresolved_attempts` after every ECR-004 reconciliation outcome. ECR-004 does not clear `PreparedAttemptState::unresolved`, append `ReceiptRecorded`, append a new run event, make `RunResumed`/`ExecutionCompleted` legal, or schedule a retry. Only an explicitly versioned future ECR-002 repair/resolution protocol could change that durable execution-state rule.
 
-**Why:** canonical ECR-002 v1 removes an unresolved marker only when a real receipt is recorded for the exact attempt. Treating sidecar no-effect evidence as equivalent to a provider receipt would counterfeit execution truth and silently reopen a `CLOSED_CANONICAL` state machine.
-
 ## R11 — Sidecar journal and integrity scope
 
 **Decision:** persist only strict ECR-004 records/evidence references in a local append-only journal. Each entry carries sequence, previous digest, and canonical entry digest so substitution/corruption is detectable under normal local integrity assumptions.
@@ -126,25 +118,63 @@ This result is advisory runtime safety metadata only. `semantically_retryable` m
 
 ## R13 — Resource bounds
 
-**Decision:** v1 planning will freeze small explicit limits for:
-- evidence refs per request/receipt;
-- receipts aggregated per target;
-- checkpoint requirements;
-- reconciliation supporting receipt IDs;
-- notes/rule identifiers;
-- journal entry size/count loaded per query.
-
-All arithmetic is checked; oversized input fails before expensive materialization where practical.
+**Decision:** v1 uses the exact bounded ceilings frozen in the normative contract for evidence refs, receipts per target, checkpoint requirements, reconciliation support IDs, notes/rule identifiers, journal entry bytes, and query materialization. All arithmetic is checked; oversized input fails before expensive materialization where practical.
 
 ## R14 — No donor/source-code adoption
 
-ECR-004 planning is derived from canonical Ecra contracts and constitution. No external donor source code is adopted by this planning package. Any new dependency discovered during implementation requires the ordinary dependency/license/advisory gate before use.
+ECR-004 planning and implementation are independently written against canonical Ecra contracts. No external donor source code is authorized or adopted by T001. Public dependency APIs only are accepted.
 
-## Open implementation questions resolved by tasks
+## T001 — Exact dependency, license, advisory and MSRV admission
 
-1. Exact SQLite schema/indexes and migration version for the ECR-004 journal.
-2. Exact v1 numeric limits after fixture sizing.
-3. Whether `sha2`/`serde_jcs` are reached through existing canonical helpers or direct accepted dependencies.
-4. Exact error-code enumeration while preserving machine-readable failure classes.
+**Review date:** 2026-08-29  
+**Authorization base:** `4fb61f8b41267983fc460c666fddd7781d91653c`  
+**Dependency-gate evidence on that exact base:** ECR-001 run `33237289643` SUCCESS; ECR-002 run `33237289693` SUCCESS.  
+**Workspace MSRV/toolchain:** Rust `1.98`; both exact-base gates compiled/tested the current locked dependency graph with the pinned 1.98 toolchain.
 
-None of these questions changes the frozen semantic boundary above.
+### Accepted direct runtime set for ecra-verify
+
+| Dependency | Exact locked version / source | Features | License / boundary | Decision |
+|---|---|---|---|---|
+| `ecra-core` | workspace path | n/a | Ecra source | ACCEPT — canonical verification/evidence/action types |
+| `ecra-run` | workspace path | n/a | Ecra source | ACCEPT — read-only run/attempt/retry truth |
+| `serde` | 1.0.229 | `derive` | MIT OR Apache-2.0 | ACCEPT — strict typed wire values |
+| `serde_json` | 1.0.151 | default | MIT OR Apache-2.0 | ACCEPT — strict JSON parsing/tests |
+| `serde_jcs` | 0.2.0 | default | MIT OR Apache-2.0 | ACCEPT — repository-aligned RFC 8785 canonicalization |
+| `sha2` | 0.11.0 | default | MIT OR Apache-2.0 | ACCEPT — domain-separated SHA-256 journal binding |
+| `thiserror` | 2.0.20 | default | MIT OR Apache-2.0 | ACCEPT — typed machine error derivation |
+| `uuid` | 1.26.0 | `serde` only | Apache-2.0 OR MIT; upstream MSRV 1.85 | ACCEPT — opaque ECR-004 IDs, no RNG/generation feature |
+| `rusqlite` | =0.40.2 | `default-features = false`, `bundled` | MIT; bundled SQLite public domain | ACCEPT — bounded local sidecar journal only |
+
+`rusqlite =0.40.2` retains the already-reviewed ECR-002 native boundary through `libsqlite3-sys 0.38.2` and bundled SQLite `3.53.2`. ECR-004 adds no new native implementation family.
+
+### Accepted dev-only set
+
+| Dependency | Exact locked version | License | Decision |
+|---|---:|---|---|
+| `proptest` | 1.11.0 | MIT OR Apache-2.0 | ACCEPT — bounded property/adversarial tests |
+| `tempfile` | 3.27.0 | MIT OR Apache-2.0 | ACCEPT — isolated SQLite/reopen tests |
+
+### Rejected / unnecessary dependencies
+
+- `zip` — REJECT for ECR-004; portable `.ecra` archive ownership remains ECR-002 and verification journal persistence does not require ZIP.
+- `url` — REJECT for ECR-004 trusted crate; external locators remain opaque canonical evidence metadata and ECR-004 performs no remote fetch.
+- any browser, network, HTTP, model, provider, process-execution, protocol, policy/authorization, identity-backend, telemetry, async runtime or remote database dependency — REJECT by FR-041/SC-011.
+- any second canonicalization, cryptographic hash, UUID, or SQLite abstraction library — REJECT; existing locked repository primitives are sufficient.
+- source-copy/vendor adoption from donor projects — REJECT; dependency API use only.
+
+### Advisory review
+
+- `libsqlite3-sys`: RUSTSEC-2022-0090 is patched in `>=0.25.1`; current locked `0.38.2` is outside the affected range.
+- `sha2`: RUSTSEC-2021-0100 affected `0.9.7` and is patched in `>=0.9.8`; current locked `0.11.0` is outside the affected release.
+- 2026-08-20 Rust supply-chain campaign: RUSTSEC-2026-0260 identifies malicious `arrayref 0.3.10` through `proc-macro1`; related malicious packages include `proc-macro1`/`proc-macro-en` and affected releases in the same campaign. Repository search on the exact authorization state found no `arrayref` or `proc-macro1` path. ECR-004 adds no dependency requiring those packages.
+- No advisory review authorizes ignoring a future lockfile delta. Any version/feature/transitive change must rerun dependency/advisory review before acceptance.
+
+### MSRV and feature conclusion
+
+- Repository workspace `rust-version = "1.98"` remains the ECR-004 MSRV floor.
+- Exact canonical ECR-001/ECR-002 gates on `4fb61f8b...` succeeded under pinned Rust 1.98 with the reused dependency graph.
+- `uuid 1.26.0` declares Rust 1.85, below the workspace floor.
+- `rusqlite 0.40.2` is already compiled/tested in the exact-base ECR-002 gate; ECR-004 reuses the same minimal `bundled` feature profile.
+- No default feature widening is authorized beyond the table above.
+
+**T001 conclusion:** `DEPENDENCY_ADMISSION_ACCEPTED`. The implementation may proceed to T002 using only this bounded set, subject to locked CI proving the added local crate does not change the transitive dependency boundary unexpectedly.
