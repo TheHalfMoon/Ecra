@@ -11,6 +11,7 @@ use crate::{ReconciliationId, VerifyError, VerifyErrorCategory, VerifyErrorCode}
 
 pub const MAX_RECONCILIATION_SUPPORT_IDS: usize = 64;
 pub const MAX_RECONCILIATION_NOTES_BYTES: usize = 4_096;
+pub const MAX_RECONCILIATION_AVAILABLE_RECEIPTS: usize = 256;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -343,6 +344,17 @@ fn resolve_support<'a>(
     support_ids: &[VerificationId],
     available_receipts: &'a [VerificationReceipt],
 ) -> Result<Vec<&'a VerificationReceipt>, VerifyError> {
+    if support_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    if available_receipts.len() > MAX_RECONCILIATION_AVAILABLE_RECEIPTS {
+        return Err(VerifyError::new(
+            VerifyErrorCategory::ResourceLimit,
+            VerifyErrorCode::ResourceLimitExceeded,
+            "available reconciliation verification receipts exceed the v1 query limit",
+        ));
+    }
+
     let mut by_id: BTreeMap<VerificationId, &VerificationReceipt> = BTreeMap::new();
     for receipt in available_receipts {
         if by_id.insert(receipt.id(), receipt).is_some() {
@@ -418,6 +430,7 @@ pub fn retry_disposition(
     attempt: &ActionAttemptRef,
     state: &RunState,
     reconciliation: Option<&ReconciliationRecordV1>,
+    available_receipts: &[VerificationReceipt],
     proposed_idempotency_key: Option<&str>,
 ) -> Result<RetryDispositionV1, VerifyError> {
     let action = intent.action_ref().map_err(|_| {
@@ -430,13 +443,16 @@ pub fn retry_disposition(
     validate_state_binding(state.run_id(), attempt, &action, state)?;
 
     let outcome = if let Some(record) = reconciliation {
-        if record.run_id != state.run_id() || record.attempt != *attempt || record.action != action
+        record.validate_against(state, available_receipts)?;
+        if record.run_id() != state.run_id()
+            || record.attempt() != attempt
+            || record.action() != &action
         {
             return Err(binding_error(
                 "retry advisory reconciliation does not bind the exact prior attempt",
             ));
         }
-        Some(record.outcome)
+        Some(record.outcome())
     } else {
         None
     };
