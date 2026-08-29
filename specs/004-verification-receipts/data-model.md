@@ -177,7 +177,7 @@ ReconciliationRecordV1
   attempt: ActionAttemptRef
   action: ActionRef
   outcome: ReconciliationOutcomeV1
-  verification_receipts: non-empty [VerificationId]
+  verification_receipts: bounded [VerificationId]
   reconciled_at: EpochMillis?
   notes: bounded string?
 ```
@@ -186,9 +186,11 @@ Invariants:
 - `attempt.action_ref == action` exactly;
 - attempt must exist in the supplied ECR-002 `RunState` for `run_id`;
 - supporting receipt IDs must resolve to receipts whose target is the exact attempt/action/receipt evidence relevant to the reconciliation rule;
-- `effect_confirmed` requires a non-conflicted conclusive verification basis;
-- `no_effect_confirmed` requires explicit evidence of no effect; mere absence of provider receipt/evidence is insufficient;
+- `effect_confirmed` requires a non-conflicted conclusive verification basis and at least one supporting receipt ID;
+- `no_effect_confirmed` requires explicit evidence of no effect and at least one supporting receipt ID; mere absence of provider receipt/evidence is insufficient;
 - `still_unknown` is permitted for insufficient/conflicted evidence and remains blocking;
+- `still_unknown` MAY carry an empty support list only when no supporting canonical `VerificationReceipt` exists for the exact reconciliation target;
+- `still_unknown` with insufficient/conflicting supplied receipts retains those supporting receipt IDs;
 - append-only: a later record does not mutate an older record;
 - the record never mutates ECR-002 state, clears `unresolved_attempts`, synthesizes `ActionReceipt`, or makes the same run resumable/completable.
 
