@@ -14,61 +14,21 @@ permissions:
 
 jobs:
   host-readiness:
-    name: macOS Data Protection host readiness
+    name: macOS Data Protection app-like host readiness
     runs-on: self-hosted
     timeout-minutes: 5
     steps:
-      - name: Require logged-in console user
-        shell: bash
-        run: |
-          set -euo pipefail
-          console_user="$(stat -f '%Su' /dev/console 2>/dev/null || printf 'unknown')"
-          [[ "$console_user" != "root" ]]
-          [[ "$console_user" != "loginwindow" ]]
-          [[ "$console_user" != "unknown" ]]
+      - uses: actions/checkout@v4
 
-      - name: Require runner user to own console session
+      - name: Validate T064 host script syntax
         shell: bash
-        run: |
-          set -euo pipefail
-          runner_user="$(id -un)"
-          console_user="$(stat -f '%Su' /dev/console 2>/dev/null || printf 'unknown')"
-          [[ "$runner_user" == "$console_user" ]]
+        run: bash -n scripts/run-ecr031-macos-live-acceptance.sh
 
-      - name: Require codesign and Xcode build tools
+      - name: Require provisioning-authorized app-like host assets
         shell: bash
-        run: |
-          set -euo pipefail
-          command -v codesign >/dev/null 2>&1
-          command -v xcodebuild >/dev/null 2>&1
+        run: bash scripts/run-ecr031-macos-live-acceptance.sh --readiness-only
 
-      - name: Detect code-signing identity
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -euo pipefail
-          security find-identity -v -p codesigning 2>/dev/null \
-            | grep -Eq '^[[:space:]]*[0-9]+\)'
-
-      - name: Detect local provisioning profile
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -euo pipefail
-          found=0
-          for directory in \
-            "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
-            "$HOME/Library/MobileDevice/Provisioning Profiles"; do
-            if [[ -d "$directory" ]] && find "$directory" -maxdepth 1 -type f \
-              \( -name '*.mobileprovision' -o -name '*.provisionprofile' \) \
-              -print -quit 2>/dev/null | grep -q .; then
-              found=1
-              break
-            fi
-          done
-          [[ "$found" -eq 1 ]]
-
-      - name: Detect Xcode developer account registry
+      - name: Record Xcode account registry diagnostic
         continue-on-error: true
         shell: bash
         run: |
@@ -88,7 +48,7 @@ jobs:
               sys.exit(1)
           PY
 
-      - name: Detect Xcode development team
+      - name: Record Xcode development team registry diagnostic
         continue-on-error: true
         shell: bash
         run: |
