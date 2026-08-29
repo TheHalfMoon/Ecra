@@ -200,7 +200,7 @@ fn model_judgment_does_not_outrank_missing_independent_evidence() {
 #[test]
 fn verification_evaluation_does_not_mutate_fact_assessment_axes() {
     let fact: Fact = serde_json::from_str(include_str!(
-        "../../ecra-core/../../../contracts/ecra-domain-v1/valid/fact-model-inferred.json"
+        "../../../contracts/ecra-domain-v1/valid/fact-model-inferred.json"
     ))
     .expect("fact fixture");
     let before = serde_json::to_vec(&fact).expect("serialize fact");
