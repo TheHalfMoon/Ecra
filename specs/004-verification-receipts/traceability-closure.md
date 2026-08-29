@@ -25,39 +25,39 @@ This document maps every ECR-004 functional requirement and success criterion to
 | FR-011 | journal persists references/typed records, not arbitrary raw payloads | `journal.rs`, `store.rs`, sentinel tests in `boundaries.rs`/`sqlite_store.rs` |
 | FR-012 | immutable artifact/content-digest decision-grade binding | `evidence.rs`, `tests/evidence.rs` |
 | FR-013 | explicit supplied evaluation/as-of freshness rules | `evidence.rs`, freshness tests |
-| FR-014 | same receipt cannot prove its own conclusive claim | `evidence.rs`, self-attestation test |
+| FR-014 | same receipt or executor network receipt cannot prove its own conclusive claim | `evidence.rs`, receipt/action-attempt self-attestation tests |
 | FR-015 | independent model judgment requires independent non-model evidence | `evidence.rs`, model-judgment test |
-| FR-016 | no provenance/freshness/dispute mutation | `tests/evidence.rs`, ECR-001 regressions |
+| FR-016 | no provenance/freshness/dispute mutation | fact-targeted `tests/evidence.rs`, ECR-001 regressions |
 | FR-017 | bounded notes and synthetic secret sentinel coverage | `request.rs`, `reconcile.rs`, `tests/boundaries.rs`, `tests/sqlite_store.rs` |
-| FR-018 | deterministic aggregate over exact target | `aggregate.rs` | `tests/aggregate.rs`, aggregate fixtures |
-| FR-019 | Absent/Verified/Rejected/Inconclusive/Conflicted closed states | `aggregate.rs` | aggregate fixture matrix |
-| FR-020 | Verified + Rejected always Conflicted | `aggregate.rs` | conflict/permutation tests |
-| FR-021 | NotEvaluated never satisfies checkpoint | `aggregate.rs`, `checkpoint.rs` | aggregate/checkpoint fixture tests |
-| FR-022 | bounded strict checkpoint requirements | `checkpoint.rs` | `tests/checkpoint.rs`, valid/invalid checkpoint fixtures |
-| FR-023 | deterministic satisfied/unsatisfied/conflicted target sets | `checkpoint.rs` | checkpoint tests |
-| FR-024 | no capability/approval/policy/declassification/executor surface | `checkpoint.rs` | `tests/checkpoint_boundaries.rs`, `tests/boundaries.rs` |
-| FR-025 | checkpoint view derived only; no ECR-002 phase mutation | `checkpoint.rs` read-only design | checkpoint boundaries + ECR-002 regressions |
-| FR-026 | exact RunId/attempt/action binding | `reconcile.rs` | reconciliation binding tests |
-| FR-027 | exact three reconciliation outcomes | `reconcile.rs` | reconciliation tests |
-| FR-028 | conclusive effect evidence -> effect_confirmed -> duplicate block | `reconcile.rs` | retry disposition matrix |
-| FR-029 | conclusive explicit no-effect evidence required; absence insufficient | `reconcile.rs`, IC-003 | `tests/reconcile.rs` |
-| FR-030 | still_unknown preserves unresolved effect and ECR-002 blocker | `reconcile.rs` read-only state input | ECR-002 compatibility tests |
-| FR-031 | no synthetic `ActionReceipt` construction | `reconcile.rs` API/source boundary | `tests/boundaries.rs`, reconciliation state tests |
-| FR-032 | reconciliation retains canonical verification IDs | `reconcile.rs` | support resolution/order tests |
-| FR-033 | `RetryDispositionV1` derives only advisory future-new-attempt semantics | `reconcile.rs`, crate README | retry matrix + boundary tests |
-| FR-034 | external-reconciliation/never-blind paths remain fail-closed | `reconcile.rs` | retry matrix, ECR-002 blind-retry regressions |
-| FR-035 | reconciliation records immutable/append-only and disagreement retained | `reconcile.rs`, `journal.rs`, `store.rs` | reconciliation/store tests |
-| FR-036 | typed IDs and append-only journal records | `ids.rs`, `journal.rs`, `store.rs` | journal/store tests |
-| FR-037 | separate ECR-004 SQLite store; no ECR-002 event/schema mutation | `store.rs` | boundaries + ECR-002 regressions |
-| FR-038 | canonical IDs plus previous/content digest substitution detection | `journal.rs`, `store.rs` | journal goldens, corruption tests |
-| FR-039 | synthetic/non-sensitive persistence boundary | README, journal/store design | sentinel tests |
-| FR-040 | reopen/replay reproduces derived views | `store.rs` | `tests/sqlite_store.rs` reopen/replay |
-| FR-041 | no browser/network/model/provider/process runtime dependency | crate Cargo manifest + `scripts/check-verify-deps.sh` | exact-head dependency gate |
-| FR-042 | `#![forbid(unsafe_code)]`; no Ecra-authored unsafe | `src/lib.rs`, `scripts/check-verify-unsafe.sh` | exact-head boundary gate |
-| FR-043 | exact count/byte/query ceilings | request/checkpoint/reconcile/journal/store constants | T040 hostile/max-bound tests |
-| FR-044 | typed error categories/codes for malformed/binding/evidence/conflict/store/unresolved cases | `error.rs` | contract, corruption and hostile-input tests |
-| FR-045 | no ambient fetch/clock/provider; offline fixture operation | pure verification modules + local store | offline CI gate |
-| FR-046 | reconciliation cannot mutate supplied ECR-002 state or make same run retryable/resumable | `reconcile.rs` takes `&RunState`; no mutation bridge | dedicated unresolved-state compatibility acceptance + ECR-002 regressions |
+| FR-018 — deterministic aggregate over exact target | `aggregate.rs` | `tests/aggregate.rs`, aggregate fixtures |
+| FR-019 — Absent/Verified/Rejected/Inconclusive/Conflicted closed states | `aggregate.rs` | aggregate fixture matrix |
+| FR-020 — Verified + Rejected always Conflicted | `aggregate.rs` | conflict/permutation tests |
+| FR-021 — NotEvaluated never satisfies checkpoint | `aggregate.rs`, `checkpoint.rs` | aggregate/checkpoint fixture tests |
+| FR-022 — bounded strict checkpoint requirements | `checkpoint.rs` | `tests/checkpoint.rs`, valid/invalid checkpoint fixtures, bounded sequence deserialization |
+| FR-023 — deterministic satisfied/unsatisfied/conflicted target sets | `checkpoint.rs` | checkpoint tests |
+| FR-024 — no capability/approval/policy/declassification/executor surface | `checkpoint.rs` | `tests/checkpoint_boundaries.rs`, `tests/boundaries.rs` |
+| FR-025 — checkpoint view derived only; no ECR-002 phase mutation | `checkpoint.rs` read-only design | checkpoint boundaries + ECR-002 regressions |
+| FR-026 — exact RunId/attempt/action binding | `reconcile.rs` | reconciliation binding tests |
+| FR-027 — exact three reconciliation outcomes | `reconcile.rs` | reconciliation tests |
+| FR-028 — conclusive effect evidence -> effect_confirmed -> duplicate block | `reconcile.rs` | retry disposition matrix with canonical evidence revalidation |
+| FR-029 — conclusive explicit no-effect evidence required; absence insufficient | `reconcile.rs`, IC-003 | `tests/reconcile.rs`, normative contract |
+| FR-030 — still_unknown preserves unresolved effect and ECR-002 blocker | `reconcile.rs` read-only state input | ECR-002 compatibility tests |
+| FR-031 — no synthetic `ActionReceipt` construction | `reconcile.rs` API/source boundary | `tests/boundaries.rs`, reconciliation state tests |
+| FR-032 — reconciliation retains canonical verification IDs | `reconcile.rs` | support resolution/order/query-bound tests |
+| FR-033 — `RetryDispositionV1` derives only advisory future-new-attempt semantics | `reconcile.rs`, crate README | retry matrix, evidence-revalidation test, boundary tests |
+| FR-034 — external-reconciliation/never-blind paths remain fail-closed | `reconcile.rs` | retry matrix, ECR-002 blind-retry regressions |
+| FR-035 — reconciliation records immutable/append-only and disagreement retained | `reconcile.rs`, `journal.rs`, `store.rs` | reconciliation/store tests |
+| FR-036 — typed IDs and append-only journal records | `ids.rs`, `journal.rs`, `store.rs` | journal/store tests |
+| FR-037 — separate ECR-004 SQLite store; no ECR-002 event/schema mutation | `store.rs` | boundaries + ECR-002 regressions |
+| FR-038 — canonical IDs plus previous/content digest substitution detection | `journal.rs`, `store.rs` | journal goldens, corruption tests |
+| FR-039 — synthetic/non-sensitive persistence boundary | README, journal/store design | sentinel tests |
+| FR-040 — reopen/replay reproduces derived views | `store.rs` | `tests/sqlite_store.rs` reopen/replay |
+| FR-041 — no browser/network/model/provider/process runtime dependency | crate Cargo manifest + `scripts/check-verify-deps.sh` | locked exact-head dependency gate |
+| FR-042 — `#![forbid(unsafe_code)]`; no Ecra-authored unsafe | `src/lib.rs`, `scripts/check-verify-unsafe.sh` | exact-head boundary gate |
+| FR-043 — exact count/byte/query ceilings | request/checkpoint/reconcile/journal/store constants | complete-input, sequence, source-query and journal-materialization limits plus T040 hostile/max-bound tests |
+| FR-044 — typed error categories/codes for malformed/binding/evidence/conflict/store/unresolved cases | `error.rs` | contract, corruption and hostile-input tests |
+| FR-045 — no ambient fetch/clock/provider; offline fixture operation | pure verification modules + local store | offline CI gate |
+| FR-046 — reconciliation cannot mutate supplied ECR-002 state or make same run retryable/resumable | `reconcile.rs` takes `&RunState`; no mutation bridge | dedicated unresolved-state compatibility acceptance + ECR-002 regressions |
 
 **FR result:** FR-001–FR-046 have implementation and acceptance owners. Zero unowned MUST functional requirement remains.
 
@@ -72,10 +72,10 @@ This document maps every ECR-004 functional requirement and success criterion to
 | SC-005 | effect-confirmed duplicate block; no-effect bounded advisory; no authorization/same-run permission |
 | SC-006 | source/state tests prove no ActionReceipt fabrication and no ECR-002 state/history mutation |
 | SC-007 | SQLite restart/reopen/replay and projection rebuild equivalence tests |
-| SC-008 | mutable evidence without immutable binding cannot produce decision-grade conclusive verification |
-| SC-009 | exact maxima/max+1 typed failures, bounded arbitrary JSON inputs, 4,096-entry materialization ceiling |
+| SC-008 | mutable evidence without immutable binding cannot produce decision-grade conclusive verification; executor network receipt remains self-attesting even when immutably bound |
+| SC-009 | exact maxima/max+1 typed failures, bounded complete request/checkpoint JSON inputs, bounded reconciliation source query, 4,096-entry materialization ceiling |
 | SC-010 | permanent exact-head ECR-004 workflow executes locked build/fmt/Clippy/tests/rustdoc/offline and ECR-001/ECR-002 regressions |
-| SC-011 | unsafe/dependency scripts and cargo-tree evidence reject forbidden runtime categories |
+| SC-011 | unsafe/dependency scripts and locked cargo-tree evidence reject forbidden runtime categories |
 | SC-012 | this document maps every FR/SC and the post-implementation analyze owns remaining convergence |
 | SC-013 | dedicated exact-head unresolved-state compatibility acceptance verifies byte/semantic state equality, unresolved membership and same-run guard preservation |
 
