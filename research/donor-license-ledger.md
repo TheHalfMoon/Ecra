@@ -2,7 +2,7 @@
 
 **Status:** CANONICAL_IMPLEMENTATION_LEDGER  
 **Created:** 2026-08-27  
-**Updated:** 2026-08-28 for ECR-002 Phase 8 exact locked-dependency evidence
+**Updated:** 2026-08-29 for ECR-004 T044 final implementation reconciliation
 
 This ledger separates **conceptual reference**, **dependency candidate**, **locked dependency**, and **source-reuse candidate**. Listing a project here never authorizes copying its source. Source reuse requires exact-file review, license compatibility, notice handling, and an implementation change that records what was copied/modified.
 
@@ -149,6 +149,66 @@ archive profile       Stored-only; Ecra-owned deterministic metadata/order and f
 
 The dependency-evidence step also re-read the direct runtime tree as `ecra-core`, `rusqlite`, `serde`, `serde_jcs`, `serde_json`, `sha2`, `thiserror`, and `zip`; it introduced no new runtime provider/network/process dependency. The exact final Phase 8 ledger head remains subject to its own full gate before T060–T066 are marked complete.
 
+## ECR-004 T001 Dependency Admission Review
+
+ECR-004 implementation is authorized from exact canonical base `4fb61f8b41267983fc460c666fddd7781d91653c`, where ECR-001 CI `33237289643` and ECR-002 CI `33237289693` both completed successfully under pinned Rust 1.98. T001 deliberately reuses already-locked repository primitives and rejects dependency expansion beyond the verification/journal boundary.
+
+| Package / component | Exact locked version | Scope | License/status | ECR-004 role | Decision |
+|---|---:|---|---|---|---|
+| `ecra-core` | workspace path | runtime | Ecra source | canonical verification/evidence/action types | ACCEPT |
+| `ecra-run` | workspace path | runtime | Ecra source | read-only run/attempt/retry truth | ACCEPT |
+| `serde` | 1.0.229 | runtime | MIT OR Apache-2.0 | strict typed wire values | ACCEPT |
+| `serde_json` | 1.0.151 | runtime | MIT OR Apache-2.0 | strict JSON parsing/tests | ACCEPT |
+| `serde_jcs` | 0.2.0 | runtime | MIT OR Apache-2.0 | repository-aligned RFC 8785 canonicalization | ACCEPT |
+| `sha2` | 0.11.0 | runtime | MIT OR Apache-2.0 | domain-separated journal SHA-256 | ACCEPT |
+| `thiserror` | 2.0.20 | runtime | MIT OR Apache-2.0 | typed machine errors | ACCEPT |
+| `uuid` | 1.26.0 | runtime | Apache-2.0 OR MIT | opaque ECR-004 IDs; `serde` only, no RNG feature | ACCEPT |
+| `rusqlite` | 0.40.2 | runtime | MIT | local append-only verification journal; `default-features=false`, `bundled` | ACCEPT |
+| `libsqlite3-sys` | 0.38.2 | transitive native runtime | MIT | inherited bundled SQLite FFI/build boundary | ACCEPT_EXISTING_NATIVE_BOUNDARY |
+| bundled SQLite | 3.53.2 | transitive native runtime | public domain | local journal storage engine | ACCEPT_EXISTING_NATIVE_BOUNDARY |
+| `proptest` | 1.11.0 | dev-only | MIT OR Apache-2.0 | property/adversarial tests | ACCEPT |
+| `tempfile` | 3.27.0 | dev-only | MIT OR Apache-2.0 | isolated SQLite/reopen tests | ACCEPT |
+
+### ECR-004 T001 security/MSRV notes
+
+- Workspace MSRV remains Rust 1.98. Exact-base ECR-001/ECR-002 gates compiled and tested the reused locked dependency graph with pinned Rust 1.98.
+- `uuid 1.26.0` declares Rust 1.85, below the workspace floor; only its `serde` feature is authorized for ECR-004 IDs.
+- `rusqlite 0.40.2` remains MIT licensed with `bundled` selecting SQLite; the bundled SQLite code is public domain. ECR-004 uses the same already-reviewed minimal `bundled` profile as ECR-002.
+- RUSTSEC-2022-0090 for `libsqlite3-sys` is patched in versions `>=0.25.1`; locked `0.38.2` is outside the affected range.
+- RUSTSEC-2021-0100 for `sha2` affected `0.9.7` and is patched in `>=0.9.8`; locked `0.11.0` is outside the affected release.
+- The 2026-08-20 malicious-crate campaign includes RUSTSEC-2026-0260 (`arrayref 0.3.10`) and RUSTSEC-2026-0265 (`proc-macro1`), plus related malicious releases. Exact authorization-state repository searches found no `arrayref` or `proc-macro1` dependency path. ECR-004 adds no dependency requiring those packages.
+- Any lockfile/version/feature/transitive change invalidates this admission evidence until reviewed again.
+
+### ECR-004 rejected dependency/source set
+
+- `zip` — REJECT as an ECR-004 direct dependency/owned capability; ECR-002 retains `.ecra` archive ownership.
+- `url` — REJECT as an ECR-004 direct dependency/owned capability; ECR-004 performs no fetch.
+- browser/network/HTTP/model/provider/process-execution/protocol/policy/authorization/identity-backend/telemetry/async-runtime/remote-database crates — REJECT.
+- duplicate canonicalization/hash/UUID/SQLite libraries — REJECT; existing locked primitives are sufficient.
+- donor source copying/vendor adoption — REJECT; public dependency APIs and independently written Ecra code only.
+
+T001 authorizes only the exact ECR-004 direct set above. Inherited transitive packages owned by canonical `ecra-core`/`ecra-run` do not become ECR-004-owned capabilities or widen the slice boundary.
+
+### ECR-004 T044 final implementation reconciliation
+
+Exact implementation evidence:
+
+```text
+HEAD                 67207e1bc91434555bfe31997f4af9f641324a76
+ECR-004 CI run       33250358128
+ECR-004 CI job       99094901800
+RESULT               SUCCESS
+rustc                 1.98.0 (88d9e12ae 2026-08-18)
+cargo                 1.98.0 (797e8a9bc 2026-08-05)
+Cargo.lock SHA-256    b8112ece8111599af10b92bc2a2e54dd006985ec32a300e47c5f8c356383a2f6
+```
+
+The exact-head direct normal dependency tree for `ecra-verify` is `ecra-core`, `ecra-run`, `rusqlite 0.40.2`, `serde 1.0.229`, `serde_jcs 0.2.0`, `serde_json 1.0.151`, `sha2 0.11.0`, `thiserror 2.0.20`, and `uuid 1.26.0`. Dev-only dependencies remain `proptest 1.11.0` and `tempfile 3.27.0`.
+
+`url 2.5.8` and `zip 8.6.0` occur only through the already-canonical upstream workspace crates `ecra-core` and `ecra-run`. ECR-004 neither declares them directly nor adopts their URL-fetch/archive capability. No new browser/network/model/provider/process/policy/authorization/identity/telemetry runtime dependency entered `ecra-verify`.
+
+No donor implementation source was copied, adapted, vendored, or imported for ECR-004. Public dependency APIs and independently written Ecra code are used. Exact-head `scripts/check-verify-unsafe.sh` and `scripts/check-verify-deps.sh` both passed. T044 is therefore `IMPLEMENTATION_DEPENDENCY_AND_DONOR_RECONCILED`.
+
 ## Durable Execution References With Licensing Caution
 
 | Project | Role | Observed license | Status | Ecra use / constraint |
@@ -200,4 +260,4 @@ Before a candidate becomes a locked dependency:
 
 ## Current Authorization
 
-ECR-001 remains authorized only for its locked trusted-domain dependency set. ECR-002 is additionally authorized for the locked `ecra-run` dependency delta recorded above, including the bounded bundled-SQLite native boundary and Stored-only ZIP substrate. Neither authorization permits copied donor source, ambient network/provider execution, real sensitive-state persistence, authentication/trust-root semantics, authorization/declassification policy, or independent verification/reconciliation behavior. Later-slice dependencies remain governed by their owning ECR package and require separate review.
+ECR-001 remains authorized only for its locked trusted-domain dependency set. ECR-002 is additionally authorized for the locked `ecra-run` dependency delta recorded above, including the bounded bundled-SQLite native boundary and Stored-only ZIP substrate. ECR-004 is authorized on implementation branch `004-verification-receipts-impl` only for the T001 direct dependency set recorded above, reusing the existing SQLite native boundary without adopting ZIP/URL as ECR-004 direct capabilities and without any provider/runtime expansion. None of these authorizations permits copied donor source, ambient network/provider execution, real sensitive-state persistence, authentication/trust-root semantics, authorization/declassification policy, fabricated executor receipts, or mutation of ECR-002 unresolved execution state. Later-slice dependencies remain governed by their owning ECR package and require separate review.

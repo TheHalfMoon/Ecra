@@ -101,3 +101,53 @@ IC-002 is owned by Phase 5 tasks T027–T029 and by the final ECR-002 regression
 ### Constitution impact
 
 G1/G4/G5/G6 improve: execution truth, verification truth and reconciliation evidence remain separate; UNKNOWN/run durability semantics are not rewritten. G2 remains unchanged because no execution authorization is introduced.
+
+## IC-003 — Empty support is permitted only for evidence-absent `still_unknown`
+
+### Discovery
+
+The canonical data model described `ReconciliationRecordV1.verification_receipts` as unconditionally non-empty, while T026 and FR-030 require reconciliation to return `still_unknown` when supporting verification evidence is absent, insufficient or conflicting. Requiring a fabricated support identifier to represent evidence absence would violate FR-032, FR-044 and the no-fabrication boundary.
+
+### Canonical resolution
+
+`verification_receipts` remains bounded and normally non-empty. The only permitted empty list is:
+
+```text
+outcome == still_unknown
+AND
+no supporting canonical VerificationReceipt exists for the exact reconciliation target
+```
+
+For all other cases:
+
+- `effect_confirmed` MUST reference at least one resolved supporting canonical `VerificationReceipt`;
+- `no_effect_confirmed` MUST reference at least one resolved supporting canonical `VerificationReceipt` that explicitly supports no-effect truth;
+- `still_unknown` with insufficient or conflicting supplied receipts retains those receipt IDs rather than discarding them;
+- absence of a provider `ActionReceipt`, elapsed time, notes, or an empty support list MUST NOT become `no_effect_confirmed`.
+
+### Prohibited interpretation
+
+IC-003 does NOT authorize:
+
+- empty support for either conclusive reconciliation outcome;
+- synthetic/fabricated verification IDs;
+- treating evidence absence as evidence of no effect;
+- bypassing exact run/attempt/action binding;
+- mutating ECR-002 run state or fabricating provider receipts.
+
+### Evidence requirement
+
+Phase 5 tests must cover:
+
+- evidence-absent `still_unknown` with an empty support list;
+- insufficient/conflicting `still_unknown` retaining all supplied support IDs;
+- conclusive outcomes rejecting empty support;
+- no-effect never inferred from missing provider receipt alone.
+
+### Task ordering
+
+IC-003 is a prerequisite clarification for T023–T026 and must converge with `data-model.md` before Phase 5 implementation is accepted.
+
+### Constitution impact
+
+G1/G4/G5/G6 improve: the representation can express genuine UNKNOWN without fabricating evidence while preserving strict conclusive-evidence requirements. G2 remains unchanged because no authority is introduced.

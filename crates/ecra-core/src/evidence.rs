@@ -99,6 +99,36 @@ impl EvidenceRef {
     pub const fn kind(&self) -> EvidenceKind {
         self.kind
     }
+
+    #[must_use]
+    pub const fn artifact(&self) -> Option<ArtifactId> {
+        self.artifact
+    }
+
+    #[must_use]
+    pub const fn observation(&self) -> Option<ObservationId> {
+        self.observation
+    }
+
+    #[must_use]
+    pub const fn receipt(&self) -> Option<ReceiptId> {
+        self.receipt
+    }
+
+    #[must_use]
+    pub fn external_ref(&self) -> Option<&str> {
+        self.external_ref.as_deref()
+    }
+
+    #[must_use]
+    pub const fn content_digest(&self) -> Option<&ContentDigest> {
+        self.content_digest.as_ref()
+    }
+
+    #[must_use]
+    pub const fn as_of(&self) -> Option<EpochMillis> {
+        self.as_of
+    }
 }
 
 #[derive(Deserialize)]

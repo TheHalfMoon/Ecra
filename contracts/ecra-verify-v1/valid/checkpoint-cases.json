@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "cases": [
+    {"name":"all-satisfied","states":["verified","verified"],"expected_satisfied":true},
+    {"name":"absent","states":["absent"],"expected_satisfied":false},
+    {"name":"rejected","states":["rejected"],"expected_satisfied":false},
+    {"name":"inconclusive","states":["inconclusive"],"expected_satisfied":false},
+    {"name":"conflicted","states":["conflicted"],"expected_satisfied":false},
+    {"name":"mixed","states":["verified","inconclusive","conflicted"],"expected_satisfied":false}
+  ]
+}

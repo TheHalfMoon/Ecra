@@ -28,126 +28,108 @@ ECR-002 closure CI: 33155302100 — SUCCESS
 ECR-001 regression on closure head: 33155302026 — SUCCESS
 ```
 
-Current canonical `main` before ECR-004 planning merge: `f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0`.
+ECR-004 implementation base is canonical `main` `4fb61f8b41267983fc460c666fddd7781d91653c`, where the permanent ECR-001/ECR-002 workflows both passed before implementation branch creation.
 
-## Parallel eligible execution lanes
+## Parallel trusted-substrate lanes
 
-The dependency graph currently permits two separate lanes. They MUST remain separate branches/PRs and one lane must not counterfeit the other's missing evidence.
+The dependency graph permits ECR-031 and ECR-004 to progress independently. They remain separate branches/PRs and neither may counterfeit the other's missing evidence.
 
-### Lane A — ECR-031 implementation
+### Lane A — ECR-031
 
 ```text
 Slice: ECR-031 — Identity, Trust Root & Sensitive Storage Foundations
-Live branch: 031-identity-trust-root
-Live PR: #4 — DRAFT / OPEN / NON-CANONICAL
-Last verified live PR head: d5e7079f0bf9f7a8848fbee9829e0994985ff38c
-Current task frontier: T064
-Current state: BLOCKED_EXTERNAL_NATIVE_ACCEPTANCE
+Branch: 031-identity-trust-root
+PR: #4 — DRAFT / OPEN / NON-CANONICAL
+State: BLOCKED_EXTERNAL_NATIVE_ACCEPTANCE
 ```
 
-Phase checkpoints already verified on the implementation branch:
+Non-native Phase 1–7 work has passed its owning gates, but native macOS Data Protection Keychain acceptance remains externally blocked because the trusted runner user has no valid Apple Development signing identity, suitable provisioning profile, configured developer account or development team.
 
-```text
-Phase 1  0289596bb7cdbb81d5f03c445fd324e985294143  run 33161529028  SUCCESS
-Phase 2  4ddb6da267ebc90647e27fde382385a9d2529452  run 33163366128  SUCCESS
-Phase 3  7eaede3f9f10461c307c8900c021273a4dbffa03  run 33165941748  SUCCESS
-Phase 4  217934d1f2c334b943349af87bcf40a4ad44b889  run 33196312711  SUCCESS
-Phase 5  bd066fa501476ff4f7fe43d0f4153de1e8d2fc60  run 33198508505  SUCCESS
-Phase 6  64c34744dd05b9850d8c9657a87e46913bd23412  run 33200973225  SUCCESS
-```
+Repository approval cannot create/infer those Apple credentials. Do not substitute legacy file-based Keychain, ad-hoc signing, plaintext/file/environment/memory fallback, or weakened acceptance. ECR-031 remains non-canonical until its own live package/PR evidence proves otherwise.
 
-Phase 7 non-native implementation evidence head `4f2c150d2e5fd882d8554cd32a8aea4d4c5da639`, run `33235282966`, passed locked build, fmt, strict Clippy, workspace tests, ECR-001/ECR-002 regressions, explicit ECR-031 targets, rustdoc, offline replay and all boundary/dependency/toolchain checks. Only the live macOS Data Protection Keychain acceptance step failed closed.
-
-Trusted-runner readiness evidence `33235282975` / `33235454670` shows:
-
-```text
-interactive console user     available
-runner == console user       yes
-codesign/Xcode tools          available
-code-signing identity         absent
-local provisioning profile   absent
-Xcode developer account      absent
-Xcode development team       absent
-```
-
-T064 therefore requires an external macOS host prerequisite: configure a valid Apple developer account/team in Xcode for the same user that owns the self-hosted runner and allow Xcode to create/install an Apple Development code-signing identity and suitable provisioning profile for an app-like Data Protection Keychain acceptance host.
-
-Repository approval alone cannot create or infer Apple account credentials, team identity, certificates or provisioning profiles. Do not substitute legacy file-based Keychain, ad-hoc signing, plaintext/file/environment/memory fallback, or weaken the live acceptance requirement.
-
-ECR-031 remains:
-
-```text
-T064 [BLOCKED_EXTERNAL_NATIVE_ACCEPTANCE]
-  ↓
-T068
-  ↓
-T069–T074
-  ↓
-T075–T082
-```
-
-Do not move PR #4 out of Draft, merge it, start ECR-031 Phase 8, or claim `VERIFIED_ON_BRANCH`/`CLOSED_CANONICAL` while T064/T068 remain open.
-
-### Lane B — ECR-004 planning / next implementation-eligible slice
+### Lane B — ECR-004
 
 ```text
 Slice: ECR-004 — Verification & Reconciliation
-Planning branch: 004-verification-receipts
-Planning PR: #5
-Planning base: f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0
-Last converged planning head before this EXECUTION commit: 764dce1c089ead4138cb5faed07c3a706946eff3
-Planning lifecycle: TASKS_READY candidate / non-canonical until planning merge
-Analyze Pass: 3
-Analyze result: ZERO_BLOCKING_PLANNING_DRIFT_FOUND
-FR-001–FR-046: OWNED
-SC-001–SC-013: OWNED
-A-001: REMEDIATED by IC-001 / T011A
-A-002: REMEDIATED by IC-002 / FR-046 / SC-013 / Phase 5 compatibility gates
-Implementation authorized: NO
+Branch: 004-verification-receipts-impl
+Review PR: #7 — READY / OPEN / NON-CANONICAL
+Superseded Draft PR: #6 — CLOSED / NOT MERGED
+Canonical implementation base: 4fb61f8b41267983fc460c666fddd7781d91653c
+Lifecycle: IMPLEMENTING_MERGE_READY
+Current frontier: T052 after exact live governance-head gate
 ```
 
-ECR-004 is independently eligible from ECR-001/ECR-002 and does not depend on ECR-031. Its package freezes these boundaries:
+PR #6 was replaced as the review container only because the connected ready-for-review GraphQL mutation was incompatible with the live GitHub schema. PR #7 opened over the same branch; no implementation diff was altered by that container replacement.
 
-- reuse ECR-001 `VerificationReceipt` as the only canonical independent verification record;
-- `ActionReceipt` remains executor-observed evidence and cannot self-verify;
-- UNKNOWN reconciliation never fabricates an `ActionReceipt` or mutates ECR-002 run-event truth;
-- aggregate/checkpoint/reconciliation views preserve conflict and grant no authority;
-- retry disposition is safety advisory only and `semantically_retryable*` applies to a future new-attempt proposal, not same-run scheduling;
-- every reconciliation outcome leaves ECR-002 prepared/unreceipted/unresolved state, `unresolved_attempts`, and `RunPhase` unchanged;
-- same-run `RunResumed`, `ExecutionCompleted`, and blind-retry guards remain authoritative for the unresolved prior attempt;
-- ECR-002 `RunEvent` v1 remains unchanged and no sidecar projection represents run resolution;
-- ECR-004 uses a separate append-only verification journal with rebuildable projections;
-- journal digest chaining is integrity/corruption detection only, not hostile complete-store tamper resistance;
-- persisted v1 acceptance is synthetic/non-sensitive evidence metadata/references/digests only;
-- no browser/network/model/provider/process/policy execution dependency enters `ecra-verify`;
-- IC-001 permits only typed read-only accessors for already-existing ECR-001 `EvidenceRef` metadata, with unchanged ECR-001 wire/canonical semantics and mandatory ECR-001 regressions;
-- IC-002 prohibits ECR-004 from clearing ECR-002 unresolved state or counterfeiting a run-repair protocol.
-
-ECR-004 implementation MUST NOT start directly from the planning branch. Required order:
+Verified implementation/review checkpoints:
 
 ```text
-1. Converge planning package/platform/index/EXECUTION/PR text on Analyze Pass 3.
-2. Process PR #5 planning review findings to zero actionable blocking drift on the exact converged head.
-3. Merge exact planning head by an allowed non-rebase method.
-4. Freeze resulting canonical main SHA.
-5. Require permanent ECR-001 and ECR-002 workflows SUCCESS on that exact SHA.
-6. Create implementation branch 004-verification-receipts-impl from that exact green canonical SHA.
-7. Execute specs/004-verification-receipts/tasks.md from T001 in dependency order.
-8. Never claim ECR-004 CLOSED_CANONICAL until T052 merge plus T053 post-merge evidence.
+Phase 1  e223ba5fbf8c375c580e7a93f524be3fd4c311fa  run 33237728338  SUCCESS
+Phase 2  40c18b4bcf1e6c124587cdfbc0e423822eb5b138  run 33245650032  SUCCESS
+T011A    75cac2aed9099d7ba82295c442b37764b284302c  run 33245970650  SUCCESS
+Phase 3  f5181ca4f903f2d039463b03b3e328b1fa9c30dd  run 33246658250  SUCCESS
+Phase 4  412de3f481d84154c5c2a85f11c6a6da0c89e35a  run 33247226826  SUCCESS
+Phase 5  fb3fdf1ce113a55d3d7276f54681a7f55dc542b3  run 33247815573  SUCCESS
+Phase 6  18ad19ae4b4f4d5f48270485af666e7204b95a0e  run 33249643366  SUCCESS
+T040     815b95ed0f95513e583aa077f04e863998d0d425  run 33250068524  SUCCESS
+T041     2a86dd909abfcb9d8658eab589787eb376a73004  run 33250250973  SUCCESS
+T043     67207e1bc91434555bfe31997f4af9f641324a76  run 33250358128  SUCCESS
+T045     90ed1bbeafea72ee655bc58a96e94696096f360e  run 33251037913  SUCCESS
+Pre-review T050  882b4ef7358aef6c416dd1b9dd67602e86334a06  run 33251589848  SUCCESS
+T051 remediation  fde10b37c17f8113b81c78cf87c0de717909ab59  run 33255382842  SUCCESS
 ```
+
+The T051 remediation job `99108056542` passed locked metadata/build, rustfmt, strict Clippy, workspace tests, complete ECR-001 regressions, complete ECR-002 regressions, every explicit ECR-004 quickstart target including review hardening, dedicated ECR-002 unresolved-state compatibility acceptance, rustdoc, offline replay, all unsafe/dependency boundaries and dependency evidence.
+
+T046/T047 traceability/constitution closure and T048/T049 convergence remain satisfied. Cubic produced 19 findings on PR #7; all valid findings were repaired forward-only, all review threads are resolved, and Cubic reports all findings addressed. CodeRabbit commit status is successful and exposes no actionable blocker. Review-only non-actionable findings were resolved with explicit rationale rather than weakening the required architecture/source/sentinel boundaries. T051 is complete.
+
+Because the T051 task/status/execution ledger convergence itself changes the branch head, the exact live governance-converged head must pass the complete ECR-004 workflow before T052 uses it as the expected merge head.
+
+## ECR-004 frozen boundaries
+
+- ECR-001 `VerificationReceipt` is the only canonical independent verification record.
+- `ActionReceipt` remains executor-observed evidence and cannot self-verify, even when the receipt itself has an immutable digest/artifact binding.
+- UNKNOWN reconciliation never fabricates `ActionReceipt` or mutates ECR-002 run-event truth.
+- aggregate/checkpoint/reconciliation views preserve conflict and grant no authority.
+- `semantically_retryable*` is advisory only for a future new-attempt proposal and must revalidate any supplied reconciliation record against canonical supporting receipts.
+- every reconciliation outcome leaves the original ECR-002 prepared/unreceipted/unresolved state and `unresolved_attempts` unchanged.
+- `RunPhase` is unchanged by every ECR-004 reconciliation outcome.
+- same-run `RunResumed`, `ExecutionCompleted`, and blind-retry guards remain authoritative.
+- ECR-002 `RunEvent` v1 remains unchanged; no sidecar projection represents run resolution.
+- ECR-004 uses a separate append-only verification journal with rebuildable projections.
+- journal chaining is local integrity/corruption/substitution detection only, not hostile full-store tamper resistance.
+- persisted v1 acceptance is synthetic/non-sensitive evidence metadata/references/digests only.
+- no browser/network/model/provider/process/policy/authorization/identity/telemetry runtime dependency enters `ecra-verify`.
+- ECR-004 exposes no provider execution, authorization, declassification, identity validation, secret-storage or same-run repair API.
+
+## ECR-004 remaining closure order
+
+```text
+complete exact-head ECR-004 + ECR-001 + ECR-002 gate on the live governance-converged PR #7 head
+  ↓
+re-check PR #7 exact head, reviews, threads, checks and mergeability
+  ↓
+T052 merge that exact expected head by allowed non-rebase method
+     then require ECR-004 + ECR-001 + ECR-002 workflows on canonical main
+  ↓
+T053 mark CLOSED_CANONICAL only from post-merge evidence;
+     update roadmap/status/index/EXECUTION and re-evaluate dependent eligibility
+```
+
+No merge, PASS or `CLOSED_CANONICAL` claim may be inferred from historical green.
 
 ## Dependency consequences
 
-- ECR-003 remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`.
-- ECR-005 requires ECR-003, ECR-004 and ECR-031 in addition to ECR-001/ECR-002, so ECR-004 alone cannot unlock it.
-- ECR-004 may continue despite the ECR-031 native-host blocker because the roadmap intentionally gives it only ECR-001/ECR-002 dependencies.
-- No other later slice may be pulled forward merely because one lane is blocked.
+- ECR-003 remains blocked until ECR-031 is `CLOSED_CANONICAL`.
+- ECR-005 requires ECR-003, ECR-004 and ECR-031 in addition to ECR-001/ECR-002; ECR-004 closure alone will not make ECR-005 implementation-eligible.
+- ECR-004 may finish despite the ECR-031 external native-host blocker because ECR-031 is not an ECR-004 dependency.
+- No later slice may be pulled forward merely because one lane is blocked.
 
 ## CI architecture
 
 The repository-scoped self-hosted macOS runner `macbook` is the trusted execution oracle for current Rust slices. Persistent personal runners must not execute untrusted fork PR code.
 
-Closed ECR-001/ECR-002 workflows remain permanent push gates on `main`. ECR-031 has its own trusted push-only branch/main gate including live native acceptance. ECR-004 implementation must add its own trusted push-only workflow with explicit request/evidence/aggregate/checkpoint/reconcile/journal/store/boundary targets plus ECR-001/ECR-002 regressions and explicit unresolved-state compatibility acceptance.
+ECR-001/ECR-002 workflows remain permanent push gates on `main`. ECR-004 has a permanent trusted push-only branch/main workflow that includes all explicit quickstart targets, ECR-001/ECR-002 regressions, unresolved-state compatibility, rustdoc/offline, boundaries and dependency evidence.
 
 Historical green cannot be reused after a content change to claim exact-head PASS.
 

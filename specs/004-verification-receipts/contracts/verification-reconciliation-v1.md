@@ -44,7 +44,7 @@ Requirements:
 }
 ```
 
-Unknown fields reject. `rule_id` is a bounded opaque rule identifier, never executable code or policy authority.
+Unknown fields reject. `rule_id` is a bounded opaque rule identifier, never executable code or policy authority. The complete serialized request is bounded so nested opaque references cannot bypass the v1 resource ceiling.
 
 ## 3. Decision-grade rules
 
@@ -55,7 +55,7 @@ Minimum v1 generic checks:
 - evidence IDs are unique within the request;
 - mutable external evidence that the rule treats as decision-critical has `content_digest` or immutable artifact/snapshot binding;
 - if the rule declares freshness required, evidence carries `as_of` and request carries `evaluated_at`;
-- a single executor `ActionReceipt` that merely repeats its own success/failure claim cannot self-verify without independently evaluated state/invariant evidence;
+- a single executor `ActionReceipt`/network receipt that merely repeats its own success/failure claim cannot self-verify a receipt, action, or action-attempt target without independently evaluated state/invariant evidence; adding an immutable digest/artifact binding does not make the executor receipt independent evidence;
 - unsupported/ambiguous evidence shape yields `Inconclusive` or typed rejection, never optimistic `Verified`.
 
 ## 4. Aggregate contract
@@ -70,7 +70,7 @@ inconclusive_count > 0                   -> inconclusive
 otherwise                                -> absent
 ```
 
-`not_evaluated` receipts remain inspectable but never satisfy a checkpoint.
+`not_evaluated` receipts remain inspectable but never satisfy a checkpoint. `VerificationAggregateViewV1` is a derived serialize-only view; callers cannot deserialize a claimed aggregate state as a substitute for canonical receipt derivation.
 
 ## 5. VerificationCheckpointV1 JSON shape
 
@@ -91,7 +91,8 @@ otherwise                                -> absent
 Rules:
 - non-empty requirements;
 - exact duplicate targets reject;
-- `absent` and `conflicted` cannot be accepted satisfying states;
+- `absent`, `inconclusive`, and `conflicted` cannot be accepted satisfying states;
+- requirements and accepted-state arrays are bounded during deserialization, and the complete checkpoint input is bounded before JSON materialization;
 - checkpoint evaluation is derived from receipts and never mutates them.
 
 ## 6. ReconciliationRecordV1 JSON shape
@@ -104,7 +105,7 @@ Rules:
   "attempt": {},
   "action": {},
   "outcome": "still_unknown",
-  "verification_receipts": ["<verification-id>"],
+  "verification_receipts": [],
   "reconciled_at": null,
   "notes": null
 }
@@ -113,8 +114,10 @@ Rules:
 Rules:
 - `attempt` must bind `action` exactly using ECR-001 validation;
 - attempt must be the exact durable attempt in the supplied ECR-002 run state;
-- support receipt IDs are unique and non-empty;
-- support receipts must exist in the ECR-004 journal and be relevant to the exact attempt/action claim;
+- support receipt IDs are unique and bounded;
+- `effect_confirmed` and `no_effect_confirmed` require at least one supporting canonical verification receipt ID;
+- `still_unknown` MAY carry an empty support list only when no supporting receipt was supplied; when support receipts are supplied, all exact IDs are retained, including conflicting or inconclusive support; an empty list never means no effect;
+- support receipts must exist in the bounded canonical receipt source and be relevant to the exact attempt/action claim;
 - `effect_confirmed` requires non-conflicted conclusive evidence of effect presence;
 - `no_effect_confirmed` requires non-conflicted conclusive evidence of effect absence;
 - `still_unknown` is mandatory for absent, insufficient, or conflicting evidence;
@@ -126,7 +129,11 @@ Rules:
 Inputs:
 - exact `ActionIntent`;
 - exact durable prior attempt;
-- latest deterministic reconciliation view.
+- latest deterministic reconciliation record, when present;
+- the bounded canonical verification receipt source needed to revalidate that reconciliation record;
+- proposed idempotency key when the ECR-001 retry class requires one.
+
+Before a reconciliation outcome can influence retry classification, ECR-004 MUST revalidate the record against the exact supplied ECR-002 state and canonical supporting receipts. A merely deserialized or caller-constructed record cannot make a retry semantically eligible by itself.
 
 Output is one closed safety classification:
 
@@ -204,6 +211,7 @@ Unknown variant/field/version rejects.
 - indexes/projections are rebuildable and non-authoritative;
 - duplicate verification/checkpoint/reconciliation IDs reject;
 - competing appenders use expected-head compare-and-append semantics so at most one wins for one expected head;
+- append is rejected before commit when it would make the authoritative journal exceed the v1 materialization ceiling;
 - crash before commit leaves no partial canonical entry;
 - corruption, sequence break, previous-digest mismatch, entry-digest mismatch, unknown newer schema, and malformed canonical JSON fail closed.
 
@@ -213,14 +221,19 @@ Initial v1 maxima:
 
 ```text
 MAX_EVIDENCE_REFS_PER_REQUEST = 32
+MAX_VERIFICATION_REQUEST_BYTES = 65536
 MAX_RECEIPTS_PER_TARGET = 256
 MAX_CHECKPOINT_REQUIREMENTS = 128
-MAX_RECONCILIATION_RECEIPTS = 64
+MAX_ACCEPTED_STATES_PER_REQUIREMENT = 2
+MAX_VERIFICATION_CHECKPOINT_BYTES = 262144
+MAX_RECONCILIATION_SUPPORT_IDS = 64
+MAX_RECONCILIATION_AVAILABLE_RECEIPTS = 256
 MAX_RULE_ID_BYTES = 128
 MAX_CHECKPOINT_LABEL_BYTES = 256
 MAX_NOTES_BYTES = 4096
+MAX_RECONCILIATION_NOTES_BYTES = 4096
 MAX_JOURNAL_ENTRY_BYTES = 65536
-MAX_QUERY_ENTRIES = 4096
+MAX_MATERIALIZED_JOURNAL_ENTRIES = 4096
 ```
 
 Implementations may choose stricter limits only through documented compatibility review; widening requires explicit contract/version review.

@@ -70,22 +70,30 @@ Derived validation result over the evidence supplied to a request.
 
 ```text
 DecisionGradeAssessmentV1
-  decision_grade: bool
-  reason: DecisionGradeReasonV1
+  status: DecisionGradeStatusV1
+  reasons: deterministic [DecisionGradeReasonV1]
+
+DecisionGradeStatusV1
+  decision_grade
+  non_decision_grade
 ```
 
 Closed reasons:
 
 ```text
-sufficient_immutable_binding
-not_required_for_nonconclusive_outcome
+missing_evidence_binding
 missing_immutable_binding
-missing_freshness_basis
-self_attesting_execution_receipt_only
-unsupported_evidence_shape
+missing_evaluation_time
+missing_freshness
+evidence_from_future
+evidence_stale
+self_attesting_execution_receipt
+model_judgment_requires_independent_evidence
 ```
 
-This object is not verification truth and is not persisted as a competing outcome. It explains whether a conclusive proposed outcome may be emitted as a receipt.
+`decision_grade` has an empty reason list. `non_decision_grade` retains every applicable fail-closed reason in deterministic enum order so multiple simultaneous evidence defects remain inspectable. A self-attesting execution-receipt-only conclusive basis is rejected with the typed self-attestation error rather than emitted as verification truth.
+
+This object is not verification truth and is not persisted as a competing outcome. It only explains whether a conclusive proposed outcome may be emitted as the canonical ECR-001 receipt.
 
 ## 5. VerificationAggregateViewV1
 
@@ -94,7 +102,7 @@ Derived deterministic view for one exact `VerificationTarget`.
 ```text
 VerificationAggregateViewV1
   target: VerificationTarget
-  state: AggregateVerificationStateV1
+  state: VerificationAggregateStateV1
   receipt_ids: [VerificationId]
   verified_ids: [VerificationId]
   rejected_ids: [VerificationId]
@@ -121,10 +129,10 @@ One requirement inside a checkpoint.
 ```text
 VerificationRequirementV1
   target: VerificationTarget
-  accepted_states: non-empty bounded set of AggregateVerificationStateV1
+  accepted_states: non-empty bounded set of VerificationAggregateStateV1
 ```
 
-`conflicted` and `absent` are not permitted as satisfying states in v1. A requirement normally accepts exactly `verified`; specialized negative checks may accept `rejected` only when the requirement semantics explicitly describe rejection as the desired evidence state.
+`absent`, `inconclusive`, and `conflicted` are prohibited satisfying states in v1. A requirement normally accepts exactly `verified`; specialized negative checks may accept `rejected` only when the requirement semantics explicitly describe rejection as the desired evidence state.
 
 ## 7. VerificationCheckpointV1
 
@@ -177,7 +185,7 @@ ReconciliationRecordV1
   attempt: ActionAttemptRef
   action: ActionRef
   outcome: ReconciliationOutcomeV1
-  verification_receipts: non-empty [VerificationId]
+  verification_receipts: bounded [VerificationId]
   reconciled_at: EpochMillis?
   notes: bounded string?
 ```
@@ -185,10 +193,12 @@ ReconciliationRecordV1
 Invariants:
 - `attempt.action_ref == action` exactly;
 - attempt must exist in the supplied ECR-002 `RunState` for `run_id`;
-- supporting receipt IDs must resolve to receipts whose target is the exact attempt/action/receipt evidence relevant to the reconciliation rule;
-- `effect_confirmed` requires a non-conflicted conclusive verification basis;
-- `no_effect_confirmed` requires explicit evidence of no effect; mere absence of provider receipt/evidence is insufficient;
+- supporting receipt IDs must resolve to receipts whose target is the exact attempt/action evidence relevant to the reconciliation rule;
+- `effect_confirmed` requires a non-conflicted conclusive verification basis and at least one supporting receipt ID;
+- `no_effect_confirmed` requires explicit evidence of no effect and at least one supporting receipt ID; mere absence of provider receipt/evidence is insufficient;
 - `still_unknown` is permitted for insufficient/conflicted evidence and remains blocking;
+- `still_unknown` MAY carry an empty support list only when no supporting canonical `VerificationReceipt` exists for the exact reconciliation target;
+- `still_unknown` with insufficient/conflicting supplied receipts retains those supporting receipt IDs;
 - append-only: a later record does not mutate an older record;
 - the record never mutates ECR-002 state, clears `unresolved_attempts`, synthesizes `ActionReceipt`, or makes the same run resumable/completable.
 
@@ -210,12 +220,12 @@ Inputs:
 - ECR-002 durable attempt state;
 - latest deterministic reconciliation view.
 
-Rules:
+Rules over ECR-001-valid intent combinations:
 - `effect_confirmed` -> `duplicate_retry_blocked`;
 - `still_unknown` or no reconciliation -> `reconciliation_required`;
-- `no_effect_confirmed` + `RetryClass::Safe` -> `semantically_retryable`;
-- `no_effect_confirmed` + `RequiresSameIdempotencyKey` -> `semantically_retryable_same_key` only for exact same key binding;
-- `RequiresExternalReconciliation` or `NeverBlindRetry` never becomes authorization; a caller still needs the owning execution/authorization path.
+- `no_effect_confirmed` + valid `RetryClass::Safe` / naturally-idempotent semantics -> `semantically_retryable`;
+- `no_effect_confirmed` + `RequiresSameIdempotencyKey` / `IdempotentWithKey` -> `semantically_retryable_same_key` only for the exact same key binding;
+- `RequiresExternalReconciliation` or `NeverBlindRetry` never becomes authorization and remains `requires_explicit_nonblind_path` after no-effect confirmation.
 
 `semantically_retryable` and `semantically_retryable_same_key` are advisory classifications for a future **new-attempt proposal** only. They do not clear the existing prepared attempt from ECR-002 `unresolved_attempts`, do not call or weaken `ensure_retry_allowed`, and do not make `RunResumed` or `ExecutionCompleted` legal for the existing run.
 
@@ -253,11 +263,17 @@ Body variants:
 
 ```text
 verification_receipt { receipt: VerificationReceipt }
-checkpoint_defined    { checkpoint: VerificationCheckpointV1 }
+checkpoint_defined { checkpoint: VerificationCheckpointV1 }
 reconciliation_recorded { record: ReconciliationRecordV1 }
 ```
 
-The digest is domain-separated SHA-256 over canonical versioned material excluding `entry_digest` itself and including sequence/previous digest/body.
+The canonical v1 digest is domain-separated SHA-256:
+
+```text
+SHA-256("ecra/verification-journal/v1\0" || JCS(version, sequence, previous_digest, body))
+```
+
+The fixed committed golden material/digest is normative for the domain separator and canonicalization behavior.
 
 Claim boundary: this is an integrity chain under ordinary local assumptions, not hostile-tamper resistance against a complete-store rewriter.
 
@@ -265,11 +281,14 @@ Claim boundary: this is an integrity chain under ordinary local assumptions, not
 
 ECR-004 owns a separate SQLite journal store; it does not add ECR-002 `RunEvent` variants.
 
-Minimum logical schema:
+Implemented v1 logical schema:
 
 ```text
+PRAGMA user_version = 1
+
 verification_meta
-  schema_version INTEGER
+  singleton INTEGER PRIMARY KEY CHECK(singleton = 1)
+  schema_version INTEGER NOT NULL
 
 verification_journal
   sequence INTEGER PRIMARY KEY
@@ -292,20 +311,18 @@ reconciliation_index
   sequence INTEGER NOT NULL
 ```
 
-Indexes are projections. Canonical journal entries are authoritative for ECR-004 persisted truth and projections must be rebuildable.
+`verification_journal_no_update` and `verification_journal_no_delete` triggers reject ordinary canonical-row mutation. Indexes are projections; canonical journal entries are authoritative for ECR-004 persisted truth and projections are rebuildable.
 
 ## 14. Versioning and migration
 
-- store schema begins at v1;
+- store schema begins at v1 and records both SQLite `user_version` and a matching `verification_meta` marker;
 - wire records use strict v1 major/minor compatibility rules aligned with repository conventions;
 - unsupported newer store/wire versions fail closed before mutation;
 - v0/empty-store initialization is transactional;
 - failed migration leaves original user version and journal bytes unchanged;
 - no ECR-002 schema/event version is changed by ECR-004 v1.
 
-## 15. Bounds to freeze in implementation planning
-
-Recommended initial v1 ceilings, subject to exact implementation fixture validation:
+## 15. Frozen v1 bounds
 
 ```text
 evidence refs per verification request      32
@@ -319,4 +336,4 @@ journal entry JSON bytes                  65536
 entries materialized by one query          4096
 ```
 
-All bounds are fail-closed and checked before expensive processing where practical.
+All bounds are fail-closed and checked before expensive processing where practical. Exact-max and max+1 behavior is covered by Phase 7 hostile-input tests.

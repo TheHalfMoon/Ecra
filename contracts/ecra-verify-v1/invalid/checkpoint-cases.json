@@ -1,0 +1,46 @@
+[
+  {
+    "name":"duplicate-target",
+    "checkpoint":{
+      "version":{"major":1,"minor":0},
+      "id":"00000000-0000-0000-0000-000000006001",
+      "label":"duplicate target",
+      "requirements":[
+        {"target":{"kind":"claim","value":{"namespace":"checkpoint","reference":"duplicate"}},"accepted_states":["verified"]},
+        {"target":{"kind":"claim","value":{"namespace":"checkpoint","reference":"duplicate"}},"accepted_states":["rejected"]}
+      ]
+    }
+  },
+  {
+    "name":"prohibited-conflicted-state",
+    "checkpoint":{
+      "version":{"major":1,"minor":0},
+      "id":"00000000-0000-0000-0000-000000006001",
+      "label":"conflict cannot satisfy",
+      "requirements":[
+        {"target":{"kind":"claim","value":{"namespace":"checkpoint","reference":"conflict"}},"accepted_states":["conflicted"]}
+      ]
+    }
+  },
+  {
+    "name":"empty-requirements",
+    "checkpoint":{
+      "version":{"major":1,"minor":0},
+      "id":"00000000-0000-0000-0000-000000006001",
+      "label":"empty",
+      "requirements":[]
+    }
+  },
+  {
+    "name":"unknown-field",
+    "checkpoint":{
+      "version":{"major":1,"minor":0},
+      "id":"00000000-0000-0000-0000-000000006001",
+      "label":"unknown field",
+      "requirements":[
+        {"target":{"kind":"claim","value":{"namespace":"checkpoint","reference":"strict"}},"accepted_states":["verified"]}
+      ],
+      "unexpected":true
+    }
+  }
+]
