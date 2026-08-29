@@ -220,7 +220,10 @@ fn conflict_is_reported_and_never_satisfies_checkpoint() {
 
     let evaluation = checkpoint.evaluate(&[aggregate]).expect("evaluation");
     assert!(!evaluation.satisfied());
-    assert_eq!(evaluation.unsatisfied_targets(), &[conflicted.clone()]);
+    assert_eq!(
+        evaluation.unsatisfied_targets(),
+        std::slice::from_ref(&conflicted)
+    );
     assert_eq!(evaluation.conflicted_targets(), &[conflicted]);
 }
 
