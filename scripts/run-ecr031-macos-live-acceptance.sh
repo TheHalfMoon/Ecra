@@ -251,7 +251,7 @@ main() {
 
   local scratch_dir
   scratch_dir="$(mktemp -d "${TMPDIR:-/tmp}/ecra-t064.XXXXXX")"
-  trap 'rm -rf "$scratch_dir"' EXIT
+  trap '[[ -z "${scratch_dir:-}" ]] || rm -rf -- "$scratch_dir"' EXIT
 
   local selection profile team application_identifier identity_hash
   selection="$(find_profile_and_identity "$scratch_dir")"
