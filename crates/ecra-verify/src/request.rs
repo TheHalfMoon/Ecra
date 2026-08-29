@@ -173,7 +173,7 @@ impl VerificationRequestV1 {
         Self::from_wire(wire)
     }
 
-    pub fn to_receipt(&self) -> Result<VerificationReceipt, VerifyError> {
+    pub(crate) fn construct_receipt(&self) -> Result<VerificationReceipt, VerifyError> {
         let mut receipt = VerificationReceipt::new(
             self.receipt_id,
             self.verifier,
