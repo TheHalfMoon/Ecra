@@ -1,11 +1,11 @@
 # ECR-004 Status — Verification & Reconciliation
 
 **Slice:** ECR-004  
-**Lifecycle:** IMPLEMENTING_FINAL_GATE  
+**Lifecycle:** IMPLEMENTING_REVIEW_READY  
 **Dependencies:** ECR-001 `CLOSED_CANONICAL`, ECR-002 `CLOSED_CANONICAL`  
 **Canonical implementation base:** `4fb61f8b41267983fc460c666fddd7781d91653c`  
 **Implementation branch:** `004-verification-receipts-impl`  
-**Implementation PR:** #6 (Draft until T050)  
+**Implementation PR:** #6  
 **Constitution:** v1.1.0
 
 ## Canonical authorization base
@@ -49,10 +49,11 @@ ECR-002 CI  33237289693  SUCCESS  exact head 4fb61f8b41267983fc460c666fddd7781d9
 | T041 portability | `2a86dd909abfcb9d8658eab589787eb376a73004` | 33250250973 | 99094604997 | SUCCESS |
 | T043 complete quickstart | `67207e1bc91434555bfe31997f4af9f641324a76` | 33250358128 | 99094901800 | SUCCESS |
 | T045 Phase 7 closure | `90ed1bbeafea72ee655bc58a96e94696096f360e` | 33251037913 | 99096645538 | SUCCESS |
+| T050 final feature gate | `e22cfc6a93332fba4acfb594f333dead8dedbb8b` | 33251312456 | 99097374327 | SUCCESS |
 
-T045 passed every permanent gate: locked metadata/build, rustfmt, strict Clippy, workspace tests, explicit ECR-001 regressions, explicit ECR-002 regressions, all ECR-004 quickstart targets, dedicated ECR-002 unresolved-state compatibility acceptance, rustdoc, offline replay, all unsafe/dependency boundaries and dependency evidence.
+T050 is the complete final feature-head gate. Every permanent step passed on the exact final implementation head: locked metadata/build, rustfmt, strict Clippy, workspace tests, explicit ECR-001 regressions, explicit ECR-002 regressions, every ECR-004 quickstart target, dedicated ECR-002 unresolved-state compatibility acceptance, rustdoc, offline replay, all unsafe/dependency boundaries and dependency evidence.
 
-T043/T045 toolchain/dependency evidence includes:
+Toolchain/dependency evidence remains:
 
 ```text
 rustc                 1.98.0 (88d9e12ae 2026-08-18)
@@ -74,52 +75,43 @@ The same closure document re-checks G1–G15 and executor self-verification, UNK
 
 ### T048 — Post-implementation analyze
 
-`post-implementation-analyze.md` result: `CONVERGENCE_REQUIRED_NO_IMPLEMENTATION_BLOCKER`.
-
-The pass found three bounded documentation drifts only:
-
-```text
-C-001 DecisionGradeAssessmentV1 data-model shape/reason set
-C-002 journal domain-separator prose
-C-003 checkpoint Inconclusive satisfying-state wording
-```
-
-No implementation change or requirement weakening was required.
+`post-implementation-analyze.md` result: `CONVERGENCE_REQUIRED_NO_IMPLEMENTATION_BLOCKER` with three bounded documentation drifts only. No implementation change or requirement weakening was required.
 
 ### T049 — Convergence
 
-T049 converged the package and lifecycle documentation to exact implementation truth:
+T049 converged the package and lifecycle documentation to exact implementation truth, including the decision-grade assessment model, checkpoint satisfying states, journal domain separator, persistence schema/bounds, dependency/source truth, platform roadmap/status, Spec Kit index and `EXECUTION.md`.
 
-- `data-model.md` now matches implemented `DecisionGradeStatusV1` + deterministic multi-reason assessment, exact checkpoint satisfying-state restrictions, implemented SQLite schema/triggers/bounds and canonical journal domain separator;
-- `plan.md` now matches the implemented/golden journal domain separator and final implementation architecture;
-- `research.md` and donor/license ledger reflect final dependency/source truth;
-- `EXECUTION.md`, platform `STATUS.md`, platform roadmap and `specs/README.md` now describe live ECR-004 implementation/final-convergence state rather than historical planning authorization;
-- traceability/analyze artifacts are part of the package.
+### T050 — Final exact-head gate
 
-T049 changes are documentation/governance convergence only. They require T050 exact-head CI before PR #6 may leave Draft.
+```text
+HEAD   e22cfc6a93332fba4acfb594f333dead8dedbb8b
+RUN    33251312456
+JOB    99097374327
+RESULT SUCCESS
+```
+
+This makes T051 review processing eligible. ECR-004 remains non-canonical until exact-head review closure, merge and required post-merge evidence complete.
 
 ## Current execution state
 
 ```text
-CURRENT_TASK                    T050
-CURRENT_STATE                   FINAL_EXACT_HEAD_GATE_REQUIRED
+CURRENT_TASK                    T051
+CURRENT_STATE                   REVIEW_READY_AFTER_FINAL_GATE
 IMPLEMENTATION_BASE             4fb61f8b41267983fc460c666fddd7781d91653c
 IMPLEMENTATION_BRANCH           004-verification-receipts-impl
-IMPLEMENTATION_PR               6_DRAFT
-T001_T045                       COMPLETE_WITH_REQUIRED_EVIDENCE
-T046                            COMPLETE_TRACEABILITY_ZERO_UNOWNED_MUST
-T047                            COMPLETE_G1_G15_ZERO_BLOCKER
-T048                            COMPLETE_CONVERGENCE_REQUIRED_NO_IMPLEMENTATION_BLOCKER
-T049                            COMPLETE_PENDING_T050_EXACT_HEAD_GATE
-T050                            NEXT_REQUIRED
-T051_T053                       NOT_YET_ELIGIBLE
+IMPLEMENTATION_PR               6
+FINAL_FEATURE_HEAD              e22cfc6a93332fba4acfb594f333dead8dedbb8b
+FINAL_FEATURE_RUN               33251312456
+FINAL_FEATURE_JOB               99097374327
+FINAL_FEATURE_RESULT            SUCCESS
+T001_T050                       COMPLETE_WITH_REQUIRED_EVIDENCE
+T051                            NEXT_REQUIRED
+T052_T053                       NOT_YET_ELIGIBLE
 ```
 
 ## Remaining canonical order
 
 ```text
-T050 complete exact-head final ECR-004 CI + ECR-001/ECR-002 regressions
-  ↓
 T051 move PR #6 out of Draft; process reviews/comments/threads to zero actionable blocker
   ↓
 T052 merge exact expected feature head by allowed non-rebase method; require ECR-004 + ECR-001 + ECR-002 workflows on canonical main
