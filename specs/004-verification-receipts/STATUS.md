@@ -96,23 +96,6 @@ Phase 5 covers strict reconciliation identity/binding, canonical support receipt
 
 ### Phase 6 — T031–T039
 
-T031–T038 implement and test:
-
-- strict versioned `VerificationJournalEntryV1` with positive bounded sequence, exact previous-digest rule, repository-aligned JCS material, domain-separated SHA-256 and fixed digest goldens;
-- transactional SQLite v1 initialization with schema marker, append-only authoritative `verification_journal`, and rebuildable receipt/checkpoint/reconciliation indexes separate from ECR-002 run storage;
-- SQL update/delete rejection for canonical journal rows while projections remain rebuildable and non-authoritative;
-- expected-head compare-and-append under `BEGIN IMMEDIATE`, where a stale competing writer fails closed;
-- authoritative duplicate-ID detection independent of projection contents;
-- corruption detection for malformed entry JSON, row/entry metadata mismatch, sequence gaps/reordering, previous-digest mismatch and duplicate canonical identities;
-- newer-schema fail-closed behavior and failed-initialization rollback evidence;
-- projection deletion/poisoning followed by canonical rebuild;
-- reopen/replay preservation of byte-equivalent aggregate/checkpoint views and identical reconciliation records;
-- synthetic/non-sensitive sentinel tests proving raw secret sentinel text is absent from persisted journal material and derived Debug output.
-
-The initial Phase 6 store candidate passed build but failed only rustfmt. The formatting repair was forward-only and did not change store semantics.
-
-T039 exact-head evidence:
-
 ```text
 HEAD   18ad19ae4b4f4d5f48270485af666e7204b95a0e
 RUN    33249643366
@@ -120,51 +103,102 @@ JOB    99093000858
 RESULT SUCCESS
 ```
 
-Every required Phase 6 gate succeeded on the exact head: locked metadata/build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, ECR-002 regressions, ECR-004 targets, rustdoc, offline replay, unsafe/dependency boundaries and dependency/toolchain evidence.
+Phase 6 covers the strict append-only journal, domain-separated JCS/SHA-256 chain, transactional SQLite v1 store/migration, immutable canonical rows, rebuildable projections, expected-head concurrency, corruption/migration/reopen/replay evidence, synthetic-secret sentinel checks, offline operation and the explicit integrity-only claim boundary.
 
-**Integrity claim boundary:** the v1 journal hash chain detects corruption, substitution and broken linkage when replayed under its local assumptions. Because v1 has no independently protected root/head anchor, ECR-004 does not claim resistance to an adversary that can rewrite the entire store consistently, verifier infallibility, provider authenticity, or exactly-once external effects.
+### Phase 7 — T040 hostile input/resource ceilings
 
-Phase 6 is `VERIFIED_ON_BRANCH`; ECR-004 remains Draft and is not `CLOSED_CANONICAL`.
+```text
+HEAD   815b95ed0f95513e583aa077f04e863998d0d425
+RUN    33250068524
+JOB    99094119979
+RESULT SUCCESS
+```
+
+T040 proves exact maxima and max+1 typed failures for request evidence, receipts per target, checkpoint requirements, reconciliation support IDs/notes, journal bytes and 4,096-entry query materialization, plus bounded arbitrary JSON parsing without panic.
+
+### Phase 7 — T041 portability
+
+```text
+HEAD   2a86dd909abfcb9d8658eab589787eb376a73004
+RUN    33250250973
+JOB    99094604997
+RESULT SUCCESS
+```
+
+T041 proves accepted JSON whitespace/CRLF/field-order variants preserve canonical journal digest/bytes, aggregate behavior and reconciliation support ordering.
+
+### Phase 7 — T042 v1 documentation
+
+T042 is implemented in commit `1fa0ab70e2664803a200733b93888a3f29c604bf`. Its README content is included in the later exact-head T043 success below and documents decision-grade evidence, checkpoint semantics, reconciliation/retry non-authority, unchanged ECR-002 unresolved-state truth, future-new-attempt-only advisory semantics, synthetic/offline persistence and explicit assurance non-claims.
+
+### Phase 7 — T043 complete quickstart exact-head gate
+
+```text
+HEAD   67207e1bc91434555bfe31997f4af9f641324a76
+RUN    33250358128
+JOB    99094901800
+RESULT SUCCESS
+```
+
+Every quickstart and closure prerequisite step succeeded on that exact head: locked metadata/build, rustfmt, strict Clippy, workspace tests, all explicit ECR-001 regressions, all explicit ECR-002 regressions, every explicit ECR-004 quickstart target, dedicated ECR-002 unresolved-state compatibility acceptance, rustdoc, offline replay, all unsafe/dependency boundary scripts and dependency evidence.
+
+Toolchain/dependency evidence from the same job:
+
+```text
+rustc                 1.98.0 (88d9e12ae 2026-08-18)
+cargo                 1.98.0 (797e8a9bc 2026-08-05)
+Cargo.lock SHA-256    b8112ece8111599af10b92bc2a2e54dd006985ec32a300e47c5f8c356383a2f6
+```
+
+The direct normal `ecra-verify` dependency surface is exactly `ecra-core`, `ecra-run`, `rusqlite 0.40.2`, `serde 1.0.229`, `serde_jcs 0.2.0`, `serde_json 1.0.151`, `sha2 0.11.0`, `thiserror 2.0.20`, and `uuid 1.26.0`. `url`/`zip` remain inherited only through canonical upstream workspace crates and are not ECR-004 direct capabilities.
+
+### Phase 7 — T044 donor/license/dependency reconciliation
+
+`specs/004-verification-receipts/research.md` and `research/donor-license-ledger.md` now reconcile the final implementation against the exact T043 dependency evidence. No donor implementation source was copied/adapted/vendored, no new provider/network/process/policy/identity/telemetry dependency entered `ecra-verify`, and the direct dependency set matches T001.
+
+T044 is complete as repository documentation. The current documentation head must still pass T045 exact-head CI before Phase 7 is `VERIFIED_ON_BRANCH`.
 
 ## Current execution state
 
 ```text
-CURRENT_TASK                    T040
-CURRENT_STATE                   IMPLEMENTING
+CURRENT_TASK                    T045
+CURRENT_STATE                   AWAITING_EXACT_HEAD_PHASE_7_CLOSURE_GATE
 IMPLEMENTATION_BASE             4fb61f8b41267983fc460c666fddd7781d91653c
 IMPLEMENTATION_BRANCH           004-verification-receipts-impl
 IMPLEMENTATION_PR               6_DRAFT
-T001_T005                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
-T006_T011                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
-T011A                           COMPLETE_WITH_EXACT_HEAD_EVIDENCE
-T012_T017                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
-T018_T022                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
-T023_T030                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
-T031_T039                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
-PHASE_6_HEAD                    18ad19ae4b4f4d5f48270485af666e7204b95a0e
-PHASE_6_RUN                     33249643366
-PHASE_6_JOB                     99093000858
-PHASE_6_RESULT                  SUCCESS
-T040                            ELIGIBLE
-T041_PLUS                       ORDERED_BY_TASK_GRAPH
+T001_T039                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
+T040                            COMPLETE_WITH_EXACT_HEAD_EVIDENCE
+T041                            COMPLETE_WITH_EXACT_HEAD_EVIDENCE
+T042                            COMPLETE_INCLUDED_IN_T043_EXACT_HEAD
+T043                            COMPLETE_WITH_EXACT_HEAD_EVIDENCE
+T044                            COMPLETE_PENDING_T045_DOCUMENTATION_HEAD_GATE
+T045                            NEXT_REQUIRED
+PHASE_7_PRE_CLOSURE_HEAD        67207e1bc91434555bfe31997f4af9f641324a76
+PHASE_7_PRE_CLOSURE_RUN         33250358128
+PHASE_7_PRE_CLOSURE_JOB         99094901800
+PHASE_7_PRE_CLOSURE_RESULT      SUCCESS
 ```
 
 ## Canonical next order
 
 ```text
-T040 hostile/bounded-input and exact-max resource tests
-  ↓
-T041 strict JSON/canonicalization portability tests
-  ↓
-T042 exact v1 usage and assurance-boundary documentation
-  ↓
-T043 complete quickstart exact-head evidence
-  ↓
-T044 donor/license/dependency implementation reconciliation
-  ↓
 T045 exact-head Phase 7 closure gate
   ↓
-T046–T053 traceability, convergence, review, merge and canonical closure
+T046 FR/SC traceability closure
+  ↓
+T047 constitution G1–G15 and risk/gap recheck
+  ↓
+T048 post-implementation analyze-equivalent review
+  ↓
+T049 package/platform/index/EXECUTION convergence
+  ↓
+T050 final exact-head implementation gate
+  ↓
+T051 move PR #6 out of Draft and resolve every actionable review finding
+  ↓
+T052 merge exact expected head by allowed non-rebase method + canonical-main workflows
+  ↓
+T053 post-merge canonical closure and dependency re-evaluation
 ```
 
 ## Parallel ECR-031 boundary
