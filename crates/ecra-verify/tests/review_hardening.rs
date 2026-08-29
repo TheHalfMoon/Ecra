@@ -3,8 +3,8 @@ use ecra_core::{
     VerificationOutcome, VerificationTarget,
 };
 use ecra_verify::{
-    MAX_VERIFICATION_CHECKPOINT_BYTES, MAX_VERIFICATION_REQUEST_BYTES,
-    VerificationCheckpointV1, VerificationRequestFieldsV1, VerificationRequestV1, VerifyErrorCode,
+    MAX_VERIFICATION_CHECKPOINT_BYTES, MAX_VERIFICATION_REQUEST_BYTES, VerificationCheckpointV1,
+    VerificationRequestFieldsV1, VerificationRequestV1, VerifyErrorCode,
 };
 
 #[test]
