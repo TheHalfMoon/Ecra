@@ -26,8 +26,8 @@ pub use aggregate::{
 };
 pub use checkpoint::{
     CheckpointEvaluationV1, MAX_ACCEPTED_STATES_PER_REQUIREMENT, MAX_CHECKPOINT_LABEL_BYTES,
-    MAX_CHECKPOINT_REQUIREMENTS, VerificationCheckpointFieldsV1, VerificationCheckpointV1,
-    VerificationRequirementV1,
+    MAX_CHECKPOINT_REQUIREMENTS, MAX_VERIFICATION_CHECKPOINT_BYTES,
+    VerificationCheckpointFieldsV1, VerificationCheckpointV1, VerificationRequirementV1,
 };
 pub use error::{VerifyError, VerifyErrorCategory, VerifyErrorCode};
 pub use evidence::{
@@ -41,13 +41,14 @@ pub use journal::{
     VerificationJournalEntryV1, VerificationJournalSequence,
 };
 pub use reconcile::{
-    MAX_RECONCILIATION_NOTES_BYTES, MAX_RECONCILIATION_SUPPORT_IDS, ReconciliationInputV1,
-    ReconciliationOutcomeV1, ReconciliationRecordFieldsV1, ReconciliationRecordV1,
-    RetryDispositionV1, reconcile, retry_disposition,
+    MAX_RECONCILIATION_AVAILABLE_RECEIPTS, MAX_RECONCILIATION_NOTES_BYTES,
+    MAX_RECONCILIATION_SUPPORT_IDS, ReconciliationInputV1, ReconciliationOutcomeV1,
+    ReconciliationRecordFieldsV1, ReconciliationRecordV1, RetryDispositionV1, reconcile,
+    retry_disposition,
 };
 pub use request::{
-    MAX_EVIDENCE_REFS_PER_REQUEST, MAX_NOTES_BYTES, MAX_RULE_ID_BYTES, VerificationRequestFieldsV1,
-    VerificationRequestV1,
+    MAX_EVIDENCE_REFS_PER_REQUEST, MAX_NOTES_BYTES, MAX_RULE_ID_BYTES,
+    MAX_VERIFICATION_REQUEST_BYTES, VerificationRequestFieldsV1, VerificationRequestV1,
 };
 pub use store::{
     ECR_VERIFY_SCHEMA_VERSION, ExpectedVerificationHead, MAX_MATERIALIZED_JOURNAL_ENTRIES,
