@@ -1,7 +1,7 @@
 use ecra_core::{
-    ActorId, ContentDigest, EpochMillis, EvidenceId, EvidenceKind, EvidenceRef, Fact, ReceiptId,
-    VerificationId, VerificationMethod, VerificationOutcome, VerificationReceipt,
-    VerificationTarget,
+    ActionAttemptId, ActionAttemptRef, ActionIntent, ActorId, ContentDigest, EpochMillis,
+    EvidenceId, EvidenceKind, EvidenceRef, Fact, FactId, ReceiptId, VerificationId,
+    VerificationMethod, VerificationOutcome, VerificationReceipt, VerificationTarget,
 };
 use ecra_verify::{
     DecisionGradeReasonV1, DecisionGradeRuleV1, DecisionGradeStatusV1, FreshnessRuleV1,
@@ -165,17 +165,51 @@ fn freshness_is_explicit_and_uses_only_supplied_times() {
 }
 
 #[test]
-fn self_attesting_execution_receipt_is_rejected() {
+fn self_attesting_execution_receipt_is_rejected_even_when_immutably_bound() {
     let evidence = EvidenceRef::new(evidence_id(7), EvidenceKind::NetworkReceipt)
-        .with_receipt(target_receipt());
+        .with_receipt(target_receipt())
+        .with_content_digest(digest());
     let request = request(
         vec![evidence],
         VerificationOutcome::Verified,
         VerificationMethod::NetworkReceipt,
         None,
     );
-    let error = assess_request(&request, DecisionGradeRuleV1::new(false, None))
-        .expect_err("receipt cannot verify itself");
+    let error = assess_request(&request, DecisionGradeRuleV1::standard())
+        .expect_err("receipt cannot verify itself even with an immutable binding");
+    assert_eq!(error.code(), VerifyErrorCode::SelfAttestingReceipt);
+}
+
+#[test]
+fn action_attempt_network_receipt_cannot_self_verify() {
+    let intent: ActionIntent = serde_json::from_str(include_str!(
+        "../../../contracts/ecra-domain-v1/valid/action-digest-golden.json"
+    ))
+    .expect("action intent");
+    let attempt = ActionAttemptRef::new(
+        ActionAttemptId::parse_str("00000000-0000-0000-0000-000000003100")
+            .expect("attempt id"),
+        intent.action_ref().expect("action ref"),
+    );
+    let request = VerificationRequestV1::from_fields(VerificationRequestFieldsV1 {
+        receipt_id: verification_id(2),
+        verifier: ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
+        verifier_principal: None,
+        target: VerificationTarget::ActionAttempt(attempt),
+        method: VerificationMethod::NetworkReceipt,
+        evidence: vec![
+            EvidenceRef::new(evidence_id(10), EvidenceKind::NetworkReceipt)
+                .with_content_digest(digest()),
+        ],
+        proposed_outcome: VerificationOutcome::Verified,
+        evaluated_at: None,
+        rule_id: "action_attempt_self_attestation".to_owned(),
+        notes: None,
+    })
+    .expect("request");
+
+    let error = verify_request(&request, DecisionGradeRuleV1::standard())
+        .expect_err("executor network receipt cannot independently verify its action attempt");
     assert_eq!(error.code(), VerifyErrorCode::SelfAttestingReceipt);
 }
 
@@ -199,22 +233,39 @@ fn model_judgment_does_not_outrank_missing_independent_evidence() {
 }
 
 #[test]
-fn verification_evaluation_does_not_mutate_fact_assessment_axes() {
+fn verification_of_fact_target_does_not_mutate_fact_assessment_axes() {
     let fact: Fact = serde_json::from_str(include_str!(
         "../../../contracts/ecra-domain-v1/valid/fact-model-inferred.json"
     ))
     .expect("fact fixture");
+    let fact_json = serde_json::to_value(&fact).expect("fact JSON");
+    let fact_id = FactId::parse_str(
+        fact_json["id"]
+            .as_str()
+            .expect("fact fixture has canonical id"),
+    )
+    .expect("fact id");
     let before = serde_json::to_vec(&fact).expect("serialize fact");
 
-    let evidence =
-        EvidenceRef::new(evidence_id(9), EvidenceKind::Computation).with_content_digest(digest());
-    let request = request(
-        vec![evidence],
-        VerificationOutcome::Verified,
-        VerificationMethod::DeterministicComputation,
-        None,
-    );
-    verify_request(&request, DecisionGradeRuleV1::standard()).expect("verification");
+    let request = VerificationRequestV1::from_fields(VerificationRequestFieldsV1 {
+        receipt_id: verification_id(3),
+        verifier: ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
+        verifier_principal: None,
+        target: VerificationTarget::Fact(fact_id),
+        method: VerificationMethod::DeterministicComputation,
+        evidence: vec![
+            EvidenceRef::new(evidence_id(9), EvidenceKind::Computation)
+                .with_content_digest(digest()),
+        ],
+        proposed_outcome: VerificationOutcome::Verified,
+        evaluated_at: None,
+        rule_id: "fact_non_mutation".to_owned(),
+        notes: None,
+    })
+    .expect("fact-targeted request");
+    let receipt =
+        verify_request(&request, DecisionGradeRuleV1::standard()).expect("verification");
+    assert_eq!(receipt.target(), &VerificationTarget::Fact(fact_id));
 
     let after = serde_json::to_vec(&fact).expect("serialize fact after verification");
     assert_eq!(before, after);
