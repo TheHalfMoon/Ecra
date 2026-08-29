@@ -337,9 +337,8 @@ fn insert_projection(
     connection: &Connection,
     entry: &VerificationJournalEntryV1,
 ) -> Result<(), VerifyError> {
-    let sequence = i64::try_from(entry.sequence().get()).map_err(|_| {
-        store_error("verification projection sequence does not fit SQLite INTEGER")
-    })?;
+    let sequence = i64::try_from(entry.sequence().get())
+        .map_err(|_| store_error("verification projection sequence does not fit SQLite INTEGER"))?;
     match entry.body() {
         VerificationJournalBodyV1::VerificationReceipt { receipt } => {
             let target = serde_jcs::to_vec(receipt.target()).map_err(|_| {
@@ -407,7 +406,8 @@ fn load_entries_from(
             .map_err(|_| store_error("verification journal contains an invalid entry"))?;
         let stored_sequence = u64::try_from(stored_sequence)
             .map_err(|_| store_error("stored verification sequence is negative"))?;
-        if entry.sequence().get() != stored_sequence || entry.entry_digest().hex() != stored_digest {
+        if entry.sequence().get() != stored_sequence || entry.entry_digest().hex() != stored_digest
+        {
             return Err(store_error(
                 "verification journal row metadata does not match authoritative entry JSON",
             ));

@@ -21,15 +21,13 @@ fn target() -> VerificationTarget {
 
 fn receipt() -> VerificationReceipt {
     VerificationReceipt::new(
-        VerificationId::parse_str("00000000-0000-0000-0000-000000091001")
-            .expect("verification id"),
+        VerificationId::parse_str("00000000-0000-0000-0000-000000091001").expect("verification id"),
         ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
         target(),
         VerificationMethod::DeterministicComputation,
         VerificationOutcome::Verified,
         vec![EvidenceRef::new(
-            EvidenceId::parse_str("00000000-0000-0000-0000-000000091002")
-                .expect("evidence id"),
+            EvidenceId::parse_str("00000000-0000-0000-0000-000000091002").expect("evidence id"),
             EvidenceKind::Computation,
         )],
     )
@@ -38,14 +36,12 @@ fn receipt() -> VerificationReceipt {
 
 fn checkpoint() -> VerificationCheckpointV1 {
     VerificationCheckpointV1::from_fields(VerificationCheckpointFieldsV1 {
-        id: CheckpointId::parse_str("00000000-0000-0000-0000-000000091003")
-            .expect("checkpoint id"),
+        id: CheckpointId::parse_str("00000000-0000-0000-0000-000000091003").expect("checkpoint id"),
         label: "synthetic replay checkpoint".to_owned(),
-        requirements: vec![VerificationRequirementV1::new(
-            target(),
-            vec![VerificationAggregateStateV1::Verified],
-        )
-        .expect("verification requirement")],
+        requirements: vec![
+            VerificationRequirementV1::new(target(), vec![VerificationAggregateStateV1::Verified])
+                .expect("verification requirement"),
+        ],
     })
     .expect("verification checkpoint")
 }
@@ -60,8 +56,7 @@ fn action_ref() -> ActionRef {
 fn reconciliation() -> ReconciliationRecordV1 {
     let action = action_ref();
     let attempt = ActionAttemptRef::new(
-        ActionAttemptId::parse_str("00000000-0000-0000-0000-000000091011")
-            .expect("attempt id"),
+        ActionAttemptId::parse_str("00000000-0000-0000-0000-000000091011").expect("attempt id"),
         action.clone(),
     );
     ReconciliationRecordV1::from_fields(ReconciliationRecordFieldsV1 {
@@ -157,8 +152,14 @@ fn append_reopen_replay_preserves_derived_views() {
     assert_eq!(after, before);
     let entries = reopened.load_entries().expect("replayed entries");
     assert_eq!(entries.len(), 3);
-    assert_eq!(entries[1].previous_digest(), Some(entries[0].entry_digest()));
-    assert_eq!(entries[2].previous_digest(), Some(entries[1].entry_digest()));
+    assert_eq!(
+        entries[1].previous_digest(),
+        Some(entries[0].entry_digest())
+    );
+    assert_eq!(
+        entries[2].previous_digest(),
+        Some(entries[1].entry_digest())
+    );
 
     let aggregate_after =
         VerificationAggregateViewV1::from_receipts(target(), after.receipts()).expect("aggregate");
@@ -268,7 +269,9 @@ fn schema_is_append_only_and_projection_indexes_are_rebuildable() {
         )
         .expect("poison projection count");
     let journal: i64 = connection
-        .query_row("SELECT COUNT(*) FROM verification_journal", [], |row| row.get(0))
+        .query_row("SELECT COUNT(*) FROM verification_journal", [], |row| {
+            row.get(0)
+        })
         .expect("journal count");
     assert_eq!(real, 1);
     assert_eq!(poison, 0);
@@ -367,8 +370,8 @@ fn previous_digest_and_sequence_chain_corruption_are_detected() {
         },
     )
     .expect("self-consistent forged entry");
-    let forged_json = String::from_utf8(forged.canonical_bytes().expect("forged bytes"))
-        .expect("forged UTF-8");
+    let forged_json =
+        String::from_utf8(forged.canonical_bytes().expect("forged bytes")).expect("forged UTF-8");
     let connection = Connection::open(&path).expect("direct connection");
     drop_triggers(&connection);
     connection
@@ -411,8 +414,8 @@ fn previous_digest_and_sequence_chain_corruption_are_detected() {
         },
     )
     .expect("self-consistent gap entry");
-    let forged_gap_json = String::from_utf8(forged_gap.canonical_bytes().expect("gap bytes"))
-        .expect("gap UTF-8");
+    let forged_gap_json =
+        String::from_utf8(forged_gap.canonical_bytes().expect("gap bytes")).expect("gap UTF-8");
     let connection = Connection::open(&second_path).expect("direct connection");
     drop_triggers(&connection);
     connection
