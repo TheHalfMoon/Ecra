@@ -11,13 +11,16 @@
 - [x] Conflicting verification remains visible; no last-write-wins behavior is allowed.
 - [x] Checkpoints are exact-target requirements without capability, approval or authorization semantics.
 - [x] Reconciliation does not fabricate ActionReceipt or mutate ECR-002 run-event truth.
+- [x] Reconciliation does not clear ECR-002 unresolved attempts or make the same run resumable/completable.
+- [x] `semantically_retryable*` is advisory for a future new-attempt proposal only, not same-run retry/scheduling permission.
 - [x] Decision-grade mutable evidence requires immutable binding and freshness metadata where required.
 - [x] Provider/browser/model/network acquisition and execution are outside v1.
 - [x] Raw sensitive/private evidence persistence is outside v1 acceptance.
-- [x] FR-001 through FR-045 are present and owned by tasks.
-- [x] SC-001 through SC-012 are present and owned by tasks.
+- [x] FR-001 through FR-046 are present and owned by tasks.
+- [x] SC-001 through SC-013 are present and owned by tasks.
 - [x] Persistence, migration, concurrency, corruption, reopen, bounds and typed errors have executable tasks.
 - [x] ECR-001 and ECR-002 regression gates have executable tasks.
+- [x] ECR-002 unresolved-state compatibility has explicit implementation and exact-head acceptance tasks.
 - [x] Traceability, analyze, convergence, review, exact-head merge and post-merge closure tasks exist.
 
 ## Data model and contract
@@ -27,8 +30,10 @@
 - [x] Aggregate states are closed and deterministic.
 - [x] Reconciliation outcomes are effect_confirmed, no_effect_confirmed and still_unknown.
 - [x] Retry disposition is closed and explicitly non-authoritative.
+- [x] Retry disposition does not alter ECR-002 unresolved execution state.
 - [x] Sidecar journal body, sequence, digest and persistence ownership are specified.
 - [x] Canonical journal truth is distinct from rebuildable indexes.
+- [x] No sidecar projection represents ECR-002 run resolution.
 - [x] v1 count/byte/query bounds and machine-readable error classes are specified.
 
 ## Threat model
@@ -38,6 +43,7 @@
 - [x] Conflict hiding is covered.
 - [x] Absence-of-evidence/no-effect confusion is covered.
 - [x] Blind retry and duplicate-effect threats are covered.
+- [x] Same-run unresolved-state bypass after reconciliation is covered.
 - [x] Mutable evidence and evidence-as-authority injection are covered.
 - [x] Provenance rewrite is covered.
 - [x] Journal corruption, projection poisoning and duplicate IDs are covered.
@@ -53,6 +59,7 @@
 - [x] G10 passes subject to implementation-time dependency/license re-verification.
 - [x] G11 is explicit PASS-N/A.
 - [x] G12 through G15 pass.
+- [x] IC-001 and IC-002 are converged across spec/research/model/contract/threat/plan/tasks/quickstart.
 - [x] This planning branch is not implementation authorization.
 - [x] Implementation starts only after the package is canonical on main and the exact canonical planning head passes required ECR-001/ECR-002 regressions.
 - [x] ECR-031 remains a separate blocked implementation slice and is not bypassed by this package.
