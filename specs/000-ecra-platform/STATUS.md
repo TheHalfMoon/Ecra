@@ -17,8 +17,8 @@ ECR-002 is fully sealed as a dependency. Its v1 durability authorization remains
 
 | ID | Slice | Lifecycle | Depends on | Eligibility / intent |
 |---|---|---|---|---|
-| ECR-031 | Identity, Trust Root & Sensitive Storage | `TASKS_READY_PENDING_EXACT_GREEN_HEAD` | ECR-001, ECR-002 | Analyze Pass 2 clean; selected critical path; implementation branch waits for exact green lifecycle-convergence main head |
-| ECR-004 | Verification & Reconciliation | `PLANNED_ELIGIBLE` | ECR-001, ECR-002 | independently planning-eligible; remains separate from ECR-031 |
+| ECR-031 | Identity, Trust Root & Sensitive Storage | `TASKS_READY_PENDING_EXACT_GREEN_HEAD` | ECR-001, ECR-002 | canonical planning is ready; live implementation state is tracked in `EXECUTION.md`/PR #4 |
+| ECR-004 | Verification & Reconciliation | `TASKS_READY` | ECR-001, ECR-002 | planning package complete/analyze-clean; implementation still requires this planning state to become canonical plus exact canonical dependency regressions |
 | ECR-003 | Authority, Information Flow, Policy & Secrets | `PLANNED_BLOCKED` | ECR-001, ECR-002, ECR-031 | implementation remains blocked until ECR-031 is `CLOSED_CANONICAL` |
 
 ECR-031 planning evidence:
@@ -32,7 +32,20 @@ G1–G15: PASS / explicit PASS-N/A
 Pass-1 blockers remediated: 4/4
 ```
 
-Implementation is not authorized until the final synchronized planning head passes both closed ECR-001 and ECR-002 workflows; the implementation branch must start from that exact SHA.
+ECR-004 planning evidence:
+
+```text
+Planning branch: 004-verification-receipts
+Analyze Pass 1 blockers: 1
+Analyze Pass 1 blockers remediated: 1
+Analyze Pass 2: ZERO_BLOCKING_PLANNING_DRIFT_FOUND
+FR-001–FR-045: OWNED
+SC-001–SC-012: OWNED
+G1–G15: PASS / explicit PASS-N/A
+IC-001: typed read-only EvidenceRef accessor prerequisite owned by T011A
+```
+
+Implementation of either slice is governed by its own exact execution package and must start/continue only from an eligible exact head. ECR-004 does not bypass ECR-031 and ECR-031 is not a dependency of ECR-004.
 
 ## ECR-031 frozen planning boundaries
 
@@ -44,12 +57,26 @@ Implementation is not authorized until the final synchronized planning head pass
 - Windows/Linux remain unsupported/unverified unless native evidence is added;
 - authorization remains ECR-003; independent action verification remains ECR-004.
 
+## ECR-004 frozen planning boundaries
+
+- reuse ECR-001 `VerificationReceipt`; no parallel verification truth record;
+- `ActionReceipt` remains executor-observed evidence and cannot self-verify;
+- aggregate states expose conflict rather than last-write-wins;
+- reconciliation preserves UNKNOWN unless explicit independent evidence confirms effect/no-effect;
+- no synthetic `ActionReceipt` is created by reconciliation;
+- retry disposition is safety metadata, not authorization;
+- ECR-002 `RunEvent` v1 remains unchanged;
+- ECR-004 uses a separate append-only verification journal with rebuildable projections;
+- the journal digest chain is an integrity/corruption-detection mechanism only, not hostile complete-store tamper resistance;
+- v1 acceptance stores synthetic/non-sensitive evidence metadata/references/digests only;
+- no browser/network/model/provider/process/policy execution dependency is admitted.
+
 ## Planned critical path
 
 | ID | Slice | Lifecycle | Depends on |
 |---|---|---|---|
 | ECR-031 | Identity, Trust Root & Sensitive Storage | `TASKS_READY_PENDING_EXACT_GREEN_HEAD` | ECR-001, ECR-002 |
-| ECR-004 | Verification & Reconciliation | `PLANNED_ELIGIBLE` | ECR-001, ECR-002 |
+| ECR-004 | Verification & Reconciliation | `TASKS_READY` | ECR-001, ECR-002 |
 | ECR-003 | Authority, Information Flow, Policy & Secrets | `PLANNED_BLOCKED` | ECR-001, ECR-002, ECR-031 |
 | ECR-005 | Evaluation & Threat Harness | `PLANNED` | ECR-001, ECR-002, ECR-003, ECR-004, ECR-031 |
 | ECR-006 | Stock Firefox / WebDriver BiDi Prototype | `PLANNED` | ECR-001–ECR-005, ECR-031 |
@@ -77,7 +104,7 @@ Follow exact dependencies in `roadmap.md` for ECR-022 through ECR-030. Deferred 
 
 ```text
 A. Trusted substrate
-   ECR-001 [CLOSED] -> ECR-002 [CLOSED] -> {ECR-031 [TASKS_READY GATE], ECR-004 [ELIGIBLE]} -> ECR-003 -> ECR-005
+   ECR-001 [CLOSED] -> ECR-002 [CLOSED] -> {ECR-031 [TASKS_READY canonical planning / live implementation tracked separately], ECR-004 [TASKS_READY planning]} -> ECR-003 -> ECR-005
 
 B. Browser wedge
    ECR-006 -> ECR-007 -> ECR-008
@@ -94,7 +121,7 @@ E. Ecosystem/work surfaces
 
 ## Sensitive-state boundary
 
-ECR-002 proved synthetic/non-sensitive local durability. ECR-031 is now the planned protection foundation, but its planning state does not yet authorize downstream slices to persist real authenticated browser secrets, credentials, private workspace payloads or equivalent high-value state. Downstream policy/privacy ownership remains explicit in the roadmap.
+ECR-002 proved synthetic/non-sensitive local durability. ECR-031 owns the protected identity/trust/storage foundation, but planning readiness alone does not authorize downstream slices to persist real authenticated browser secrets, credentials, private workspace payloads or equivalent high-value state. ECR-004 likewise remains synthetic/non-sensitive for persisted evidence until the relevant protection/privacy owners authorize more. Downstream policy/privacy ownership remains explicit in the roadmap.
 
 ## Update rule
 
