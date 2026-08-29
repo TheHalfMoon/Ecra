@@ -62,10 +62,25 @@ jobs:
           cargo test -p ecra-run --test boundaries --locked
           cargo test -p ecra-run --test portability --locked
           cargo test -p ecra-run --locked
-      - name: ECR-004 Phase 1 targets
+      - name: ECR-004 explicit quickstart targets
         run: |
           cargo test -p ecra-verify --lib --locked
-          cargo test -p ecra-verify --tests --locked
+          cargo test -p ecra-verify --test request_contract --locked
+          cargo test -p ecra-verify --test evidence --locked
+          cargo test -p ecra-verify --test aggregate --locked
+          cargo test -p ecra-verify --test checkpoint --locked
+          cargo test -p ecra-verify --test reconcile --locked
+          cargo test -p ecra-verify --test journal --locked
+          cargo test -p ecra-verify --test sqlite_store --locked
+          cargo test -p ecra-verify --test migration --locked
+          cargo test -p ecra-verify --test boundaries --locked
+          cargo test -p ecra-verify --test portability --locked
+      - name: ECR-002 unresolved-state compatibility acceptance
+        run: |
+          cargo test -p ecra-verify --test reconcile --locked all_outcomes_preserve_ecr002_state_and_same_run_guards
+          cargo test -p ecra-verify --test reconcile --locked retry_disposition_matrix_is_advisory_and_fail_closed
+          cargo test -p ecra-run --test attempts --locked
+          cargo test -p ecra-run --test crash_recovery --locked
       - name: Rustdoc tests
         run: cargo test --doc --workspace --locked
       - name: Offline replay gate
