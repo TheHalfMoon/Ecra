@@ -1,6 +1,6 @@
 use ecra_core::{
-    ActorId, ClaimRef, VerificationId, VerificationMethod, VerificationOutcome, VerificationReceipt,
-    VerificationTarget,
+    ActorId, ClaimRef, VerificationId, VerificationMethod, VerificationOutcome,
+    VerificationReceipt, VerificationTarget,
 };
 use ecra_verify::{
     MAX_VERIFICATION_JOURNAL_SEQUENCE, VerificationJournalBodyV1, VerificationJournalDigest,
@@ -15,9 +15,7 @@ fn golden_receipt() -> VerificationReceipt {
         VerificationId::parse_str("00000000-0000-0000-0000-000000090001")
             .expect("verification id"),
         ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
-        VerificationTarget::Claim(
-            ClaimRef::new("journal", "golden").expect("claim target"),
-        ),
+        VerificationTarget::Claim(ClaimRef::new("journal", "golden").expect("claim target")),
         VerificationMethod::Other,
         VerificationOutcome::NotEvaluated,
         Vec::new(),
@@ -38,16 +36,13 @@ fn golden_entry() -> VerificationJournalEntryV1 {
 
 #[test]
 fn canonical_genesis_digest_matches_fixed_golden() {
-    let material = include_bytes!(
-        "../../../contracts/ecra-verify-v1/expected/journal-genesis-material.json"
-    );
+    let material =
+        include_bytes!("../../../contracts/ecra-verify-v1/expected/journal-genesis-material.json");
     let material = material
         .strip_suffix(b"\n")
         .expect("golden material has one trailing newline");
-    let expected = include_str!(
-        "../../../contracts/ecra-verify-v1/expected/journal-genesis.sha256"
-    )
-    .trim();
+    let expected =
+        include_str!("../../../contracts/ecra-verify-v1/expected/journal-genesis.sha256").trim();
 
     let mut preimage = Vec::with_capacity(JOURNAL_DOMAIN.len() + material.len());
     preimage.extend_from_slice(JOURNAL_DOMAIN);

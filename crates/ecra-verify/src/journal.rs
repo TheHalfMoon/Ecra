@@ -101,7 +101,8 @@ impl VerificationJournalDigest {
     }
 
     fn for_material(material: &[u8]) -> Self {
-        let mut preimage = Vec::with_capacity(VERIFICATION_JOURNAL_V1_DOMAIN.len() + material.len());
+        let mut preimage =
+            Vec::with_capacity(VERIFICATION_JOURNAL_V1_DOMAIN.len() + material.len());
         preimage.extend_from_slice(VERIFICATION_JOURNAL_V1_DOMAIN);
         preimage.extend_from_slice(material);
         let digest = Sha256::digest(preimage);
@@ -146,9 +147,15 @@ impl<'de> Deserialize<'de> for VerificationJournalDigest {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum VerificationJournalBodyV1 {
-    VerificationReceipt { receipt: VerificationReceipt },
-    CheckpointDefined { checkpoint: VerificationCheckpointV1 },
-    ReconciliationRecorded { record: ReconciliationRecordV1 },
+    VerificationReceipt {
+        receipt: VerificationReceipt,
+    },
+    CheckpointDefined {
+        checkpoint: VerificationCheckpointV1,
+    },
+    ReconciliationRecorded {
+        record: ReconciliationRecordV1,
+    },
 }
 
 #[derive(Serialize)]
@@ -206,11 +213,8 @@ impl VerificationJournalEntryV1 {
             ));
         }
         validate_previous_digest(wire.sequence, wire.previous_digest.as_ref())?;
-        let material = canonical_material(
-            wire.sequence,
-            wire.previous_digest.as_ref(),
-            &wire.body,
-        )?;
+        let material =
+            canonical_material(wire.sequence, wire.previous_digest.as_ref(), &wire.body)?;
         let expected = VerificationJournalDigest::for_material(&material);
         if expected != wire.entry_digest {
             return Err(VerifyError::new(
