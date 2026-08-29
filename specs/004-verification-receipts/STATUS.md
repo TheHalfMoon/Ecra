@@ -47,16 +47,7 @@ Phase 1 is `VERIFIED_ON_BRANCH`; ECR-004 is not yet `CLOSED_CANONICAL`.
 
 ## Phase 2 — strict request contract
 
-T006–T010 are implemented:
-
-- typed non-nil `CheckpointId` and `ReconciliationId`;
-- strict ECR-004 machine-readable error category/code surface with bounded static diagnostics;
-- strict exact-v1.0 `VerificationRequestV1` with bounded evidence/rule/notes, duplicate-ID rejection and unknown-field rejection;
-- valid/invalid fixtures covering every canonical verification target, all method classes and all outcomes;
-- validated request construction produces only the canonical ECR-001 `VerificationReceipt`;
-- architecture/type tests preserve `ActionReceipt != VerificationReceipt` and reject parallel verified/authority surfaces.
-
-T011 exact-head evidence:
+T006–T010 are implemented. T011 exact-head evidence:
 
 ```text
 HEAD   40c18b4bcf1e6c124587cdfbc0e423822eb5b138
@@ -65,45 +56,88 @@ JOB    99082565826
 RESULT SUCCESS
 ```
 
-The exact Phase 2 head passed locked metadata/build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, ECR-002 regressions, ECR-004 request/boundary tests, rustdoc, offline replay and every dependency/unsafe boundary.
+T011A then added only the IC-001 read-only canonical `EvidenceRef` accessors. ECR-001 field/wire/schema/validation semantics were not changed, the temporary branch-only write-capable bootstrap workflow was removed before acceptance, and regression tests preserve JSON/JCS behavior.
 
-Phase 2 request semantics are therefore `VERIFIED_ON_BRANCH` through T011. T011A remains a separate prerequisite before Phase 3.
+T011A exact-head evidence:
+
+```text
+HEAD   75cac2aed9099d7ba82295c442b37764b284302c
+RUN    33245970650
+JOB    99083386559
+RESULT SUCCESS
+```
+
+Phase 2 including T011A is `VERIFIED_ON_BRANCH`.
+
+## Phase 3 — decision-grade evidence and deterministic aggregation
+
+T012–T016 are implemented:
+
+- decision-grade assessment requires evidence binding and fail-closes conclusive outcomes without immutable binding;
+- explicit freshness rules use only supplied `as_of` evidence metadata and supplied evaluation time, with no ambient clock or remote fetch;
+- an execution receipt cannot alone prove its own conclusive verification claim;
+- independent model judgment does not outrank missing independent non-model evidence;
+- conclusive canonical `VerificationReceipt` construction is routed through decision-grade assessment rather than a bypass;
+- aggregate state is deterministic across `Absent`, `Verified`, `Rejected`, `Inconclusive`, and `Conflicted`;
+- aggregate views retain the complete sorted receipt-ID set plus sorted per-outcome receipt-ID sets;
+- `Verified + Rejected` is always `Conflicted`; `NotEvaluated` alone is `Absent`; no last-write-wins rule exists;
+- aggregation fixtures, all six three-receipt permutations, 1,000 identical aggregate evaluations, and ECR-001 Fact non-mutation evidence are covered by tests.
+
+Intermediate Phase 3 heads failed only quality gates and were repaired forward-only without suppressions. The final Phase 3 candidate passed every required gate on the exact head below.
+
+T017 exact-head evidence:
+
+```text
+HEAD   f5181ca4f903f2d039463b03b3e328b1fa9c30dd
+RUN    33246658250
+JOB    99085187943
+RESULT SUCCESS
+```
+
+The exact Phase 3 head passed locked metadata/build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, ECR-002 regressions, ECR-004 targets, rustdoc, offline replay, unsafe/dependency boundaries and dependency/toolchain evidence.
+
+Phase 3 is `VERIFIED_ON_BRANCH`; ECR-004 remains Draft and is not `CLOSED_CANONICAL`.
 
 ## Current execution state
 
 ```text
-CURRENT_TASK                    T011A
+CURRENT_TASK                    T018
 CURRENT_STATE                   IMPLEMENTING
 IMPLEMENTATION_BASE             4fb61f8b41267983fc460c666fddd7781d91653c
 IMPLEMENTATION_BRANCH           004-verification-receipts-impl
 IMPLEMENTATION_PR               6_DRAFT
 T001_T005                        COMPLETE_WITH_EXACT_HEAD_EVIDENCE
 T006_T011                        COMPLETE_WITH_EXACT_HEAD_EVIDENCE
-PHASE_2_HEAD                     40c18b4bcf1e6c124587cdfbc0e423822eb5b138
-PHASE_2_RUN                      33245650032
-PHASE_2_JOB                      99082565826
-PHASE_2_RESULT                   SUCCESS
-T011A                            ELIGIBLE
-T012_PLUS                        NOT_REACHED
+T011A                            COMPLETE_WITH_EXACT_HEAD_EVIDENCE
+T012_T017                        COMPLETE_WITH_EXACT_HEAD_EVIDENCE
+PHASE_3_HEAD                     f5181ca4f903f2d039463b03b3e328b1fa9c30dd
+PHASE_3_RUN                      33246658250
+PHASE_3_JOB                      99085187943
+PHASE_3_RESULT                   SUCCESS
+T018                             ELIGIBLE
+T019_PLUS                        ORDERED_BY_TASK_GRAPH
 ```
 
 ## Canonical next order
 
 ```text
-T011A EvidenceRef read-only accessors + unchanged ECR-001 serialization/canonical semantics
-  ↓ exact regression gate
-T012 decision-grade evidence
-T013 freshness
-T014 deterministic aggregate
-T015 fixtures
-T016 permutation/determinism properties
-T017 exact-head Phase 3 gate
+T018 strict checkpoint requirements/checkpoint contract
+  ↓
+T019 deterministic checkpoint evaluation
+  ↓
+T020 checkpoint authority-boundary architecture tests
+  ↓
+T021 checkpoint fixtures and false-completion cases
+  ↓
+T022 exact-head Phase 4 gate
+  ↓
+T023–T030 UNKNOWN reconciliation and retry safety
 ```
-
-No Phase 3 evidence logic starts before T011A completes and its exact regression evidence exists.
 
 ## Parallel ECR-031 boundary
 
-ECR-031 remains a separate Draft implementation PR with the native macOS provisioning prerequisite at T064/T068. ECR-004 does not depend on ECR-031 and must not absorb identity/protected-storage scope or persist real sensitive evidence.
+ECR-031 remains independently blocked at native macOS Data Protection Keychain acceptance. No valid Apple Development signing identity, suitable provisioning profile, or configured usable Apple developer account/team is available for the same macOS user that owns the self-hosted `macbook` runner.
+
+That blocker must not be bypassed with legacy file-based Keychain, plaintext/file/env/memory fallback, ad-hoc signing substitution, weakened native tests, or assurance overclaims. ECR-004 does not depend on ECR-031 and continues independently.
 
 ECR-005 remains blocked by its complete dependency set.
