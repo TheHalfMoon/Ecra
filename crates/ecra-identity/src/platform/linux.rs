@@ -19,6 +19,9 @@ mod tests {
 
     #[test]
     fn linux_v1_backend_is_explicitly_unsupported_until_native_acceptance() {
-        assert_eq!(unsupported_backend().code(), IdentityErrorCode::BackendUnsupported);
+        assert_eq!(
+            unsupported_backend().code(),
+            IdentityErrorCode::BackendUnsupported
+        );
     }
 }
