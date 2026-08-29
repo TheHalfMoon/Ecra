@@ -359,11 +359,10 @@ fn target_key(target: &VerificationTarget) -> Result<Vec<u8>, VerifyError> {
 fn sort_targets(targets: &mut [VerificationTarget]) -> Result<(), VerifyError> {
     let mut keyed = targets
         .iter()
-        .cloned()
-        .map(|target| target_key(&target).map(|key| (key, target)))
+        .map(|target| target_key(target).map(|key| (key, target.clone())))
         .collect::<Result<Vec<_>, _>>()?;
     keyed.sort_by(|left, right| left.0.cmp(&right.0));
-    for (slot, (_, target)) in targets.iter_mut().zip(keyed.into_iter()) {
+    for (slot, (_, target)) in targets.iter_mut().zip(keyed) {
         *slot = target;
     }
     Ok(())
