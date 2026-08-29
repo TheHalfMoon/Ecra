@@ -80,6 +80,13 @@ impl VerificationStore {
             .map(|entry| (entry.sequence(), entry.entry_digest().clone()));
         validate_expected_head(expected, actual.as_ref())?;
         reject_duplicate_identity(&existing, &body)?;
+        if existing.len() >= MAX_MATERIALIZED_JOURNAL_ENTRIES {
+            return Err(VerifyError::new(
+                VerifyErrorCategory::ResourceLimit,
+                VerifyErrorCode::ResourceLimitExceeded,
+                "verification journal append would exceed the v1 materialization limit",
+            ));
+        }
 
         let (sequence, previous_digest) = match actual {
             None => (VerificationJournalSequence::new(1)?, None),
