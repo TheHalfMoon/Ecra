@@ -13,8 +13,8 @@ Add one auditable `ecra-verify` crate that:
 2. emits canonical `VerificationReceipt` only;
 3. aggregates immutable receipts deterministically and exposes conflict;
 4. evaluates bounded critical verification checkpoints;
-5. reconciles exact ECR-002 unresolved attempts without fabricating execution receipts;
-6. derives fail-closed retry safety dispositions without granting authority;
+5. reconciles exact ECR-002 unresolved attempts as **independent effect evidence** without fabricating execution receipts or resolving the ECR-002 run state;
+6. derives fail-closed retry safety dispositions for future new-attempt proposals without granting authority or scheduling execution;
 7. persists synthetic/non-sensitive verification/checkpoint/reconciliation records in a separate append-only local journal;
 8. remains offline, provider-neutral, bounded, and dependency-minimal.
 
@@ -26,7 +26,7 @@ crates/ecra-core
           ↓
 crates/ecra-run
   durable RunState/attempt/recovery/retry truth
-          ↓
+          ↓ read-only compatibility boundary
 crates/ecra-verify
   ├─ error.rs          typed machine-readable ECR-004 errors
   ├─ ids.rs            CheckpointId/ReconciliationId
@@ -34,12 +34,14 @@ crates/ecra-verify
   ├─ evidence.rs       decision-grade evidence checks
   ├─ aggregate.rs      deterministic receipt aggregation
   ├─ checkpoint.rs     bounded checkpoint definitions/evaluation
-  ├─ reconcile.rs      exact attempt reconciliation + RetryDispositionV1
+  ├─ reconcile.rs      exact effect reconciliation + advisory RetryDispositionV1
   ├─ journal.rs        versioned canonical journal entry/digest/replay
   └─ store.rs          local SQLite append-only journal + migrations
 ```
 
 `ecra-verify` may depend on `ecra-core`, `ecra-run`, minimal serialization/hash/SQLite dependencies already accepted in the repository after exact implementation-time re-verification. It must not depend on browser, network, model, policy, provider, protocol, process-execution, identity-backend, or UI crates.
+
+`ecra-verify` MUST NOT depend on private/internal ECR-002 mutation APIs or introduce a bridge that appends run events/receipts. `RunState` is verification input only.
 
 ## 3. Implementation phases
 
@@ -79,7 +81,10 @@ crates/ecra-verify
 - exact `RunId`/attempt/action binding against ECR-002 `RunState`;
 - conclusive-effect/no-effect/still-unknown validation;
 - retry-disposition matrix over ECR-001 retry/idempotency classes;
-- no synthetic `ActionReceipt`; ECR-002 state remains untouched.
+- no synthetic `ActionReceipt`;
+- ECR-002 state remains byte/semantically untouched for reconciliation purposes;
+- explicit tests prove the prior attempt remains unresolved and same-run resume/completion/blind retry remain blocked after every reconciliation outcome;
+- retry dispositions are advisory for a future new-attempt proposal only.
 
 ### Phase F — append-only journal and persistence
 
@@ -93,7 +98,7 @@ crates/ecra-verify
 
 - resource-bound/property/adversarial tests;
 - secret/sensitive sentinel scans;
-- README with exact claims/non-claims;
+- README with exact claims/non-claims, including the unresolved-run boundary;
 - quickstart/full exact-head gate;
 - traceability, constitution recheck, post-implementation analyze;
 - review/merge/post-merge evidence.
@@ -136,6 +141,8 @@ CREATE TABLE reconciliation_index (
 
 Schema triggers/API checks should reject ordinary update/delete of canonical journal rows. All projections must be rebuildable from the journal.
 
+No sidecar row is a mutable projection of ECR-002 run resolution. ECR-004 persistence cannot mark an ECR-002 attempt resolved.
+
 ## 5. Canonicalization/integrity
 
 Use repository-aligned strict versioned JSON + RFC 8785/JCS and SHA-256 semantics rather than introducing another canonicalizer.
@@ -153,19 +160,40 @@ The chain detects normal corruption/substitution. It is not a protected authenti
 For an exact unresolved attempt:
 
 1. validate the attempt exists in the supplied ECR-002 `RunState` and binds the exact `ActionIntent`/`ActionRef`;
-2. load supporting canonical verification receipts by ID;
-3. reject irrelevant/cross-target supporting receipts;
-4. aggregate relevant effect-presence/effect-absence evidence under the declared reconciliation rule;
-5. if both effect and no-effect are conclusive -> `still_unknown` / typed conflict;
-6. if effect is conclusive -> `effect_confirmed`;
-7. if no-effect is conclusive -> `no_effect_confirmed`;
-8. otherwise -> `still_unknown`;
-9. persist the reconciliation record append-only;
-10. derive retry disposition separately from ECR-001 semantics, never execution authorization.
+2. snapshot/retain the relevant ECR-002 read-only attempt/run-state facts needed for postcondition testing;
+3. load supporting canonical verification receipts by ID;
+4. reject irrelevant/cross-target supporting receipts;
+5. aggregate relevant effect-presence/effect-absence evidence under the declared reconciliation rule;
+6. if both effect and no-effect are conclusive -> `still_unknown` / typed conflict;
+7. if effect is conclusive -> `effect_confirmed`;
+8. if no-effect is conclusive -> `no_effect_confirmed`;
+9. otherwise -> `still_unknown`;
+10. persist the reconciliation record append-only;
+11. derive retry disposition separately from ECR-001 semantics, never execution authorization;
+12. prove no ECR-002 event/receipt/state mutation occurred and the prior unresolved marker remains unchanged.
 
-No step creates or modifies an ECR-002 `ActionReceipt` or run event.
+No step creates or modifies an ECR-002 `ActionReceipt`, run event, prepared-attempt state, unresolved set, phase, resume/completion state, or scheduler state.
 
-## 7. Verification checkpoint algorithm
+## 7. Retry-disposition interpretation
+
+`RetryDispositionV1` answers a narrow semantic question about a future new-attempt proposal:
+
+```text
+Would the current reconciliation evidence plus ECR-001 retry/idempotency semantics immediately forbid proposing a new attempt for duplicate-effect reasons?
+```
+
+It does **not** answer:
+
+```text
+May the existing ECR-002 run resume?
+May the unresolved prior attempt be retried?
+May execution occur?
+Is authorization granted?
+```
+
+Those answers remain NO/not-owned in ECR-004 v1. Existing ECR-002 guards remain authoritative and fail closed.
+
+## 8. Verification checkpoint algorithm
 
 For each checkpoint requirement:
 
@@ -176,7 +204,7 @@ For each checkpoint requirement:
 
 This is a derived verification view. It never changes `RunPhase` or creates completion truth in ECR-002.
 
-## 8. Testing strategy
+## 9. Testing strategy
 
 ### Unit/contract
 - strict IDs/errors/version parsing;
@@ -195,6 +223,14 @@ This is a derived verification view. It never changes `RunPhase` or creates comp
 - conflicting verification never becomes verified;
 - absence-of-evidence never becomes no-effect proof.
 
+### ECR-002 compatibility
+- reconciliation takes `RunState` read-only and leaves canonical bytes/state unchanged;
+- `unresolved_attempts` membership for the prior attempt is unchanged for all three reconciliation outcomes;
+- no `RunEvent`/`ActionReceipt` construction side effect;
+- `RunResumed`/`ExecutionCompleted` remain rejected where the unresolved attempt blocks them;
+- blind-retry guard remains rejected for the unresolved prior attempt;
+- `semantically_retryable*` is tested only as advisory output for a future new-attempt proposal.
+
 ### Persistence
 - transactional initialization/migration;
 - append/reopen/replay equivalence;
@@ -208,7 +244,7 @@ This is a derived verification view. It never changes `RunPhase` or creates comp
 - full ECR-002 event/reducer/attempt/budget/migration/store/crash/archive/boundary suite;
 - workspace/rustdoc/offline.
 
-## 9. CI gate
+## 10. CI gate
 
 Permanent ECR-004 CI must include:
 
@@ -231,14 +267,14 @@ cargo tree -p ecra-verify --locked
 
 Historical green cannot be reused after a content change to claim exact-head PASS.
 
-## 10. Constitution G1–G15
+## 11. Constitution G1–G15
 
 - **G1 Domain coherence — PASS:** reuses canonical VerificationReceipt/targets/evidence and ECR-002 attempt truth.
 - **G2 Authority — PASS:** verification/retry disposition grants no capability/approval/execution authority.
 - **G3 Provenance — PASS:** verification does not rewrite provenance; evidence refs retained.
-- **G4 Side effects — PASS:** ECR-004 performs only local journal mutation; external side effects are observed/reconciled, never executed.
+- **G4 Side effects — PASS:** ECR-004 performs only local journal mutation; external side effects are observed/reconciled, never executed; ECR-002 unresolved state is not altered.
 - **G5 Verification — PASS:** one canonical VerificationReceipt path; executor receipts are not verifier truth.
-- **G6 Durability — PASS:** sidecar journal restart/reopen/replay specified; ECR-002 execution history untouched.
+- **G6 Durability — PASS:** sidecar journal restart/reopen/replay specified; ECR-002 execution history/state remains dependency truth.
 - **G7 Privacy/secrets — PASS:** synthetic/non-sensitive metadata only; raw evidence payload/secret persistence excluded.
 - **G8 Local-first — PASS:** fully offline fixture operation; no cloud dependency.
 - **G9 Interoperability — PASS-N/A:** no external protocol adapter in v1.
@@ -249,13 +285,19 @@ Historical green cannot be reused after a content change to claim exact-head PAS
 - **G14 Identity/principal — PASS:** verifier principal is optional evidence only; no authentication/identity minting.
 - **G15 Bounded execution — PASS:** explicit counts/bytes/query limits and no recursive/provider execution.
 
-## 11. Complexity tracking
+## 12. Complexity tracking
 
 ### New sidecar journal instead of extending ECR-002 v1 events
 
 **Cost:** one additional local schema/store and combined consumer view.
 
-**Why simpler alternatives are insufficient:** extending `RunEvent` would change a `CLOSED_CANONICAL` strict v1 wire contract and conflate execution truth with verification truth. A sidecar preserves both owners cleanly.
+**Why simpler alternatives are insufficient:** extending `RunEvent` would change a `CLOSED_CANONICAL` strict v1 wire contract and conflate execution truth with verification truth. A sidecar preserves both owners cleanly. It intentionally cannot resolve the old run state.
+
+### Advisory retry disposition instead of ECR-002 run repair
+
+**Cost:** reconciliation evidence and execution-state resolution remain separate; a later explicitly versioned repair protocol is required to consume that evidence operationally.
+
+**Why:** ECR-002 v1 has no canonical resolution event other than a real receipt path. Silently clearing the unresolved marker from ECR-004 would counterfeit execution truth and violate the closed dependency contract.
 
 ### New `ecra-verify` crate instead of placing logic in ecra-run
 
@@ -263,12 +305,12 @@ Historical green cannot be reused after a content change to claim exact-head PAS
 
 **Why:** verifier logic must stay independent from executor/reducer semantics, and later browser/search/provider adapters need a narrow verification interface rather than direct run-store access.
 
-## 12. Implementation authorization rule
+## 13. Implementation authorization rule
 
 This planning branch does not authorize code. Implementation begins only after:
 
 1. spec/research/data-model/contracts/threat-model/plan/tasks/quickstart/checklist exist;
-2. analyze finds zero blocking planning drift;
+2. analyze finds zero blocking planning drift after IC-001 and IC-002 convergence;
 3. planning PR is merged to canonical `main`;
 4. exact merged planning head passes required ECR-001/ECR-002 regressions;
 5. implementation branch is created from that exact eligible head.
