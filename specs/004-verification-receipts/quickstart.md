@@ -13,6 +13,8 @@ implementation branch created from exact authorized planning head
 
 No ECR-031 dependency is required for ECR-004 v1 because acceptance persists only synthetic/non-sensitive verification metadata and does not claim protected hostile-tamper resistance.
 
+ECR-004 also does not reopen ECR-002 v1. Reconciliation records effect evidence only; an unresolved ECR-002 attempt remains unresolved unless ECR-002 itself later evolves through an explicit versioned repair/resolution protocol.
+
 ## 2. Locked workspace gate
 
 ```bash
@@ -74,6 +76,8 @@ cargo test -p ecra-run --test portability --locked
 cargo test -p ecra-run --locked
 ```
 
+These regressions are semantic acceptance for the IC-002 boundary, not merely compatibility smoke tests.
+
 ## 6. Boundary checks
 
 ```bash
@@ -89,7 +93,8 @@ cargo tree -p ecra-verify --locked
 Expected:
 - no Ecra-authored unsafe in `ecra-verify`;
 - no browser/network/model/provider/process/policy/authorization dependencies;
-- only accepted canonical/serialization/hash/local-store dependencies.
+- only accepted canonical/serialization/hash/local-store dependencies;
+- no dependency path that gives ECR-004 private ECR-002 mutation/event-append authority.
 
 ## 7. Verification contract acceptance
 
@@ -131,19 +136,44 @@ cross-run attempt evidence                        -> reject
 cross-action attempt evidence                     -> reject
 ```
 
-Then prove retry safety:
+Then prove retry-safety classification:
 
 ```text
 effect_confirmed -> duplicate retry blocked
 still_unknown -> blind retry blocked
-no_effect_confirmed + naturally idempotent safe -> semantically retryable, not authorized
-no_effect_confirmed + same-key class -> exact same key required
+no_effect_confirmed + naturally idempotent safe -> semantically retryable advisory only
+no_effect_confirmed + same-key class -> exact same key required for any future new-attempt proposal
 non-idempotent/unknown/never-blind paths remain fail-closed
 ```
 
 No test may fabricate an `ActionReceipt` to resolve the scenario.
 
-## 10. Journal/persistence acceptance
+## 10. ECR-002 unresolved-state compatibility acceptance
+
+For each reconciliation outcome (`effect_confirmed`, `no_effect_confirmed`, `still_unknown`), prove all of the following against the supplied canonical ECR-002 state:
+
+```text
+RunState canonical/semantic execution state unchanged
+PreparedAttemptState remains unreceipted when originally unreceipted
+PreparedAttemptState unresolved flag unchanged
+RunState unresolved_attempts membership unchanged
+RunPhase unchanged
+no ECR-002 RunEvent constructed/appended
+no ActionReceipt constructed/synthesized
+```
+
+Then prove the ECR-002 guards remain authoritative:
+
+```text
+same-run RunResumed remains rejected when unresolved state blocks it
+same-run ExecutionCompleted remains rejected when unresolved state blocks it
+blind retry of the unresolved prior attempt remains rejected
+semantically_retryable* does not call/override ensure_retry_allowed
+```
+
+A passing reconciliation test MUST NOT claim operational run resolution. `semantically_retryable*` is only evidence for a future owning path to consider a **new attempt**.
+
+## 11. Journal/persistence acceptance
 
 ```text
 empty store -> transactional v1 initialization
@@ -161,20 +191,20 @@ failed migration -> original state preserved
 
 The integrity-chain test wording must explicitly avoid hostile full-store tamper-resistance claims.
 
-## 11. Resource/hostile input acceptance
+## 12. Resource/hostile input acceptance
 
 Test exact v1 ceilings for evidence refs, receipts per target, checkpoint requirements, reconciliation support IDs, notes/rule strings, journal entry bytes and query materialization. Over-limit input must return typed resource-limit errors without panic.
 
-## 12. Synthetic/non-sensitive audit
+## 13. Synthetic/non-sensitive audit
 
 Committed ECR-004 fixtures and journal bytes must contain only synthetic IDs/metadata/digests. Add sentinels proving raw private/secret payload strings are absent from stored entries, Debug/Display and errors.
 
-## 13. Closure gate
+## 14. Closure gate
 
 Before PR leaves Draft/implementation review state:
 
 1. all ECR-004 tasks complete;
-2. FR/SC traceability has zero unowned requirement;
+2. FR/SC traceability has zero unowned requirement, including FR-046/SC-013;
 3. constitution G1–G15 rechecked;
 4. post-implementation analyze has zero unresolved MUST drift;
 5. exact feature head passes permanent ECR-004 CI plus ECR-001/ECR-002 regressions;
