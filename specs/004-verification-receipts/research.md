@@ -103,7 +103,7 @@ effect_confirmed   -> duplicate_retry_blocked
 still_unknown      -> reconciliation_required
 no_effect_confirmed + safe -> semantically_retryable
 no_effect_confirmed + requires_same_idempotency_key -> semantically_retryable_same_key
-no_effect_confirmed + never_blind_retry -> still_requires_explicit_nonblind_path
+no_effect_confirmed + never_blind_retry -> requires_explicit_nonblind_path
 ```
 
 This result is advisory runtime safety metadata only. `semantically_retryable` means only that a future owning runtime/policy path may consider proposing a **new attempt** under the applicable action semantics. It is not `CapabilityGrant`, approval, authorization lease, executor command, or permission to resume the existing ECR-002 run.
