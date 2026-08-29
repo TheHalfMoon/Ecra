@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "cases": [
+    {"name":"empty","outcomes":[],"expected_state":"absent"},
+    {"name":"not-evaluated-only","outcomes":["not_evaluated"],"expected_state":"absent"},
+    {"name":"inconclusive-only","outcomes":["inconclusive"],"expected_state":"inconclusive"},
+    {"name":"verified","outcomes":["verified"],"expected_state":"verified"},
+    {"name":"rejected","outcomes":["rejected"],"expected_state":"rejected"},
+    {"name":"verified-with-inconclusive","outcomes":["verified","inconclusive"],"expected_state":"verified"},
+    {"name":"rejected-with-inconclusive","outcomes":["rejected","inconclusive"],"expected_state":"rejected"},
+    {"name":"verified-rejected-conflict","outcomes":["verified","rejected"],"expected_state":"conflicted"},
+    {"name":"conflict-with-inconclusive-and-not-evaluated","outcomes":["verified","rejected","inconclusive","not_evaluated"],"expected_state":"conflicted"}
+  ]
+}

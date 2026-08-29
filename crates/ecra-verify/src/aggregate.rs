@@ -23,6 +23,10 @@ pub struct VerificationAggregateViewV1 {
     target: VerificationTarget,
     state: VerificationAggregateStateV1,
     receipt_ids: Vec<VerificationId>,
+    verified_ids: Vec<VerificationId>,
+    rejected_ids: Vec<VerificationId>,
+    inconclusive_ids: Vec<VerificationId>,
+    not_evaluated_ids: Vec<VerificationId>,
 }
 
 impl VerificationAggregateViewV1 {
@@ -39,9 +43,10 @@ impl VerificationAggregateViewV1 {
         }
 
         let mut receipt_ids = BTreeSet::new();
-        let mut has_verified = false;
-        let mut has_rejected = false;
-        let mut has_inconclusive = false;
+        let mut verified_ids = BTreeSet::new();
+        let mut rejected_ids = BTreeSet::new();
+        let mut inconclusive_ids = BTreeSet::new();
+        let mut not_evaluated_ids = BTreeSet::new();
 
         for receipt in receipts {
             if receipt.target() != &target {
@@ -59,14 +64,26 @@ impl VerificationAggregateViewV1 {
                 ));
             }
             match receipt.outcome() {
-                VerificationOutcome::Verified => has_verified = true,
-                VerificationOutcome::Rejected => has_rejected = true,
-                VerificationOutcome::Inconclusive => has_inconclusive = true,
-                VerificationOutcome::NotEvaluated => {}
+                VerificationOutcome::Verified => {
+                    verified_ids.insert(receipt.id());
+                }
+                VerificationOutcome::Rejected => {
+                    rejected_ids.insert(receipt.id());
+                }
+                VerificationOutcome::Inconclusive => {
+                    inconclusive_ids.insert(receipt.id());
+                }
+                VerificationOutcome::NotEvaluated => {
+                    not_evaluated_ids.insert(receipt.id());
+                }
             }
         }
 
-        let state = match (has_verified, has_rejected, has_inconclusive) {
+        let state = match (
+            !verified_ids.is_empty(),
+            !rejected_ids.is_empty(),
+            !inconclusive_ids.is_empty(),
+        ) {
             (true, true, _) => VerificationAggregateStateV1::Conflicted,
             (true, false, _) => VerificationAggregateStateV1::Verified,
             (false, true, _) => VerificationAggregateStateV1::Rejected,
@@ -78,6 +95,10 @@ impl VerificationAggregateViewV1 {
             target,
             state,
             receipt_ids: receipt_ids.into_iter().collect(),
+            verified_ids: verified_ids.into_iter().collect(),
+            rejected_ids: rejected_ids.into_iter().collect(),
+            inconclusive_ids: inconclusive_ids.into_iter().collect(),
+            not_evaluated_ids: not_evaluated_ids.into_iter().collect(),
         })
     }
 
@@ -94,5 +115,25 @@ impl VerificationAggregateViewV1 {
     #[must_use]
     pub fn receipt_ids(&self) -> &[VerificationId] {
         &self.receipt_ids
+    }
+
+    #[must_use]
+    pub fn verified_ids(&self) -> &[VerificationId] {
+        &self.verified_ids
+    }
+
+    #[must_use]
+    pub fn rejected_ids(&self) -> &[VerificationId] {
+        &self.rejected_ids
+    }
+
+    #[must_use]
+    pub fn inconclusive_ids(&self) -> &[VerificationId] {
+        &self.inconclusive_ids
+    }
+
+    #[must_use]
+    pub fn not_evaluated_ids(&self) -> &[VerificationId] {
+        &self.not_evaluated_ids
     }
 }
