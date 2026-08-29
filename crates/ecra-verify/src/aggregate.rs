@@ -17,7 +17,11 @@ pub enum VerificationAggregateStateV1 {
     Conflicted,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+/// A derived aggregate view that can only be constructed from canonical
+/// verification receipts. It is intentionally serialize-only: accepting this
+/// view from untrusted serialized input would allow callers to bypass receipt
+/// bounds and state derivation.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct VerificationAggregateViewV1 {
     target: VerificationTarget,
