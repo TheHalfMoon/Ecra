@@ -23,7 +23,8 @@ fn t064_live_acceptance_requires_signed_provisioned_app_like_host() {
 
     assert!(harness.contains("dev.ecra.identity.t064"));
     assert!(harness.contains("EcraT064Host.app"));
-    assert!(harness.contains("Contents/embedded.provisionprofile"));
+    assert!(harness.contains("contents_dir=\"$app_dir/Contents\""));
+    assert!(harness.contains("embedded.provisionprofile"));
     assert!(harness.contains("com.apple.application-identifier"));
     assert!(harness.contains("com.apple.developer.team-identifier"));
     assert!(harness.contains("keychain-access-groups"));
