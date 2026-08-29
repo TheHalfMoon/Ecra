@@ -3,9 +3,7 @@ use std::collections::BTreeSet;
 use ecra_core::{EvidenceKind, VerificationMethod, VerificationOutcome, VerificationTarget};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    VerificationRequestV1, VerifyError, VerifyErrorCategory, VerifyErrorCode,
-};
+use crate::{VerificationRequestV1, VerifyError, VerifyErrorCategory, VerifyErrorCode};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -92,10 +90,7 @@ pub struct DecisionGradeRuleV1 {
 
 impl DecisionGradeRuleV1 {
     #[must_use]
-    pub const fn new(
-        require_immutable_binding: bool,
-        freshness: Option<FreshnessRuleV1>,
-    ) -> Self {
+    pub const fn new(require_immutable_binding: bool, freshness: Option<FreshnessRuleV1>) -> Self {
         Self {
             require_immutable_binding,
             freshness,

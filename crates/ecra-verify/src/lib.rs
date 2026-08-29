@@ -22,8 +22,8 @@ pub use aggregate::{
 };
 pub use error::{VerifyError, VerifyErrorCategory, VerifyErrorCode};
 pub use evidence::{
-    DecisionGradeAssessmentV1, DecisionGradeReasonV1, DecisionGradeRuleV1,
-    DecisionGradeStatusV1, FreshnessRuleV1, assess_request, verify_request,
+    DecisionGradeAssessmentV1, DecisionGradeReasonV1, DecisionGradeRuleV1, DecisionGradeStatusV1,
+    FreshnessRuleV1, assess_request, verify_request,
 };
 pub use ids::{CheckpointId, ReconciliationId};
 pub use request::{

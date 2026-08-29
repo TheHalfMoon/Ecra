@@ -38,8 +38,7 @@ fn request(
 ) -> VerificationRequestV1 {
     VerificationRequestV1::from_fields(VerificationRequestFieldsV1 {
         receipt_id: verification_id(1),
-        verifier: ActorId::parse_str("00000000-0000-0000-0000-000000000001")
-            .expect("actor id"),
+        verifier: ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
         verifier_principal: None,
         target: VerificationTarget::Receipt(target_receipt()),
         method,
@@ -99,8 +98,8 @@ fn immutable_external_evidence_can_produce_conclusive_canonical_receipt() {
 
 #[test]
 fn freshness_is_explicit_and_uses_only_supplied_times() {
-    let no_as_of = EvidenceRef::new(evidence_id(3), EvidenceKind::ExternalState)
-        .with_content_digest(digest());
+    let no_as_of =
+        EvidenceRef::new(evidence_id(3), EvidenceKind::ExternalState).with_content_digest(digest());
     let request_missing = request(
         vec![no_as_of],
         VerificationOutcome::Verified,
@@ -180,8 +179,8 @@ fn self_attesting_execution_receipt_is_rejected() {
 
 #[test]
 fn model_judgment_does_not_outrank_missing_independent_evidence() {
-    let evidence = EvidenceRef::new(evidence_id(8), EvidenceKind::ModelJudgment)
-        .with_content_digest(digest());
+    let evidence =
+        EvidenceRef::new(evidence_id(8), EvidenceKind::ModelJudgment).with_content_digest(digest());
     let request = request(
         vec![evidence],
         VerificationOutcome::Verified,
@@ -205,8 +204,8 @@ fn verification_evaluation_does_not_mutate_fact_assessment_axes() {
     .expect("fact fixture");
     let before = serde_json::to_vec(&fact).expect("serialize fact");
 
-    let evidence = EvidenceRef::new(evidence_id(9), EvidenceKind::Computation)
-        .with_content_digest(digest());
+    let evidence =
+        EvidenceRef::new(evidence_id(9), EvidenceKind::Computation).with_content_digest(digest());
     let request = request(
         vec![evidence],
         VerificationOutcome::Verified,
