@@ -11,8 +11,19 @@
 //! behind the later `store` module and must not leak provider/runtime behavior
 //! into verification logic.
 
-/// Marker exposed by the Phase 1 scaffold so downstream gates can prove the
-/// crate is linked without implying semantic verification is implemented.
+pub mod error;
+pub mod ids;
+pub mod request;
+
+pub use error::{VerifyError, VerifyErrorCategory, VerifyErrorCode};
+pub use ids::{CheckpointId, ReconciliationId};
+pub use request::{
+    MAX_EVIDENCE_REFS_PER_REQUEST, MAX_NOTES_BYTES, MAX_RULE_ID_BYTES,
+    VerificationRequestFieldsV1, VerificationRequestV1,
+};
+
+/// Phase 1 remains inspectable as implementation history; returning `true`
+/// carries no semantic verification or authorization meaning.
 #[must_use]
 pub const fn phase_one_scaffold() -> bool {
     true
