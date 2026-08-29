@@ -189,7 +189,8 @@ Invariants:
 - `effect_confirmed` requires a non-conflicted conclusive verification basis;
 - `no_effect_confirmed` requires explicit evidence of no effect; mere absence of provider receipt/evidence is insufficient;
 - `still_unknown` is permitted for insufficient/conflicted evidence and remains blocking;
-- append-only: a later record does not mutate an older record.
+- append-only: a later record does not mutate an older record;
+- the record never mutates ECR-002 state, clears `unresolved_attempts`, synthesizes `ActionReceipt`, or makes the same run resumable/completable.
 
 ## 10. RetryDispositionV1
 
@@ -216,7 +217,26 @@ Rules:
 - `no_effect_confirmed` + `RequiresSameIdempotencyKey` -> `semantically_retryable_same_key` only for exact same key binding;
 - `RequiresExternalReconciliation` or `NeverBlindRetry` never becomes authorization; a caller still needs the owning execution/authorization path.
 
-## 11. VerificationJournalEntryV1
+`semantically_retryable` and `semantically_retryable_same_key` are advisory classifications for a future **new-attempt proposal** only. They do not clear the existing prepared attempt from ECR-002 `unresolved_attempts`, do not call or weaken `ensure_retry_allowed`, and do not make `RunResumed` or `ExecutionCompleted` legal for the existing run.
+
+## 11. ECR-002 unresolved-state compatibility
+
+ECR-004 v1 has no run-resolution state transition. For every reconciliation outcome:
+
+```text
+input ECR-002 RunState
+  unresolved_attempts contains prior attempt
+        ↓ ECR-004 reconcile
+append ReconciliationRecordV1 only
+        ↓
+output/observed ECR-002 RunState
+  byte/semantic execution state unchanged
+  unresolved_attempts still contains prior attempt
+```
+
+ECR-004 exposes no API that mutates `RunState`, constructs a `RunEvent`, records an `ActionReceipt`, resumes the run, completes the run, schedules execution, or converts the old attempt into a resolved attempt. A future explicit ECR-002 versioned repair/resolution protocol may consume ECR-004 evidence, but that protocol is not part of ECR-004 v1.
+
+## 12. VerificationJournalEntryV1
 
 Strict append-only envelope:
 
@@ -241,7 +261,7 @@ The digest is domain-separated SHA-256 over canonical versioned material excludi
 
 Claim boundary: this is an integrity chain under ordinary local assumptions, not hostile-tamper resistance against a complete-store rewriter.
 
-## 12. Persistence model
+## 13. Persistence model
 
 ECR-004 owns a separate SQLite journal store; it does not add ECR-002 `RunEvent` variants.
 
@@ -274,15 +294,16 @@ reconciliation_index
 
 Indexes are projections. Canonical journal entries are authoritative for ECR-004 persisted truth and projections must be rebuildable.
 
-## 13. Versioning and migration
+## 14. Versioning and migration
 
 - store schema begins at v1;
 - wire records use strict v1 major/minor compatibility rules aligned with repository conventions;
 - unsupported newer store/wire versions fail closed before mutation;
 - v0/empty-store initialization is transactional;
-- failed migration leaves original user version and journal bytes unchanged.
+- failed migration leaves original user version and journal bytes unchanged;
+- no ECR-002 schema/event version is changed by ECR-004 v1.
 
-## 14. Bounds to freeze in implementation planning
+## 15. Bounds to freeze in implementation planning
 
 Recommended initial v1 ceilings, subject to exact implementation fixture validation:
 
