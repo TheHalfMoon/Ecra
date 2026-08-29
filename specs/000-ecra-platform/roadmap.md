@@ -33,7 +33,7 @@ Build the default trusted gateway between human/model intent and digital informa
 | ECR-001 | Trusted Domain Kernel | Versioned zero-I/O domain types/invariants for actor/principal refs, origin/resource/scope, information labels, capability request/grant, provenance, action/action-attempt refs, receipts and verification | — | CLOSED_CANONICAL | `specs/001-trusted-domain-kernel/` |
 | ECR-002 | Durable Run, Ledger & Budgets | Serializable run machine, unique execution attempts, append-only integrity-chained local ledger, portable `.ecra` fixture/run artifact, cancellation/resource budgets | ECR-001 | CLOSED_CANONICAL | `specs/002-durable-run-ledger/` |
 | ECR-003 | Authority, Information Flow, Policy & Secrets | Fail-closed capability and source-to-sink disclosure evaluation, immutable authorization decision/lease, approval binding, origin authority, secret handles, policy adapter | ECR-001, ECR-002, ECR-031 | PLANNED | `specs/003-authority-policy-secrets/` |
-| ECR-004 | Verification & Reconciliation | Independent verifier framework, executor-observed vs verified outcomes, UNKNOWN handling, reconciliation, critical-point verification, immutable decision-grade evidence | ECR-001, ECR-002 | IMPLEMENTING | `specs/004-verification-receipts/` |
+| ECR-004 | Verification & Reconciliation | Independent verifier framework, executor-observed vs verified outcomes, UNKNOWN handling, reconciliation, critical-point verification, immutable decision-grade evidence | ECR-001, ECR-002 | CLOSED_CANONICAL | `specs/004-verification-receipts/` |
 | ECR-005 | Evaluation & Threat Harness | Golden fixtures plus security/information-flow/durability/resource-bound/verification benchmark harness used by later slices | ECR-001, ECR-002, ECR-003, ECR-004, ECR-031 | PLANNED | `specs/005-evaluation-threat-harness/` |
 | ECR-006 | Stock Firefox / WebDriver BiDi Prototype | Bounded browser control against stock Firefox with observations, receipts, origin transitions, permission brokerage experiments and takeover events | ECR-001–ECR-005, ECR-031 | PLANNED | `specs/006-firefox-bidi-prototype/` |
 | ECR-007 | Browser Foundation & Upstream Strategy | Reproducible/traceable Firefox-derived build, patch ledger, IPC threat contract, update/rebase policy, extension/profile compatibility/trust model | ECR-006 | PLANNED | `specs/007-browser-foundation/` |
@@ -71,17 +71,16 @@ ECR-002 Durable Run, Ledger & Budgets [CLOSED_CANONICAL]
   ├────────────────────────────────┐
   ↓                                ↓
 ECR-031 Identity / Trust Root      ECR-004 Verification
-[IMPLEMENTING; native blocked]      [IMPLEMENTING; review remediation]
+[IMPLEMENTING; native blocked]      [CLOSED_CANONICAL]
   ↓
-ECR-003 Authority / Information Flow / Policy
-  └───────────┬──────────┘
-              ↓
-ECR-005 Evaluation & Threat Harness
-              ↓
+ECR-003 Authority / Information Flow / Policy [BLOCKED]
+  ↓
+ECR-005 Evaluation & Threat Harness [BLOCKED]
+  ↓
 ECR-006 Stock Firefox Prototype
-              ↓
+  ↓
 ECR-007 Browser Foundation
-              ↓
+  ↓
 ECR-008 Browser Wedge
 
 Parallel after trusted policy/verification:
@@ -99,6 +98,8 @@ ECR-018 Terminal → ECR-019 Developer
 ECR-020 Data
 ECR-021 Local Model Gateway
 ```
+
+The current critical-path blocker is ECR-031 T064 native macOS Data Protection Keychain acceptance. A blocked lane does not authorize bypassing dependency order.
 
 ## Why These Slices Exist
 
@@ -130,7 +131,7 @@ MCP/ACP/A2A are adapters. Their authentication/token semantics are mapped into E
 
 ECR-002 may persist only synthetic/non-sensitive fixtures and local test runs in its v1 acceptance/product authorization. ECR-031 defines the protected local identity/trust/storage substrate but is not yet `CLOSED_CANONICAL`; downstream slices therefore may not infer protected real-sensitive-state authorization from its implementation progress. ECR-004 v1 likewise persists only synthetic/non-sensitive evidence metadata/references/digests. Downstream sensitive-state use remains gated by the implemented/closed protection, policy and privacy owners required by each slice.
 
-A hash/integrity chain may detect accidental/local corruption under its stated assumptions. Do not claim hostile tamper resistance unless a protected trust anchor, MAC/signature or external anchor supports the claim.
+A hash/integrity chain may detect accidental/local corruption under its stated assumptions. Do not claim hostile tamper resistance unless a protected trust anchor, MAC/signature or external anchor supports that claim.
 
 ## Cross-Cutting Work That Must Never Be “Later”
 
@@ -162,12 +163,23 @@ Every affected slice MUST add/update as part of Definition of Done:
 - `CLOSED_CANONICAL` — exact implemented state satisfies spec, plan, tasks, tests, analysis/convergence, documentation, merge and required post-merge evidence.
 - `DEFERRED` — intentionally outside current critical path; may not be pulled forward without explicit dependency/strategy review.
 
-## Current Slice
+## Current Slice State
 
-`ECR-001 Trusted Domain Kernel` and `ECR-002 Durable Run, Ledger & Budgets` are `CLOSED_CANONICAL`.
+`ECR-001 Trusted Domain Kernel`, `ECR-002 Durable Run, Ledger & Budgets`, and `ECR-004 Verification & Reconciliation` are `CLOSED_CANONICAL`.
 
-`ECR-031 Identity, Trust Root & Sensitive Storage Foundations` has an active implementation PR but remains blocked on external native macOS Data Protection Keychain acceptance. Its exact live state is governed by its package, PR #4 and Actions truth.
+ECR-004 closure evidence includes:
 
-`ECR-004 Verification & Reconciliation` is in active T051 review remediation on non-draft PR #7. Draft PR #6 was closed unmerged solely as a review-container recovery after the connected ready-for-review mutation failed against the live GitHub GraphQL schema; PR #7 preserves the same implementation branch. The pre-review final gate passed on exact head `882b4ef7358aef6c416dd1b9dd67602e86334a06` (run `33251589848`, job `99098084666`), but Cubic review then produced actionable findings. Those findings are being repaired forward-only, so historical T050 green is no longer final evidence. A renewed complete exact-head gate and zero-actionable-review snapshot are mandatory before T052. ECR-004 is **not** `CLOSED_CANONICAL` until merge and T053 post-merge evidence complete.
+```text
+MERGED FEATURE HEAD       990addb79e6fe5a1ad2b16dae159c624959e2128
+CANONICAL MERGE           2a95fbb4f20b1646505cb179f4822a758a546895
+CLOSURE-CONVERGENCE HEAD  c159c96061a73ead9710985d07608e2b417fe275
+ECR-001 RUN/JOB           33256430974 / 99110882402  SUCCESS
+ECR-002 RUN/JOB           33256430942 / 99110916386  SUCCESS
+ECR-004 RUN/JOB           33256430965 / 99110882233  SUCCESS
+```
 
-ECR-003 remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`. ECR-005 remains blocked until every listed dependency, including ECR-003/ECR-004/ECR-031, is canonically closed.
+The final T053 marker itself still requires the same three workflows on the exact canonical `main` head before the external closure claim is made.
+
+`ECR-031 Identity, Trust Root & Sensitive Storage Foundations` has active Draft PR #4 and remains `IMPLEMENTING / BLOCKED_EXTERNAL_NATIVE_ACCEPTANCE` at T064. Live branch evidence shows the trusted runner user lacks the Apple Development signing identity, provisioning profile, developer-account registry and development team required for Data Protection Keychain acceptance. No legacy/plaintext/ad-hoc fallback or weakened acceptance is authorized.
+
+`ECR-003` remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`. `ECR-005` remains blocked until every listed dependency, including ECR-003 and ECR-031, is canonically closed. No later slice may be pulled forward merely because the current native-security lane is blocked.

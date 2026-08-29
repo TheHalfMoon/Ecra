@@ -10,7 +10,7 @@ For implementation work, use this order:
 2. `EXECUTION.md` — current execution truth, next eligible work and exact verification rules.
 3. `specs/README.md` — Spec Kit navigation.
 4. `specs/000-ecra-platform/roadmap.md` — canonical ECR dependency graph.
-5. the active slice package and its `STATUS.md` / `tasks.md` / `analyze.md`.
+5. the active slice package and its `STATUS.md` / `tasks.md` / analyze artifacts.
 6. exact live Git/GitHub branch, PR, CI, review and head truth.
 
 `EXECUTION.md` exists so a new human or coding agent can continue from repository truth without a private chat handoff.
@@ -21,81 +21,76 @@ For implementation work, use this order:
 - `AGENTS.md` — repository execution rules for coding agents.
 - `EXECUTION.md` — operational execution entry point.
 - `specs/README.md` — feature-package navigation and lifecycle rules.
+- `specs/000-ecra-platform/roadmap.md` — immutable ECR dependency graph.
 
-## Closed Trusted Substrate
+## Closed trusted substrate
 
 ### ECR-001 — Trusted Domain Kernel
 
 Lifecycle: **CLOSED_CANONICAL**.  
 Closure-ledger head `85e4bf657b6c33e3f88d83e92e7a35279d177349`; CI `33099434232` SUCCESS.
 
-ECR-001 owns provider-neutral zero-I/O trusted domain types and invariants, including Actor vs Principal/IdentityAssertion references.
-
 ### ECR-002 — Durable Run, Ledger & Budgets
 
 Lifecycle: **CLOSED_CANONICAL**.  
-Final feature head `87fd9fc560bf5ca21a07a4d25473f305b4c05f05`; merge `40efc8a64a9562f0f3eb2555b350cfa03d3e0675`.  
 Final closure-convergence head `aadc19c972e619222d426674d7542dd9c00dbe44`; ECR-002 CI `33155302100` and ECR-001 regression `33155302026` SUCCESS.
 
-ECR-002 owns durable run truth, attempts/recovery, budgets, SQLite durability and deterministic synthetic/non-sensitive `.ecra` interchange. It does not own authentication/trust roots, authorization, independent outcome verification or provider execution.
+### ECR-004 — Verification & Reconciliation
 
-## Active Slice — ECR-031
+Lifecycle: **CLOSED_CANONICAL**.  
+Merged implementation PR #7.  
+Merged feature head `990addb79e6fe5a1ad2b16dae159c624959e2128`.  
+Canonical implementation merge `2a95fbb4f20b1646505cb179f4822a758a546895`.  
+Closure-convergence head `c159c96061a73ead9710985d07608e2b417fe275`.
+
+Closure-convergence exact-head gates:
+
+```text
+ECR-001  RUN 33256430974  JOB 99110882402  SUCCESS
+ECR-002  RUN 33256430942  JOB 99110916386  SUCCESS
+ECR-004  RUN 33256430965  JOB 99110882233  SUCCESS
+```
+
+The canonical `main` head containing the T053 marker must pass the same three workflows before an external final closure claim is made.
+
+ECR-004 remains bounded to independent verification/reconciliation. It does not grant authority, declassify data, validate identity, store real sensitive evidence, execute providers, clear ECR-002 unresolved attempts, or repair/resume the same unresolved run.
+
+## Active dependency frontier — ECR-031
 
 ### Identity, Trust Root & Sensitive Storage Foundations
 
-Lifecycle: **TASKS_READY_PENDING_EXACT_GREEN_HEAD**.  
-Dependencies: ECR-001/ECR-002 `CLOSED_CANONICAL`.  
-Analyze Pass 2: `a3c7d563c139c65886f169f9181c07a997038f1f` — `ZERO_BLOCKING_PLANNING_DRIFT_FOUND`.
+Lifecycle: **IMPLEMENTING / BLOCKED_EXTERNAL_NATIVE_ACCEPTANCE**.  
+Implementation branch: `031-identity-trust-root`.  
+Draft implementation PR: #4.  
+Current blocking task: T064.
 
-Planning package:
+The live ECR-031 branch/package controls exact task progress. Native macOS Data Protection Keychain acceptance remains blocked because the trusted runner user lacks the Apple Development signing identity, suitable provisioning profile, configured Xcode developer account registry and usable development team required for the app-like acceptance host.
 
-```text
-specs/031-identity-trust-root/STATUS.md
-specs/031-identity-trust-root/spec.md
-specs/031-identity-trust-root/research.md
-specs/031-identity-trust-root/data-model.md
-specs/031-identity-trust-root/contracts/identity-trust-v1.md
-specs/031-identity-trust-root/threat-model.md
-specs/031-identity-trust-root/plan.md
-specs/031-identity-trust-root/tasks.md
-specs/031-identity-trust-root/quickstart.md
-specs/031-identity-trust-root/analyze.md
-specs/031-identity-trust-root/checklists/requirements.md
-```
+The exact unblock condition is external: configure a valid Apple developer account/team in Xcode for the same runner user and allow Xcode to create/install an Apple Development certificate/signing identity plus suitable provisioning profile, then rerun T064 on the exact feature head.
 
-Planning result:
+Do not substitute legacy file-based Keychain, ad-hoc signing, plaintext/file/environment/memory fallback, `synchronizing=true`, weakened live acceptance, or unsupported Secure Enclave/hardware/non-exportability claims.
 
-```text
-FR-001–FR-058 OWNED
-SC-001–SC-016 OWNED
-G1–G15 PASS / explicit PASS-N/A
-UNOWNED_FR=0
-UNOWNED_SC=0
-MUST_LEVEL_PLANNING_GAPS=0
-FAILED_CONSTITUTION_GATES=0
-PASS_1_BLOCKERS_REMEDIATED=4/4
-```
+## Blocked dependents
 
-Pass-1 blockers now frozen in canonical planning:
+### ECR-003 — Authority, Information Flow, Policy & Secrets
 
-```text
-C1 bootstrap       opaque Ecra-local principal; no OS-label/external-proofing shortcut
-C2 lifecycle       authenticated ProtectedTrustStateV1 -> VerifiedTrustSnapshot authority
-C3 issuance        EnrolledPrincipalHandle + VerifiedTrustSnapshot -> fixed IssuerSession; no arbitrary mint
-C4 signing custody portable Ed25519 software key protected by native backend; no Secure Enclave/hardware claim
-```
+Lifecycle: **PLANNED_BLOCKED**.  
+Depends on ECR-001, ECR-002 and ECR-031. Implementation remains forbidden until ECR-031 is `CLOSED_CANONICAL` and the normal Spec Kit lifecycle authorizes the slice.
 
-Implementation remains blocked until the final synchronized planning head passes both permanent ECR-001 and ECR-002 workflows. `031-identity-trust-root` must be created from that exact green SHA, followed by a Draft implementation PR and T001 dependency/license/advisory/MSRV re-verification.
+### ECR-005 — Evaluation & Threat Harness
 
-## Parallel eligibility
+Lifecycle: **PLANNED_BLOCKED_BY_DEPENDENCIES**.  
+Depends on ECR-001, ECR-002, ECR-003, ECR-004 and ECR-031. ECR-004 closure alone does not unblock it.
 
-ECR-004 — Verification & Reconciliation — is independently planning-eligible from ECR-001/ECR-002. It remains separate from ECR-031. ECR-003 remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`.
+No later ECR slice becomes implementation-eligible merely because the ECR-031 lane is externally blocked.
 
-## Platform Execution Shape
+## Platform execution shape
 
 ```text
 Trusted substrate
-ECR-001 [CLOSED] -> ECR-002 [CLOSED] -> {ECR-031 [TASKS_READY GATE], ECR-004 [ELIGIBLE]} -> ECR-003 -> ECR-005
+ECR-001 [CLOSED] -> ECR-002 [CLOSED]
+        -> {ECR-031 [BLOCKED_EXTERNAL], ECR-004 [CLOSED]}
+        -> ECR-003 [BLOCKED] -> ECR-005 [BLOCKED]
 
 Browser wedge
 ECR-006 -> ECR-007 -> ECR-008
@@ -114,7 +109,7 @@ ECR-022–ECR-030 own later sync, registry, supply chain, privacy/diagnostics, a
 
 ## Execution Rule
 
-Do not implement a later `ECR-###` slice because it is exciting or independently codeable. Follow dependency ordering in the canonical roadmap.
+Do not implement a later `ECR-###` slice because it is independently codeable or because the current critical path has an external blocker. Follow dependency ordering in the canonical roadmap.
 
 ```text
 SPEC_READY
@@ -134,7 +129,7 @@ merge + required post-merge verification
 CLOSED_CANONICAL
 ```
 
-Only `CLOSED_CANONICAL` dependencies unlock dependent implementation unless the dependent spec explicitly authorizes bounded fixture-only research.
+Only `CLOSED_CANONICAL` dependencies unlock dependent implementation unless the dependent spec explicitly authorizes bounded fixture-only research that cannot counterfeit the missing dependency.
 
 ## Review-Sensitive Rules
 
@@ -155,6 +150,7 @@ Only `CLOSED_CANONICAL` dependencies unlock dependent implementation unless the 
 ## Keeping the Repository Easy to Continue
 
 Whenever execution materially advances:
+
 1. update the active slice `STATUS.md`;
 2. update `EXECUTION.md` if active phase/slice or exact verified baseline changes;
 3. update platform roadmap/status when lifecycle changes;

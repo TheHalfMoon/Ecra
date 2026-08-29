@@ -1,13 +1,58 @@
 # ECR-004 Status — Verification & Reconciliation
 
 **Slice:** ECR-004  
-**Lifecycle:** IMPLEMENTING_CLOSURE_CONVERGENCE  
+**Lifecycle:** CLOSED_CANONICAL  
 **Dependencies:** ECR-001 `CLOSED_CANONICAL`, ECR-002 `CLOSED_CANONICAL`  
 **Canonical implementation base:** `4fb61f8b41267983fc460c666fddd7781d91653c`  
 **Implementation branch:** `004-verification-receipts-impl`  
 **Merged implementation PR:** #7  
 **Superseded review container:** #6 — closed, not merged  
 **Constitution:** v1.1.0
+
+## Closure summary
+
+ECR-004 completed T001–T053 with exact-head implementation, review, merge, post-merge and closure-convergence evidence. The implementation remained inside the frozen verification/reconciliation boundary and did not absorb ECR-003 or ECR-031 authority, identity, secret-storage or native-security scope.
+
+### Final reviewed implementation candidate
+
+```text
+HEAD   990addb79e6fe5a1ad2b16dae159c624959e2128
+RUN    33255653083
+JOB    99108796794
+RESULT SUCCESS
+```
+
+PR #7 merged by the allowed non-rebase `merge` method with that exact expected feature head:
+
+```text
+CANONICAL MERGE SHA  2a95fbb4f20b1646505cb179f4822a758a546895
+PR                   #7 MERGED
+METHOD               merge
+```
+
+Required workflows passed on the exact merge state:
+
+```text
+ECR-001  RUN 33255780673  JOB 99109106995  SUCCESS
+ECR-002  RUN 33255780671  JOB 99109107144  SUCCESS
+ECR-004  RUN 33255780663  JOB 99109107058  SUCCESS
+```
+
+T052 evidence was then recorded and the canonical execution ledger advanced to closure-convergence head:
+
+```text
+HEAD  c159c96061a73ead9710985d07608e2b417fe275
+```
+
+All required workflows passed again on that exact closure-convergence head before the T053 lifecycle marker was created:
+
+```text
+ECR-001  RUN 33256430974  JOB 99110882402  SUCCESS
+ECR-002  RUN 33256430942  JOB 99110916386  SUCCESS
+ECR-004  RUN 33256430965  JOB 99110882233  SUCCESS
+```
+
+T053 is complete in this closure marker. Repository governance still requires ECR-001 + ECR-002 + ECR-004 to succeed on the exact canonical `main` head that contains this marker before an external `CLOSED_CANONICAL` claim is made. GitHub Actions truth on that exact final head is the owning final evidence and must not be replaced by the historical runs above.
 
 ## Canonical authorization base
 
@@ -18,18 +63,7 @@ ECR-001 CI  33237289643  SUCCESS  exact head 4fb61f8b41267983fc460c666fddd7781d9
 ECR-002 CI  33237289693  SUCCESS  exact head 4fb61f8b41267983fc460c666fddd7781d91653c
 ```
 
-## Frozen v1 boundaries
-
-- ECR-001 `VerificationReceipt` is the only canonical independent verification record.
-- `ActionReceipt` is executor-observed execution evidence and never self-verifies, including when a receipt has an immutable digest/artifact binding.
-- Fact/Artifact/run metadata gains no parallel `verified` truth flag.
-- Reconciliation never fabricates `ActionReceipt`, appends ECR-002 events, clears `unresolved_attempts`, resumes/completes the same run, or schedules execution.
-- `semantically_retryable*` is advisory for a future new-attempt proposal only and any supplied reconciliation record is revalidated against canonical supporting receipts.
-- ECR-004 persistence is a separate append-only synthetic/non-sensitive verification journal.
-- Journal chaining is integrity/corruption/substitution detection under local-store assumptions, not hostile whole-store tamper resistance.
-- No browser/network/model/provider/process/policy/authorization/identity/telemetry execution dependency enters v1.
-
-## Implementation clarifications
+## Implementation clarifications retained at closure
 
 - **IC-001:** only read-only accessors for already-existing canonical ECR-001 `EvidenceRef` fields; no wire/canonical/validation change.
 - **IC-002:** reconciliation resolves effect truth only and cannot resolve ECR-002 v1 run state.
@@ -54,99 +88,45 @@ ECR-002 CI  33237289693  SUCCESS  exact head 4fb61f8b41267983fc460c666fddd7781d9
 | T051 review-remediation | `fde10b37c17f8113b81c78cf87c0de717909ab59` | 33255382842 | 99108056542 | SUCCESS |
 | Governance-converged merge candidate | `990addb79e6fe5a1ad2b16dae159c624959e2128` | 33255653083 | 99108796794 | SUCCESS |
 
-## Phase 8 closure artifacts
+## Frozen v1 boundaries
 
-### T046 — FR/SC traceability
+- ECR-001 `VerificationReceipt` is the only canonical independent verification record.
+- `ActionReceipt` is executor-observed evidence and never self-verifies, including when a receipt has an immutable digest/artifact binding.
+- Fact, Artifact and run metadata have no parallel verified-truth flag.
+- UNKNOWN reconciliation never fabricates `ActionReceipt` or appends/mutates ECR-002 run-event truth.
+- Reconciliation never clears ECR-002 `unresolved_attempts`, changes `RunPhase`, or makes the same unresolved run resumable/completable.
+- `semantically_retryable*` is advisory only for a future new-attempt proposal; it grants no authorization, scheduling or same-run repair authority, and supplied reconciliation records are revalidated against canonical supporting receipts.
+- ECR-004 persistence is a separate append-only verification journal with rebuildable projections, separate from ECR-002 run storage.
+- Journal chaining provides local integrity/corruption/substitution detection only; it is not hostile whole-store tamper resistance.
+- Persisted v1 acceptance is synthetic/non-sensitive evidence metadata/references/digests only.
+- No browser/network/model/provider/process/policy/authorization/identity/telemetry execution dependency enters `ecra-verify`.
+- ECR-004 exposes no provider execution, authorization, declassification, identity validation, secret storage or same-run repair surface.
 
-`traceability-closure.md` maps FR-001–FR-046 and SC-001–SC-013 to implementation/tests/contracts. Result: zero unowned MUST requirement.
+## Traceability and review evidence
 
-### T047 — Constitution and verification-risk re-check
+- `traceability-closure.md` maps FR-001–FR-046 and SC-001–SC-013 with zero unowned MUST requirement.
+- Constitution gates G1–G15 were re-checked with zero blocker and no unsupported security claim.
+- `post-implementation-analyze.md` found only bounded documentation convergence and authorized no requirement weakening.
+- Cubic's 19 PR #7 findings were processed and resolved; the governance-converged merge candidate passed the complete branch gate.
+- Donor/license/dependency reconciliation found no unrecorded donor source or forbidden runtime/provider dependency.
 
-The same closure document re-checks G1–G15 and executor self-verification, UNKNOWN retry, duplicate effects, mutable evidence, malicious evidence, verifier conflict/capture, journal overclaim and same-run unresolved-state bypass. Result: zero constitutional blocker and no unsupported security claim.
+## Dependency re-evaluation
 
-### T048 — Post-implementation analyze
+ECR-004 closure does **not** make ECR-005 implementation-eligible.
 
-`post-implementation-analyze.md` found only bounded documentation convergence. No requirement weakening was authorized.
+- ECR-003 remains blocked until ECR-031 is `CLOSED_CANONICAL`.
+- ECR-005 still requires ECR-001, ECR-002, ECR-003, ECR-004 and ECR-031 to be `CLOSED_CANONICAL`.
+- ECR-031 remains independently blocked on native macOS Data Protection Keychain acceptance because the trusted runner user lacks the required Apple Development signing/provisioning/account/team state.
+- No legacy Keychain, ad-hoc signing, plaintext/file/environment/memory fallback, or weakened native acceptance is authorized.
 
-### T049 — Convergence
-
-T049 converged the package and lifecycle documentation to implementation truth, including the decision-grade assessment model, checkpoint satisfying states, journal domain separator, persistence schema/bounds, dependency/source truth, platform roadmap/status, Spec Kit index and `EXECUTION.md`.
-
-### T050 — Pre-review exact-head gate
-
-```text
-HEAD   882b4ef7358aef6c416dd1b9dd67602e86334a06
-RUN    33251589848
-JOB    99098084666
-RESULT SUCCESS
-```
-
-### T051 — Review processing and remediation
-
-PR #7 was the active non-draft review container. Cubic reported 19 findings. Every valid finding was repaired forward-only; all 19 inline review threads were resolved. Cubic reported all findings addressed. CodeRabbit's commit status was successful and exposed no actionable blocker. Review-only non-actionable source-scan/concurrency/sentinel findings were resolved against the owning tasks/contracts without weakening safety boundaries.
-
-The exact remediation head passed the renewed full gate:
-
-```text
-HEAD   fde10b37c17f8113b81c78cf87c0de717909ab59
-RUN    33255382842
-JOB    99108056542
-RESULT SUCCESS
-```
-
-The subsequent governance-converged exact merge candidate also passed the complete branch gate:
+## Final task state
 
 ```text
-HEAD   990addb79e6fe5a1ad2b16dae159c624959e2128
-RUN    33255653083
-JOB    99108796794
-RESULT SUCCESS
-```
-
-### T052 — Exact-head merge and canonical-main verification
-
-PR #7 merged by the allowed non-rebase `merge` method with expected feature head `990addb79e6fe5a1ad2b16dae159c624959e2128`.
-
-```text
-CANONICAL MERGE SHA  2a95fbb4f20b1646505cb179f4822a758a546895
-PR                   #7 MERGED
-METHOD               merge
-```
-
-All three required workflows then passed on that exact canonical `main` state:
-
-```text
-ECR-001  RUN 33255780673  JOB 99109106995  SUCCESS
-ECR-002  RUN 33255780671  JOB 99109107144  SUCCESS
-ECR-004  RUN 33255780663  JOB 99109107058  SUCCESS
-```
-
-T052 is complete. T053 is now the only remaining ECR-004 task.
-
-## Current execution state
-
-```text
-CURRENT_TASK                    T053
-CURRENT_STATE                   CLOSURE_CONVERGENCE_PENDING_EXACT_HEAD_GATE
-CANONICAL_MERGE_HEAD            2a95fbb4f20b1646505cb179f4822a758a546895
+T001_T053                       COMPLETE
+IMPLEMENTATION_PR               7 MERGED
 MERGED_IMPLEMENTATION_HEAD      990addb79e6fe5a1ad2b16dae159c624959e2128
-IMPLEMENTATION_PR               7
-POST_MERGE_ECR001_RUN           33255780673
-POST_MERGE_ECR001_JOB           99109106995
-POST_MERGE_ECR002_RUN           33255780671
-POST_MERGE_ECR002_JOB           99109107144
-POST_MERGE_ECR004_RUN           33255780663
-POST_MERGE_ECR004_JOB           99109107058
-T001_T052                       COMPLETE_WITH_REQUIRED_EVIDENCE
-T053                            IN_PROGRESS
+CANONICAL_MERGE_HEAD            2a95fbb4f20b1646505cb179f4822a758a546895
+CLOSURE_CONVERGENCE_HEAD        c159c96061a73ead9710985d07608e2b417fe275
+LIFECYCLE_MARKER                CLOSED_CANONICAL
+EXTERNAL_CLAIM_GATE             EXACT_FINAL_MAIN_ECR001_ECR002_ECR004_SUCCESS
 ```
-
-## T053 closure rule
-
-This convergence records the complete merge/post-merge evidence but does not yet claim `CLOSED_CANONICAL`. The exact closure-convergence `main` head produced by T053 lifecycle/index updates must pass ECR-001 + ECR-002 + ECR-004. Only after that evidence may the final closure marker set T053 `[x]` and lifecycle `CLOSED_CANONICAL`; that marker head must itself pass the same three workflows before the external final closure claim is made.
-
-Dependency re-evaluation is unchanged in one important respect: ECR-004 closure alone cannot make ECR-005 implementation-eligible. ECR-005 still requires ECR-003 and ECR-031 to be `CLOSED_CANONICAL`; ECR-031 remains externally blocked on native macOS Data Protection Keychain acceptance and ECR-003 therefore remains blocked.
-
-## Parallel ECR-031 boundary
-
-ECR-031 remains independently blocked on native macOS Data Protection Keychain acceptance because the trusted runner user lacks a valid Apple Development signing identity, suitable provisioning profile and usable developer account/team. No legacy/plaintext/ad-hoc fallback is authorized.
