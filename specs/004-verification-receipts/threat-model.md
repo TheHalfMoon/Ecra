@@ -9,7 +9,8 @@
 - integrity/order of ECR-004 journal entries;
 - evidence identity/digest/as-of metadata;
 - checkpoint requirements and derived completion views;
-- non-authoritative boundary between reconciliation and execution authorization.
+- non-authoritative boundary between reconciliation and execution authorization;
+- preservation of ECR-002 unresolved execution state unless a real ECR-002 receipt/versioned repair protocol changes it.
 
 ## Trust boundaries
 
@@ -27,6 +28,8 @@ append-only ECR-004 journal
 aggregate/checkpoint/reconciliation derived views
 
 ECR-002 RunState/ActionAttempt truth ───────┘
+                ↑
+read-only compatibility boundary; no run-state mutation
 ```
 
 Provider/browser/model/network acquisition is outside ECR-004 v1. Inputs crossing into ECR-004 are data, not authority.
@@ -65,15 +68,15 @@ Provider/browser/model/network acquisition is outside ECR-004 v1. Inputs crossin
 
 ### TM-006 Blind retry after UNKNOWN
 
-**Attack:** unresolved external attempt is retried due timeout, note, elapsed time, or model confidence.
+**Attack:** unresolved external attempt is retried due timeout, note, elapsed time, model confidence, or a misread `no_effect_confirmed` advisory.
 
-**Mitigation:** `still_unknown` -> `reconciliation_required`; ECR-001 retry/idempotency semantics remain mandatory; no ECR-004 result authorizes execution.
+**Mitigation:** `still_unknown` -> `reconciliation_required`; ECR-001 retry/idempotency semantics remain mandatory; no ECR-004 result authorizes execution; `semantically_retryable*` applies only to a future new-attempt proposal and never clears the existing ECR-002 unresolved state.
 
 ### TM-007 Duplicate side effect after effect confirmed
 
 **Attack:** reconciled `effect_confirmed` attempt is retried.
 
-**Mitigation:** derived `duplicate_retry_blocked` disposition; exact-attempt tests across all retry classes.
+**Mitigation:** derived `duplicate_retry_blocked` disposition; exact-attempt tests across all retry classes; existing ECR-002 unresolved state remains untouched.
 
 ### TM-008 Mutable external evidence changes later
 
@@ -143,6 +146,12 @@ Provider/browser/model/network acquisition is outside ECR-004 v1. Inputs crossin
 
 **Mitigation:** no capability/policy/approval output types; retry disposition explicitly non-authoritative; architecture tests reject ECR-003 concepts/dependencies.
 
+### TM-019 Reconciliation bypasses ECR-002 unresolved-state guards
+
+**Attack:** a consumer treats `no_effect_confirmed` as if it removed the prior attempt from `RunState::unresolved_attempts`, marks the prepared attempt resolved, calls `RunResumed`/`ExecutionCompleted`, or invokes blind retry in the same run.
+
+**Mitigation:** ECR-004 exposes no run-state mutation/event/receipt API; reconciliation functions take ECR-002 state read-only; Phase 5 tests compare pre/post run state and prove `unresolved_attempts` is unchanged; ECR-002 regression tests prove resume/completion/retry guards still reject the unresolved attempt after every reconciliation outcome. Any future repair/resolution transition requires explicit ECR-002 versioned ownership.
+
 ## Security claims allowed
 
 ECR-004 v1 may claim:
@@ -150,7 +159,8 @@ ECR-004 v1 may claim:
 - append-only local journal behavior under tested store APIs;
 - corruption/substitution detection under stated local integrity assumptions;
 - fail-closed UNKNOWN reconciliation and blind-retry safety semantics;
-- no executor-receipt self-verification shortcut.
+- no executor-receipt self-verification shortcut;
+- reconciliation preserves ECR-002 unresolved execution-state guards.
 
 ECR-004 v1 may NOT claim:
 - verifier infallibility or calibrated accuracy;
@@ -158,4 +168,5 @@ ECR-004 v1 may NOT claim:
 - remote evidence authenticity beyond supplied bindings;
 - authorization, authentication, declassification, or safe provider execution;
 - protection of real sensitive evidence payloads;
-- exactly-once external effects.
+- exactly-once external effects;
+- that `no_effect_confirmed` resumes/completes the same ECR-002 run or clears its unresolved attempt.
