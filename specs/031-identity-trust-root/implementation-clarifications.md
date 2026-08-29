@@ -75,3 +75,54 @@ This correction strengthens implementation ordering. It does not broaden ECR-031
 ### Gate
 
 No semantic post-Phase-3 code may begin until this clarification plus synchronized `tasks.md`, `plan.md`, `STATUS.md`, `EXECUTION.md` and `analyze.md` is committed and the permanent ECR-031 workflow succeeds on that exact convergence head.
+
+## IC-002 — T064 requires a provisioning-authorized app-like macOS test host
+
+**Date:** 2026-08-29
+**Discovered at:** T064 external-readiness investigation after ECR-004 canonical closure
+**Classification:** MUST-level native-acceptance harness defect
+**Status:** REMEDIATED_IN_IMPLEMENTATION / EXTERNAL_ASSETS_STILL_REQUIRED
+
+### Finding
+
+The first T064 workflow executed the ignored Rust library tests directly from Cargo's ordinary test binary while the tests themselves correctly stated that Data Protection Keychain acceptance requires a provisioned app-like macOS host.
+
+That execution shape was insufficient for the claimed acceptance boundary. Apple TN3137 documents that macOS Data Protection Keychain access groups are derived from the host process code-signing entitlements, those restricted entitlements must be authorized by a provisioning profile, and a command-line-style executable needs an app-like bundle structure in which to embed that profile. Apple TN3125 further documents that provisioning-profile entitlements are an authorization allowlist and that wildcard authorization in the profile must be resolved to concrete, non-wildcard entitlements in the signed program. Apple's guidance for signing nonbundled executables with restricted entitlements likewise requires an app-like wrapper.
+
+A bare Cargo test executable therefore cannot become valid T064 evidence merely because an Apple Development certificate and provisioning profile exist on the runner. The test executable must run as the signed main executable of a provisioning-authorized app-like bundle.
+
+### Remediation
+
+T064 keeps its stable task ID and frozen security intent. Repository-owned live acceptance now uses `scripts/run-ecr031-macos-live-acceptance.sh` to:
+
+1. require an interactive macOS console session owned by the runner user;
+2. require `security`, `codesign`, `xcodebuild`, and `python3`;
+3. select an unexpired macOS provisioning profile that authorizes the fixed synthetic bundle identifier `dev.ecra.identity.t064` and its concrete keychain access group;
+4. require an `Apple Development` signing identity for the same profile team;
+5. build the exact `ecra-identity` Rust library test executable without running it bare;
+6. place that executable at `EcraT064Host.app/Contents/MacOS/EcraT064Host` with a matching `Info.plist`;
+7. embed the selected provisioning profile at `Contents/embedded.provisionprofile`;
+8. claim only the concrete application-identifier, team-identifier, and keychain-access-groups entitlements authorized by that profile;
+9. sign the app-like bundle with the matching Apple Development identity and verify the signature plus claimed entitlements;
+10. execute both ignored Data Protection Keychain acceptance tests only through that signed app-like host;
+11. delete all temporary host material after the run.
+
+The dedicated readiness workflow now invokes the same repository script in `--readiness-only` mode. Missing or mismatched signing/profile assets are a real failing gate rather than a green diagnostic with failed `continue-on-error` probes. Xcode account/team registry checks remain diagnostics because a valid certificate/profile may be installed by other authorized means; the security acceptance boundary is the actual signing identity, provisioning-profile authorization, signed entitlements, and live Data Protection Keychain behavior.
+
+### Security effect
+
+This remediation strengthens the T064 evidence boundary. It does not:
+
+- substitute the legacy file-based Keychain;
+- enable `synchronizing=true`;
+- introduce plaintext/file/environment/memory fallback;
+- accept ad-hoc signing;
+- claim Secure Enclave, hardware-backed, non-exportable, user-presence, cross-machine, or recovery guarantees;
+- treat possession of a certificate/profile as proof that the live Keychain tests passed;
+- change ECR-003/ECR-004/ECR-005 or later-slice ownership.
+
+### Remaining external prerequisite
+
+Repository-side host packaging is now defined, but the trusted macOS runner must still possess an unexpired macOS provisioning profile authorizing `dev.ecra.identity.t064` plus a matching Apple Development signing identity. Xcode account/team configuration is one acceptable way to obtain those assets but is not itself the acceptance claim.
+
+T064 remains open until both live ignored tests pass through the signed app-like host on one exact feature head. T068 remains blocked until that evidence exists.
