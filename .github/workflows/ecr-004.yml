@@ -75,6 +75,7 @@ jobs:
           cargo test -p ecra-verify --test migration --locked
           cargo test -p ecra-verify --test boundaries --locked
           cargo test -p ecra-verify --test portability --locked
+          cargo test -p ecra-verify --test review_hardening --locked
       - name: ECR-002 unresolved-state compatibility acceptance
         run: |
           cargo test -p ecra-verify --test reconcile --locked all_outcomes_preserve_ecr002_state_and_same_run_guards
