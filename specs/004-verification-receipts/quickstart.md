@@ -29,8 +29,6 @@ cargo test --workspace --locked --offline
 
 ## 3. Explicit ECR-004 targets
 
-Expected target set after implementation:
-
 ```bash
 cargo test -p ecra-verify --lib --locked
 cargo test -p ecra-verify --test request_contract --locked
@@ -43,6 +41,7 @@ cargo test -p ecra-verify --test sqlite_store --locked
 cargo test -p ecra-verify --test migration --locked
 cargo test -p ecra-verify --test boundaries --locked
 cargo test -p ecra-verify --test portability --locked
+cargo test -p ecra-verify --test review_hardening --locked
 ```
 
 ## 4. ECR-001 regressions
@@ -101,12 +100,13 @@ Expected:
 Prove with committed fixtures/tests:
 
 ```text
-ActionReceipt never self-promotes to VerificationReceipt
+ActionReceipt/network receipt never self-promotes to independent VerificationReceipt truth
 wrong target/action/attempt/evidence binding fails closed
 Verified/Rejected/Inconclusive require evidence
 mutable decision-grade evidence requires immutable digest/snapshot binding
+an immutable binding does not turn executor self-report into independent evaluation
 method label alone never determines truth
-verification never rewrites provenance
+verification never rewrites provenance/fact assessment axes
 ```
 
 ## 8. Aggregation acceptance
@@ -121,7 +121,7 @@ inconclusive only                          -> inconclusive
 verified + rejected in any ordering        -> conflicted
 ```
 
-Permutation/property tests must prove ordering independence and 1,000 identical evaluations must produce identical canonical views.
+Permutation/property tests must prove ordering independence and 1,000 identical evaluations must produce identical canonical views. `VerificationAggregateViewV1` is derived from canonical receipts and is not accepted from hostile serialized input as an asserted truth view.
 
 ## 9. Reconciliation acceptance
 
@@ -145,6 +145,8 @@ no_effect_confirmed + naturally idempotent safe -> semantically retryable adviso
 no_effect_confirmed + same-key class -> exact same key required for any future new-attempt proposal
 non-idempotent/unknown/never-blind paths remain fail-closed
 ```
+
+A supplied reconciliation record must be revalidated against the exact ECR-002 state and its canonical supporting verification receipts before it can influence retry disposition. A merely deserialized or caller-constructed reconciliation record is not trusted.
 
 No test may fabricate an `ActionReceipt` to resolve the scenario.
 
@@ -187,28 +189,29 @@ duplicate IDs -> fail closed
 projection delete/rebuild -> equivalent view
 newer unsupported schema -> no mutation + fail closed
 failed migration -> original state preserved
+append at 4,096 authoritative entries -> fail before a 4,097th entry can poison replay
 ```
 
 The integrity-chain test wording must explicitly avoid hostile full-store tamper-resistance claims.
 
 ## 12. Resource/hostile input acceptance
 
-Test exact v1 ceilings for evidence refs, receipts per target, checkpoint requirements, reconciliation support IDs, notes/rule strings, journal entry bytes and query materialization. Over-limit input must return typed resource-limit errors without panic.
+Test exact v1 ceilings for complete request bytes, evidence refs, receipts per target, checkpoint requirements/accepted-state sequences/complete checkpoint bytes, reconciliation support IDs and available-receipt query size, notes/rule strings, journal entry bytes and journal query materialization. Over-limit input must return typed resource-limit errors without panic.
 
 ## 13. Synthetic/non-sensitive audit
 
-Committed ECR-004 fixtures and journal bytes must contain only synthetic IDs/metadata/digests. Add sentinels proving raw private/secret payload strings are absent from stored entries, Debug/Display and errors.
+Committed ECR-004 fixtures and journal bytes must contain only synthetic IDs/metadata/digests. Sentinel scans prove raw private/secret payload strings are absent from the authorized synthetic persistence corpus, Debug/Display and error paths. ECR-004 does not claim to heuristically redact a secret deliberately inserted into canonical notes; real sensitive payload acceptance remains outside v1.
 
 ## 14. Closure gate
 
-Before PR leaves Draft/implementation review state:
+Before merge:
 
-1. all ECR-004 tasks complete;
+1. all ECR-004 implementation/convergence tasks before merge complete;
 2. FR/SC traceability has zero unowned requirement, including FR-046/SC-013;
 3. constitution G1–G15 rechecked;
 4. post-implementation analyze has zero unresolved MUST drift;
-5. exact feature head passes permanent ECR-004 CI plus ECR-001/ECR-002 regressions;
-6. all actionable review threads resolved;
+5. exact final feature head passes permanent ECR-004 CI plus ECR-001/ECR-002 regressions;
+6. all actionable review threads are resolved and automated review/check state has no remaining actionable blocker;
 7. merge exact expected head by allowed non-rebase method;
 8. required ECR-004/ECR-001/ECR-002 post-merge `main` workflows pass;
 9. only then mark `CLOSED_CANONICAL`.
