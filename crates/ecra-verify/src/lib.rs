@@ -18,8 +18,8 @@ pub mod request;
 pub use error::{VerifyError, VerifyErrorCategory, VerifyErrorCode};
 pub use ids::{CheckpointId, ReconciliationId};
 pub use request::{
-    MAX_EVIDENCE_REFS_PER_REQUEST, MAX_NOTES_BYTES, MAX_RULE_ID_BYTES,
-    VerificationRequestFieldsV1, VerificationRequestV1,
+    MAX_EVIDENCE_REFS_PER_REQUEST, MAX_NOTES_BYTES, MAX_RULE_ID_BYTES, VerificationRequestFieldsV1,
+    VerificationRequestV1,
 };
 
 /// Phase 1 remains inspectable as implementation history; returning `true`
