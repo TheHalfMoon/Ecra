@@ -16,7 +16,7 @@ macro_rules! define_non_nil_id {
                 if value.is_nil() {
                     return Err(VerifyError::new(
                         VerifyErrorCategory::Validation,
-                        VerifyErrorCode::DuplicateId,
+                        VerifyErrorCode::InvalidIdentifier,
                         concat!($kind, " id must be a non-nil UUID"),
                     ));
                 }
@@ -27,7 +27,7 @@ macro_rules! define_non_nil_id {
                 let parsed = Uuid::parse_str(value).map_err(|_| {
                     VerifyError::new(
                         VerifyErrorCategory::Validation,
-                        VerifyErrorCode::InvalidTarget,
+                        VerifyErrorCode::InvalidIdentifier,
                         concat!($kind, " id must be a valid UUID"),
                     )
                 })?;
