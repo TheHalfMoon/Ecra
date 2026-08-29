@@ -1,7 +1,7 @@
 # Tasks: ECR-004 Verification & Reconciliation
 
 **Feature:** ECR-004  
-**Status:** IMPLEMENTING_REVIEW_READY  
+**Status:** IMPLEMENTING_MERGE_READY  
 **Dependencies:** ECR-001/ECR-002 `CLOSED_CANONICAL`  
 **Execution rule:** `[x]` requires implementation plus linked evidence. Planning completion does not authorize implementation until the planning package is canonical and the exact canonical planning head passes the required dependency regressions.
 
@@ -79,7 +79,7 @@
 - [x] **T048** Run post-implementation analyze-equivalent review; append explicit convergence tasks for any MUST-level drift rather than hiding it. **Path:** `specs/004-verification-receipts/post-implementation-analyze.md`. **SC-012, SC-013**
 - [x] **T049** Converge spec/research/data-model/contract/threat-model/plan/tasks/quickstart/status/platform lifecycle docs with exact implementation truth. **Paths:** `specs/004-verification-receipts/`, `specs/000-ecra-platform/`, `specs/README.md`, `EXECUTION.md` as applicable.
 - [x] **T050** Run complete exact-head final ECR-004 CI on the final feature head and require ECR-001/ECR-002 regression success, including unresolved-state compatibility acceptance. **SC-010–SC-013**
-- [ ] **T051** Move implementation PR out of Draft only after T050; process all review/check/thread findings and require zero actionable blocker. **SC-012, SC-013**
+- [x] **T051** Move implementation PR out of Draft only after T050; process all review/check/thread findings and require zero actionable blocker. **SC-012, SC-013**
 - [ ] **T052** Merge the exact expected implementation head by an allowed non-rebase method and require canonical-main ECR-004 + ECR-001 + ECR-002 workflows to succeed on the resulting canonical state.
 - [ ] **T053** Mark ECR-004 `CLOSED_CANONICAL` only after post-merge evidence; update roadmap/status/index/EXECUTION and re-evaluate dependency eligibility for ECR-005 and other slices from live canonical truth.
 
