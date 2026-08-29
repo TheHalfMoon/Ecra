@@ -22,7 +22,7 @@ VerificationReceipt {
 
 Requirements:
 - `target` is an existing ECR-001 `VerificationTarget`;
-- `Verified`, `Rejected`, and `Inconclusive` require non-empty evidence;
+- `verified`, `rejected`, and `inconclusive` require non-empty evidence;
 - a receipt is independent verification truth only for its exact target;
 - no receipt implies capability, approval, authorization, declassification, or provider execution authority.
 
