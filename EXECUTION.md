@@ -55,13 +55,13 @@ Branch: 004-verification-receipts-impl
 Review PR: #7 — READY / OPEN / NON-CANONICAL
 Superseded Draft PR: #6 — CLOSED / NOT MERGED
 Canonical implementation base: 4fb61f8b41267983fc460c666fddd7781d91653c
-Lifecycle: IMPLEMENTING_REVIEW_REMEDIATION
-Current frontier: T051 review findings -> renewed exact-head gate -> review closure
+Lifecycle: IMPLEMENTING_MERGE_READY
+Current frontier: T052 after exact live governance-head gate
 ```
 
-PR #6 was replaced as the review container only because the connected ready-for-review GraphQL mutation was incompatible with the live GitHub schema. PR #7 opened over the same branch and exact tested head; no implementation diff was altered by that container replacement.
+PR #6 was replaced as the review container only because the connected ready-for-review GraphQL mutation was incompatible with the live GitHub schema. PR #7 opened over the same branch; no implementation diff was altered by that container replacement.
 
-Verified implementation checkpoints before review remediation:
+Verified implementation/review checkpoints:
 
 ```text
 Phase 1  e223ba5fbf8c375c580e7a93f524be3fd4c311fa  run 33237728338  SUCCESS
@@ -76,11 +76,14 @@ T041     2a86dd909abfcb9d8658eab589787eb376a73004  run 33250250973  SUCCESS
 T043     67207e1bc91434555bfe31997f4af9f641324a76  run 33250358128  SUCCESS
 T045     90ed1bbeafea72ee655bc58a96e94696096f360e  run 33251037913  SUCCESS
 Pre-review T050  882b4ef7358aef6c416dd1b9dd67602e86334a06  run 33251589848  SUCCESS
+T051 remediation  fde10b37c17f8113b81c78cf87c0de717909ab59  run 33255382842  SUCCESS
 ```
 
-The pre-review exact-head job `99098084666` passed locked metadata/build, rustfmt, strict Clippy, workspace tests, complete ECR-001 regressions, complete ECR-002 regressions, all explicit ECR-004 quickstart targets, dedicated ECR-002 unresolved-state compatibility acceptance, rustdoc, offline replay, all unsafe/dependency boundaries and dependency evidence.
+The T051 remediation job `99108056542` passed locked metadata/build, rustfmt, strict Clippy, workspace tests, complete ECR-001 regressions, complete ECR-002 regressions, every explicit ECR-004 quickstart target including review hardening, dedicated ECR-002 unresolved-state compatibility acceptance, rustdoc, offline replay, all unsafe/dependency boundaries and dependency evidence.
 
-T046/T047 traceability/constitution closure and T048/T049 convergence were materialized before review. CodeRabbit completed with minimal merge risk and no actionable merge-blocking finding. Cubic completed its PR #7 review with 19 findings; valid findings are being repaired forward-only and review-only false positives are documented/resolved. Because review remediation changes branch content, historical T050 green is no longer final evidence. A renewed exact-head complete ECR-004 gate is mandatory before T051 can close.
+T046/T047 traceability/constitution closure and T048/T049 convergence remain satisfied. Cubic produced 19 findings on PR #7; all valid findings were repaired forward-only, all review threads are resolved, and Cubic reports all findings addressed. CodeRabbit commit status is successful and exposes no actionable blocker. Review-only non-actionable findings were resolved with explicit rationale rather than weakening the required architecture/source/sentinel boundaries. T051 is complete.
+
+Because the T051 task/status/execution ledger convergence itself changes the branch head, the exact live governance-converged head must pass the complete ECR-004 workflow before T052 uses it as the expected merge head.
 
 ## ECR-004 frozen boundaries
 
@@ -102,13 +105,11 @@ T046/T047 traceability/constitution closure and T048/T049 convergence were mater
 ## ECR-004 remaining closure order
 
 ```text
-T051 repair every valid PR #7 review finding forward-only and document/resolve non-actionable findings
+complete exact-head ECR-004 + ECR-001 + ECR-002 gate on the live governance-converged PR #7 head
   ↓
-renew complete T050-equivalent exact-head ECR-004 + ECR-001 + ECR-002 gate on the final review-remediation head
+re-check PR #7 exact head, reviews, threads, checks and mergeability
   ↓
-re-process PR #7 reviews/comments/threads/checks to zero actionable blocker on that exact head
-  ↓
-T052 merge exact expected feature head by allowed non-rebase method
+T052 merge that exact expected head by allowed non-rebase method
      then require ECR-004 + ECR-001 + ECR-002 workflows on canonical main
   ↓
 T053 mark CLOSED_CANONICAL only from post-merge evidence;
