@@ -124,7 +124,7 @@ fn verified_and_rejected_is_conflicted_with_both_receipts_retained() {
 #[test]
 fn not_evaluated_alone_is_absent_and_never_satisfies_verification() {
     let receipt = receipt(103, VerificationOutcome::NotEvaluated);
-    let aggregate = VerificationAggregateViewV1::from_receipts(target(), &[receipt.clone()])
+    let aggregate = VerificationAggregateViewV1::from_receipts(target(), std::slice::from_ref(&receipt))
         .expect("aggregate");
 
     assert_eq!(aggregate.state(), VerificationAggregateStateV1::Absent);
