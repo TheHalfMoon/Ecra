@@ -1,0 +1,84 @@
+name: ECR-031 macOS Host Readiness
+
+on:
+  push:
+    branches:
+      - 031-identity-trust-root
+
+permissions:
+  contents: read
+
+jobs:
+  interactive-console-session:
+    name: interactive console session
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Require logged-in console user
+        shell: bash
+        run: |
+          set -euo pipefail
+          console_user="$(stat -f '%Su' /dev/console 2>/dev/null || printf 'unknown')"
+          [[ "$console_user" != "root" ]]
+          [[ "$console_user" != "loginwindow" ]]
+          [[ "$console_user" != "unknown" ]]
+
+  runner-matches-console-user:
+    name: runner matches console user
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Require runner user to own console session
+        shell: bash
+        run: |
+          set -euo pipefail
+          runner_user="$(id -un)"
+          console_user="$(stat -f '%Su' /dev/console 2>/dev/null || printf 'unknown')"
+          [[ "$runner_user" == "$console_user" ]]
+
+  code-signing-identity:
+    name: code signing identity available
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Require at least one code-signing identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v security >/dev/null 2>&1
+          security find-identity -v -p codesigning 2>/dev/null \
+            | grep -Eq '^[[:space:]]*[0-9]+\)'
+
+  provisioning-profile:
+    name: provisioning profile available
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Require at least one local provisioning profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for directory in \
+            "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
+            "$HOME/Library/MobileDevice/Provisioning Profiles"; do
+            if [[ -d "$directory" ]] && find "$directory" -maxdepth 1 -type f \
+              \( -name '*.mobileprovision' -o -name '*.provisionprofile' \) \
+              -print -quit 2>/dev/null | grep -q .; then
+              found=1
+              break
+            fi
+          done
+          [[ "$found" -eq 1 ]]
+
+  signing-tools:
+    name: signing tools available
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Require codesign and Xcode build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v codesign >/dev/null 2>&1
+          command -v xcodebuild >/dev/null 2>&1
