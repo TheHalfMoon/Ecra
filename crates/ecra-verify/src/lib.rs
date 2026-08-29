@@ -11,11 +11,20 @@
 //! behind the later `store` module and must not leak provider/runtime behavior
 //! into verification logic.
 
+pub mod aggregate;
 pub mod error;
+pub mod evidence;
 pub mod ids;
 pub mod request;
 
+pub use aggregate::{
+    MAX_RECEIPTS_PER_TARGET, VerificationAggregateStateV1, VerificationAggregateViewV1,
+};
 pub use error::{VerifyError, VerifyErrorCategory, VerifyErrorCode};
+pub use evidence::{
+    DecisionGradeAssessmentV1, DecisionGradeReasonV1, DecisionGradeRuleV1,
+    DecisionGradeStatusV1, FreshnessRuleV1, assess_request, verify_request,
+};
 pub use ids::{CheckpointId, ReconciliationId};
 pub use request::{
     MAX_EVIDENCE_REFS_PER_REQUEST, MAX_NOTES_BYTES, MAX_RULE_ID_BYTES, VerificationRequestFieldsV1,
