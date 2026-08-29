@@ -160,3 +160,26 @@ jobs:
           grep -F 'security-framework = { version = "=3.7.0", default-features = false, features = ["OSX_10_15"] }' crates/ecra-identity/Cargo.toml
           cargo tree -p ecra-identity --edges normal --depth 1 --locked
           cargo tree -p ecra-identity --edges normal --locked
+
+      - name: macOS Data Protection Keychain live acceptance
+        shell: bash
+        run: |
+          set -uo pipefail
+          status=0
+
+          if ! cargo test -p ecra-identity --lib --locked \
+            platform::macos::tests::data_protection_keychain_roundtrips_all_v1_secret_purposes \
+            -- --exact --ignored; then
+            status=1
+          fi
+
+          if ! cargo test -p ecra-identity --lib --locked \
+            platform::macos::tests::native_keychain_bootstrap_publishes_and_reopens_same_identity \
+            -- --exact --ignored; then
+            status=1
+          fi
+
+          if [[ "$status" -ne 0 ]]; then
+            echo "macOS Data Protection Keychain live acceptance failed closed. The runner host must provide a user-context, provisioning-authorized app-like execution identity; do not substitute the legacy file-based keychain." >&2
+          fi
+          exit "$status"
