@@ -15,7 +15,10 @@ fn execution_and_domain_types_have_no_parallel_verified_field() {
     assert!(!receipt_source.contains("    verified:"));
     assert!(!evidence_source.contains("    verified:"));
     assert!(!artifact_source.contains("    verified:"));
-    assert_ne!(TypeId::of::<ActionReceipt>(), TypeId::of::<VerificationReceipt>());
+    assert_ne!(
+        TypeId::of::<ActionReceipt>(),
+        TypeId::of::<VerificationReceipt>()
+    );
 }
 
 #[test]
@@ -23,12 +26,10 @@ fn verification_request_exposes_no_authority_surface() {
     let request = VerificationRequestV1::from_fields(VerificationRequestFieldsV1 {
         receipt_id: VerificationId::parse_str("00000000-0000-0000-0000-000000000801")
             .expect("verification id"),
-        verifier: ActorId::parse_str("00000000-0000-0000-0000-000000000001")
-            .expect("actor id"),
+        verifier: ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
         verifier_principal: None,
         target: VerificationTarget::Receipt(
-            ReceiptId::parse_str("00000000-0000-0000-0000-000000000802")
-                .expect("receipt id"),
+            ReceiptId::parse_str("00000000-0000-0000-0000-000000000802").expect("receipt id"),
         ),
         method: VerificationMethod::Other,
         evidence: Vec::new(),
@@ -52,6 +53,9 @@ fn verification_request_exposes_no_authority_surface() {
         "execute",
         "retry_allowed",
     ] {
-        assert!(!object.contains_key(prohibited), "prohibited field: {prohibited}");
+        assert!(
+            !object.contains_key(prohibited),
+            "prohibited field: {prohibited}"
+        );
     }
 }
