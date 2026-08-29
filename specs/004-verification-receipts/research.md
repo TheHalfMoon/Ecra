@@ -1,6 +1,6 @@
 # Research: ECR-004 Verification & Reconciliation
 
-**Status:** IMPLEMENTATION_DEPENDENCIES_REVIEWED  
+**Status:** IMPLEMENTATION_DEPENDENCIES_RECONCILED  
 **Canonical implementation base:** `4fb61f8b41267983fc460c666fddd7781d91653c`  
 **Dependencies:** ECR-001/ECR-002 `CLOSED_CANONICAL`  
 **Implementation branch:** `004-verification-receipts-impl`
@@ -156,8 +156,8 @@ ECR-004 planning and implementation are independently written against canonical 
 
 ### Rejected / unnecessary dependencies
 
-- `zip` — REJECT for ECR-004; portable `.ecra` archive ownership remains ECR-002 and verification journal persistence does not require ZIP.
-- `url` — REJECT for ECR-004 trusted crate; external locators remain opaque canonical evidence metadata and ECR-004 performs no remote fetch.
+- `zip` — REJECT as an ECR-004 direct dependency/owned capability; portable `.ecra` archive ownership remains ECR-002 and verification journal persistence does not require ZIP.
+- `url` — REJECT as an ECR-004 direct dependency/owned capability; external locators remain opaque canonical evidence metadata and ECR-004 performs no remote fetch.
 - any browser, network, HTTP, model, provider, process-execution, protocol, policy/authorization, identity-backend, telemetry, async runtime or remote database dependency — REJECT by FR-041/SC-011.
 - any second canonicalization, cryptographic hash, UUID, or SQLite abstraction library — REJECT; existing locked repository primitives are sufficient.
 - source-copy/vendor adoption from donor projects — REJECT; dependency API use only.
@@ -178,3 +178,32 @@ ECR-004 planning and implementation are independently written against canonical 
 - No default feature widening is authorized beyond the table above.
 
 **T001 conclusion:** `DEPENDENCY_ADMISSION_ACCEPTED`. The implementation may proceed to T002 using only this bounded set, subject to locked CI proving the added local crate does not change the transitive dependency boundary unexpectedly.
+
+## T044 — Final implementation dependency and source reconciliation
+
+**Evidence head:** `67207e1bc91434555bfe31997f4af9f641324a76`  
+**ECR-004 CI:** run `33250358128`, job `99094901800` — SUCCESS  
+**Toolchain:** `rustc 1.98.0 (88d9e12ae 2026-08-18)`, `cargo 1.98.0 (797e8a9bc 2026-08-05)`  
+**Cargo.lock SHA-256:** `b8112ece8111599af10b92bc2a2e54dd006985ec32a300e47c5f8c356383a2f6`
+
+The implemented `ecra-verify` direct runtime dependency surface exactly matches the T001 admission:
+
+```text
+ecra-core   workspace path
+ecra-run    workspace path
+rusqlite    0.40.2
+serde       1.0.229
+serde_jcs   0.2.0
+serde_json  1.0.151
+sha2        0.11.0
+thiserror   2.0.20
+uuid        1.26.0
+```
+
+Dev-only dependencies remain `proptest 1.11.0` and `tempfile 3.27.0`.
+
+The complete cargo tree also contains `url 2.5.8` through canonical `ecra-core` and `zip 8.6.0` through canonical `ecra-run`. Those are inherited transitive paths from already-closed dependency slices; ECR-004 does not declare them directly, widen their feature sets, fetch URLs, own archive semantics, or call archive/network/provider capabilities. The T001 rejection of `url` and `zip` therefore means rejection of new ECR-004 direct ownership/dependency expansion, not removal of packages already required by canonical upstream workspace crates.
+
+No donor implementation source was copied, adapted, vendored, or imported into ECR-004. The slice uses public dependency APIs and independently written Ecra code only. Exact-head `scripts/check-verify-unsafe.sh` and `scripts/check-verify-deps.sh` passed, and the CI dependency evidence found no new browser/network/model/provider/process/policy/authorization/identity/telemetry runtime dependency.
+
+**T044 conclusion:** `IMPLEMENTATION_DEPENDENCY_AND_DONOR_RECONCILED`.
