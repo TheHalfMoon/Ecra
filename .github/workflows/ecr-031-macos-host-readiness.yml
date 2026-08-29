@@ -82,3 +82,63 @@ jobs:
           set -euo pipefail
           command -v codesign >/dev/null 2>&1
           command -v xcodebuild >/dev/null 2>&1
+
+  xcode-account-configured:
+    name: Xcode developer account configured
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Require non-empty Xcode developer account registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import plistlib
+          import sys
+
+          path = Path.home() / "Library/Preferences/com.apple.dt.Xcode.plist"
+          if not path.is_file():
+              sys.exit(1)
+          with path.open("rb") as handle:
+              data = plistlib.load(handle)
+          accounts = data.get("DVTDeveloperAccountManagerAppleIDLists")
+          if not accounts:
+              sys.exit(1)
+          PY
+
+  xcode-account-token:
+    name: Xcode developer account token available
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Require Xcode account token in the current user keychain
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v security >/dev/null 2>&1
+          security find-generic-password -s "Xcode-Token" >/dev/null 2>&1
+
+  xcode-team-configured:
+    name: Xcode development team configured
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Require at least one configured Xcode development team
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import plistlib
+          import sys
+
+          path = Path.home() / "Library/Preferences/com.apple.dt.Xcode.plist"
+          if not path.is_file():
+              sys.exit(1)
+          with path.open("rb") as handle:
+              data = plistlib.load(handle)
+          teams = data.get("IDEProvisioningTeamByIdentifier") or data.get("IDEProvisioningTeams")
+          if not isinstance(teams, dict) or not teams:
+              sys.exit(1)
+          PY
