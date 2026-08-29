@@ -11,6 +11,9 @@ use crate::{VerifyError, VerifyErrorCategory, VerifyErrorCode};
 pub const MAX_EVIDENCE_REFS_PER_REQUEST: usize = 32;
 pub const MAX_RULE_ID_BYTES: usize = 128;
 pub const MAX_NOTES_BYTES: usize = 4096;
+/// Maximum complete serialized v1 request size. This bounds every nested opaque
+/// string/reference in addition to the field-specific ceilings below.
+pub const MAX_VERIFICATION_REQUEST_BYTES: usize = 64 * 1024;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VerificationRequestFieldsV1 {
@@ -147,7 +150,7 @@ impl VerificationRequestV1 {
             }
         }
 
-        Ok(Self {
+        let value = Self {
             version,
             receipt_id: fields.receipt_id,
             verifier: fields.verifier,
@@ -159,10 +162,32 @@ impl VerificationRequestV1 {
             evaluated_at: fields.evaluated_at,
             rule_id: fields.rule_id,
             notes: fields.notes,
-        })
+        };
+        let serialized = serde_json::to_vec(&value).map_err(|_| {
+            VerifyError::new(
+                VerifyErrorCategory::Validation,
+                VerifyErrorCode::InvalidTarget,
+                "verification request could not be size-checked",
+            )
+        })?;
+        if serialized.len() > MAX_VERIFICATION_REQUEST_BYTES {
+            return Err(VerifyError::new(
+                VerifyErrorCategory::ResourceLimit,
+                VerifyErrorCode::ResourceLimitExceeded,
+                "verification request exceeds the complete v1 byte limit",
+            ));
+        }
+        Ok(value)
     }
 
     pub fn from_json_slice(input: &[u8]) -> Result<Self, VerifyError> {
+        if input.len() > MAX_VERIFICATION_REQUEST_BYTES {
+            return Err(VerifyError::new(
+                VerifyErrorCategory::ResourceLimit,
+                VerifyErrorCode::ResourceLimitExceeded,
+                "verification request JSON exceeds the complete v1 byte limit",
+            ));
+        }
         let wire: VerificationRequestWire = serde_json::from_slice(input).map_err(|_| {
             VerifyError::new(
                 VerifyErrorCategory::Validation,
