@@ -23,6 +23,7 @@ ECR-002 CI  33237289693  SUCCESS  exact head 4fb61f8b41267983fc460c666fddd7781d9
 - ECR-004 reconciliation never fabricates `ActionReceipt`, appends ECR-002 events, clears `unresolved_attempts`, resumes/completes the same run, or schedules execution.
 - Retry disposition is advisory for a future new-attempt proposal only.
 - ECR-004 persistence is a separate append-only synthetic/non-sensitive verification journal.
+- The journal digest chain is an integrity/corruption/substitution detector under local-store assumptions. It is **not** a hostile whole-store tamper-resistance guarantee and has no protected external trust anchor in v1.
 - No browser/network/model/provider/process/policy/identity-backend execution dependency enters v1.
 
 ## Planning clarifications
@@ -84,24 +85,6 @@ Phase 4 covers strict bounded checkpoints, duplicate-target rejection, canonical
 
 ### Phase 5 — T023–T030
 
-T023–T029 implement and test:
-
-- strict bounded `ReconciliationRecordV1` and closed reconciliation outcomes;
-- exact `RunId` + durable unresolved `ActionAttemptRef` + underlying `ActionRef` binding against read-only ECR-002 `RunState`;
-- canonical support receipt resolution with missing/duplicate/cross-target rejection and deterministic support-ID retention;
-- `effect_confirmed`, `no_effect_confirmed`, and `still_unknown` derived from exact supporting verification evidence rather than caller-selected outcome;
-- IC-003 evidence-absent `still_unknown` without fabricated support IDs;
-- immutable evidence requirement for conclusive reconciliation;
-- byte/semantic non-mutation proof for ECR-002 state across all reconciliation outcomes;
-- unresolved prepared attempt membership remains unchanged and no provider `ActionReceipt` or ECR-002 `RunEvent` is synthesized;
-- same-run `RunResumed`, `ExecutionCompleted`, and blind-retry guards remain blocked for the unresolved prior attempt;
-- `RetryDispositionV1` remains advisory only for a future new-attempt proposal;
-- duplicate-effect block, reconciliation-required, safe semantic retry, exact same-key semantic retry, key mutation rejection, external-reconciliation and never-blind paths are covered by the retry matrix.
-
-Intermediate Phase 5 heads failed only rustfmt quality gates and were repaired forward-only without suppressions or semantic weakening.
-
-T030 exact-head evidence:
-
 ```text
 HEAD   fb3fdf1ce113a55d3d7276f54681a7f55dc542b3
 RUN    33247815573
@@ -109,14 +92,44 @@ JOB    99088239340
 RESULT SUCCESS
 ```
 
-Every required Phase 5 gate succeeded on the exact head: locked metadata/build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, ECR-002 regressions, ECR-004 targets, rustdoc, offline replay, unsafe/dependency boundaries and dependency/toolchain evidence.
+Phase 5 covers strict reconciliation identity/binding, canonical support receipt resolution, fail-closed effect/no-effect/unknown derivation, ECR-002 byte/semantic non-mutation, unresolved-attempt preservation, same-run resume/completion/blind-retry guard compatibility, and future-new-attempt-only retry advisory semantics.
 
-Phase 5 is `VERIFIED_ON_BRANCH`; ECR-004 remains Draft and is not `CLOSED_CANONICAL`.
+### Phase 6 — T031–T039
+
+T031–T038 implement and test:
+
+- strict versioned `VerificationJournalEntryV1` with positive bounded sequence, exact previous-digest rule, repository-aligned JCS material, domain-separated SHA-256 and fixed digest goldens;
+- transactional SQLite v1 initialization with schema marker, append-only authoritative `verification_journal`, and rebuildable receipt/checkpoint/reconciliation indexes separate from ECR-002 run storage;
+- SQL update/delete rejection for canonical journal rows while projections remain rebuildable and non-authoritative;
+- expected-head compare-and-append under `BEGIN IMMEDIATE`, where a stale competing writer fails closed;
+- authoritative duplicate-ID detection independent of projection contents;
+- corruption detection for malformed entry JSON, row/entry metadata mismatch, sequence gaps/reordering, previous-digest mismatch and duplicate canonical identities;
+- newer-schema fail-closed behavior and failed-initialization rollback evidence;
+- projection deletion/poisoning followed by canonical rebuild;
+- reopen/replay preservation of byte-equivalent aggregate/checkpoint views and identical reconciliation records;
+- synthetic/non-sensitive sentinel tests proving raw secret sentinel text is absent from persisted journal material and derived Debug output.
+
+The initial Phase 6 store candidate passed build but failed only rustfmt. The formatting repair was forward-only and did not change store semantics.
+
+T039 exact-head evidence:
+
+```text
+HEAD   18ad19ae4b4f4d5f48270485af666e7204b95a0e
+RUN    33249643366
+JOB    99093000858
+RESULT SUCCESS
+```
+
+Every required Phase 6 gate succeeded on the exact head: locked metadata/build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, ECR-002 regressions, ECR-004 targets, rustdoc, offline replay, unsafe/dependency boundaries and dependency/toolchain evidence.
+
+**Integrity claim boundary:** the v1 journal hash chain detects corruption, substitution and broken linkage when replayed under its local assumptions. Because v1 has no independently protected root/head anchor, ECR-004 does not claim resistance to an adversary that can rewrite the entire store consistently, verifier infallibility, provider authenticity, or exactly-once external effects.
+
+Phase 6 is `VERIFIED_ON_BRANCH`; ECR-004 remains Draft and is not `CLOSED_CANONICAL`.
 
 ## Current execution state
 
 ```text
-CURRENT_TASK                    T031
+CURRENT_TASK                    T040
 CURRENT_STATE                   IMPLEMENTING
 IMPLEMENTATION_BASE             4fb61f8b41267983fc460c666fddd7781d91653c
 IMPLEMENTATION_BRANCH           004-verification-receipts-impl
@@ -127,34 +140,31 @@ T011A                           COMPLETE_WITH_EXACT_HEAD_EVIDENCE
 T012_T017                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
 T018_T022                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
 T023_T030                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
-PHASE_5_HEAD                    fb3fdf1ce113a55d3d7276f54681a7f55dc542b3
-PHASE_5_RUN                     33247815573
-PHASE_5_JOB                     99088239340
-PHASE_5_RESULT                  SUCCESS
-T031                            ELIGIBLE
-T032_PLUS                       ORDERED_BY_TASK_GRAPH
+T031_T039                       COMPLETE_WITH_EXACT_HEAD_EVIDENCE
+PHASE_6_HEAD                    18ad19ae4b4f4d5f48270485af666e7204b95a0e
+PHASE_6_RUN                     33249643366
+PHASE_6_JOB                     99093000858
+PHASE_6_RESULT                  SUCCESS
+T040                            ELIGIBLE
+T041_PLUS                       ORDERED_BY_TASK_GRAPH
 ```
 
 ## Canonical next order
 
 ```text
-T031 strict verification journal entry and digest chain
+T040 hostile/bounded-input and exact-max resource tests
   ↓
-T032 canonical digest goldens and mutation tests
+T041 strict JSON/canonicalization portability tests
   ↓
-T033 transactional SQLite v1 journal/index store
+T042 exact v1 usage and assurance-boundary documentation
   ↓
-T034 append-only truth and rebuildable projection enforcement
+T043 complete quickstart exact-head evidence
   ↓
-T035 expected-head concurrency
+T044 donor/license/dependency implementation reconciliation
   ↓
-T036 corruption/migration/projection recovery matrix
+T045 exact-head Phase 7 closure gate
   ↓
-T037 restart/reopen deterministic replay
-  ↓
-T038 synthetic/non-sensitive sentinel boundaries
-  ↓
-T039 exact-head Phase 6 gate
+T046–T053 traceability, convergence, review, merge and canonical closure
 ```
 
 ## Parallel ECR-031 boundary
