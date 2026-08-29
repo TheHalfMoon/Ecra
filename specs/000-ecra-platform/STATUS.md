@@ -18,7 +18,7 @@ ECR-002 is fully sealed as a dependency. Its v1 durability authorization remains
 | ID | Slice | Lifecycle | Depends on | Eligibility / intent |
 |---|---|---|---|---|
 | ECR-031 | Identity, Trust Root & Sensitive Storage | `TASKS_READY_PENDING_EXACT_GREEN_HEAD` | ECR-001, ECR-002 | canonical planning is ready; live implementation state is tracked in `EXECUTION.md`/PR #4 |
-| ECR-004 | Verification & Reconciliation | `TASKS_READY` | ECR-001, ECR-002 | planning package complete/analyze-clean; implementation still requires this planning state to become canonical plus exact canonical dependency regressions |
+| ECR-004 | Verification & Reconciliation | `TASKS_READY` | ECR-001, ECR-002 | planning package Analyze Pass 3 clean; implementation still requires this planning state to become canonical plus exact canonical dependency regressions |
 | ECR-003 | Authority, Information Flow, Policy & Secrets | `PLANNED_BLOCKED` | ECR-001, ECR-002, ECR-031 | implementation remains blocked until ECR-031 is `CLOSED_CANONICAL` |
 
 ECR-031 planning evidence:
@@ -36,13 +36,13 @@ ECR-004 planning evidence:
 
 ```text
 Planning branch: 004-verification-receipts
-Analyze Pass 1 blockers: 1
-Analyze Pass 1 blockers remediated: 1
-Analyze Pass 2: ZERO_BLOCKING_PLANNING_DRIFT_FOUND
-FR-001–FR-045: OWNED
-SC-001–SC-012: OWNED
+Planning PR: #5
+Analyze Pass 1 blocker A-001: REMEDIATED by IC-001 / T011A
+Analyze Pass 2 review blocker A-002: REMEDIATED by IC-002 / FR-046 / SC-013 / Phase 5 compatibility tasks
+Analyze Pass 3: ZERO_BLOCKING_PLANNING_DRIFT_FOUND
+FR-001–FR-046: OWNED
+SC-001–SC-013: OWNED
 G1–G15: PASS / explicit PASS-N/A
-IC-001: typed read-only EvidenceRef accessor prerequisite owned by T011A
 ```
 
 Implementation of either slice is governed by its own exact execution package and must start/continue only from an eligible exact head. ECR-004 does not bypass ECR-031 and ECR-031 is not a dependency of ECR-004.
@@ -64,8 +64,9 @@ Implementation of either slice is governed by its own exact execution package an
 - aggregate states expose conflict rather than last-write-wins;
 - reconciliation preserves UNKNOWN unless explicit independent evidence confirms effect/no-effect;
 - no synthetic `ActionReceipt` is created by reconciliation;
-- retry disposition is safety metadata, not authorization;
-- ECR-002 `RunEvent` v1 remains unchanged;
+- retry disposition is safety advisory for a future new-attempt proposal, not authorization or same-run scheduling;
+- every reconciliation outcome leaves ECR-002 prepared/unreceipted/unresolved state and `RunPhase` unchanged;
+- ECR-002 `RunEvent` v1 remains unchanged and no ECR-004 sidecar projection represents run resolution;
 - ECR-004 uses a separate append-only verification journal with rebuildable projections;
 - the journal digest chain is an integrity/corruption-detection mechanism only, not hostile complete-store tamper resistance;
 - v1 acceptance stores synthetic/non-sensitive evidence metadata/references/digests only;
