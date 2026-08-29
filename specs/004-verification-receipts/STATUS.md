@@ -8,54 +8,31 @@
 **Implementation PR:** #6 (Draft)  
 **Constitution:** v1.1.0
 
-ECR-004 planning became canonical through merged PR #5. The exact canonical planning head `4fb61f8b41267983fc460c666fddd7781d91653c` then passed both required dependency regressions:
+ECR-004 planning became canonical through merged PR #5. Exact canonical planning head `4fb61f8b41267983fc460c666fddd7781d91653c` passed both required dependency regressions:
 
 ```text
 ECR-001 CI  33237289643  SUCCESS  exact head 4fb61f8b41267983fc460c666fddd7781d91653c
 ECR-002 CI  33237289693  SUCCESS  exact head 4fb61f8b41267983fc460c666fddd7781d91653c
 ```
 
-Therefore implementation branch `004-verification-receipts-impl` was legally created from that exact canonical SHA.
-
 ## Frozen v1 boundaries
 
-- reuse ECR-001 `VerificationReceipt` as the only canonical independent verification record;
-- `ActionReceipt` remains executor-observed execution evidence and never self-verifies;
-- no second `verified` flag on Fact/Artifact/run metadata;
-- exact target/evidence/verifier/method/outcome binding;
-- deterministic aggregate states: `Absent`, `Verified`, `Rejected`, `Inconclusive`, `Conflicted`;
-- critical verification checkpoints are requirements, not authority;
-- exact ECR-002 UNKNOWN attempt reconciliation produces `effect_confirmed`, `no_effect_confirmed`, or `still_unknown` without fabricating `ActionReceipt`;
-- retry disposition is fail-closed advisory metadata for a future new-attempt proposal only, never execution authorization or same-run scheduling;
-- every reconciliation outcome leaves ECR-002 `RunState`, prepared-attempt receipt/unresolved state, `unresolved_attempts`, and `RunPhase` unchanged;
-- ECR-002 `RunEvent` v1 wire contract is unchanged and no run-resolution event is introduced;
-- ECR-004 uses a separate append-only verification journal with rebuildable indexes;
-- no sidecar projection represents or mutates ECR-002 run resolution;
-- journal hash chaining is corruption/substitution detection only, not hostile complete-store tamper resistance;
-- acceptance persists synthetic/non-sensitive evidence metadata/references/digests only;
-- no browser/network/model/provider/process/policy/identity-backend execution dependency enters v1.
+- ECR-001 `VerificationReceipt` remains the only canonical independent verification record.
+- `ActionReceipt` is executor-observed execution evidence and never self-verifies.
+- Fact/Artifact/run metadata gains no parallel `verified` flag.
+- ECR-004 reconciliation never fabricates `ActionReceipt`, appends ECR-002 events, clears `unresolved_attempts`, resumes/completes the same run, or schedules execution.
+- Retry disposition is advisory for a future new-attempt proposal only.
+- ECR-004 persistence is a separate append-only synthetic/non-sensitive verification journal.
+- No browser/network/model/provider/process/policy/identity-backend execution dependency enters v1.
 
-## Analyze history
+## Planning clarifications
 
-### Pass 1 — A-001
-
-IC-001 authorizes only read-only accessors for already-existing canonical ECR-001 `EvidenceRef` metadata, with no wire/canonical/validation change and full ECR-001 regressions. T011A owns the implementation prerequisite.
-
-### Pass 2 review — A-002
-
-IC-002 + FR-046 + SC-013 freeze a read-only compatibility boundary: ECR-004 records effect truth and advisory new-attempt semantics only. It does not clear ECR-002 unresolved state, append an ECR-002 event/receipt, resume/complete the existing run, or schedule a retry.
+- **IC-001:** ECR-004 may add only read-only accessors for the already-existing canonical `EvidenceRef` artifact/observation/receipt/external-ref/content-digest/as-of fields. No field, wire, canonicalization or validation change is authorized.
+- **IC-002:** reconciliation evidence resolves effect truth only and cannot resolve ECR-002 v1 run state.
 
 ## Phase 1 — workspace, dependency and CI boundary
 
-T001–T004 are implemented on the branch:
-
-- T001 exact dependency/license/advisory/MSRV admission is recorded in `research.md` and `research/donor-license-ledger.md`;
-- T002 added dependency-minimal `crates/ecra-verify` with `#![forbid(unsafe_code)]` and explicit pure-logic/local-journal separation;
-- T003 added `scripts/check-verify-unsafe.sh` and `scripts/check-verify-deps.sh`;
-- T004 added permanent trusted push-only `.github/workflows/ecr-004.yml` with `contents: read` only;
-- the temporary branch-only lockfile bootstrap changed only `Cargo.lock` and was removed before the Phase 1 acceptance head.
-
-T005 exact-head evidence:
+T001–T004 are implemented. T005 exact-head evidence:
 
 ```text
 HEAD   e223ba5fbf8c375c580e7a93f524be3fd4c311fa
@@ -64,53 +41,69 @@ JOB    99061549466
 RESULT SUCCESS
 ```
 
-Every required step succeeded on that exact head: locked metadata/build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, ECR-002 regressions, ECR-004 Phase 1 targets, rustdoc, offline replay, ECR-001/ECR-002/ECR-004 unsafe/dependency boundaries, and ECR-004 dependency/toolchain evidence.
+Every required Phase 1 step succeeded: locked metadata/build, rustfmt, strict Clippy, workspace tests, ECR-001/ECR-002 regressions, ECR-004 targets, rustdoc, offline replay, all unsafe/dependency boundaries and dependency/toolchain evidence.
 
-Phase 1 is therefore `VERIFIED_ON_BRANCH`; this is not `CLOSED_CANONICAL` for ECR-004.
+Phase 1 is `VERIFIED_ON_BRANCH`; ECR-004 is not yet `CLOSED_CANONICAL`.
+
+## Phase 2 — strict request contract
+
+T006–T010 are implemented:
+
+- typed non-nil `CheckpointId` and `ReconciliationId`;
+- strict ECR-004 machine-readable error category/code surface with bounded static diagnostics;
+- strict exact-v1.0 `VerificationRequestV1` with bounded evidence/rule/notes, duplicate-ID rejection and unknown-field rejection;
+- valid/invalid fixtures covering every canonical verification target, all method classes and all outcomes;
+- validated request construction produces only the canonical ECR-001 `VerificationReceipt`;
+- architecture/type tests preserve `ActionReceipt != VerificationReceipt` and reject parallel verified/authority surfaces.
+
+T011 exact-head evidence:
+
+```text
+HEAD   40c18b4bcf1e6c124587cdfbc0e423822eb5b138
+RUN    33245650032
+JOB    99082565826
+RESULT SUCCESS
+```
+
+The exact Phase 2 head passed locked metadata/build, rustfmt, strict Clippy, workspace tests, ECR-001 regressions, ECR-002 regressions, ECR-004 request/boundary tests, rustdoc, offline replay and every dependency/unsafe boundary.
+
+Phase 2 request semantics are therefore `VERIFIED_ON_BRANCH` through T011. T011A remains a separate prerequisite before Phase 3.
 
 ## Current execution state
 
 ```text
-CURRENT_TASK                    T006
+CURRENT_TASK                    T011A
 CURRENT_STATE                   IMPLEMENTING
 IMPLEMENTATION_BASE             4fb61f8b41267983fc460c666fddd7781d91653c
 IMPLEMENTATION_BRANCH           004-verification-receipts-impl
 IMPLEMENTATION_PR               6_DRAFT
-T001                             COMPLETE
-T002                             COMPLETE
-T003                             COMPLETE
-T004                             COMPLETE
-T005                             COMPLETE_EXACT_HEAD
-PHASE_1_HEAD                     e223ba5fbf8c375c580e7a93f524be3fd4c311fa
-PHASE_1_RUN                      33237728338
-PHASE_1_JOB                      99061549466
-PHASE_1_RESULT                   SUCCESS
-T006                             ELIGIBLE
-T007_PLUS                        NOT_REACHED
+T001_T005                        COMPLETE_WITH_EXACT_HEAD_EVIDENCE
+T006_T011                        COMPLETE_WITH_EXACT_HEAD_EVIDENCE
+PHASE_2_HEAD                     40c18b4bcf1e6c124587cdfbc0e423822eb5b138
+PHASE_2_RUN                      33245650032
+PHASE_2_JOB                      99082565826
+PHASE_2_RESULT                   SUCCESS
+T011A                            ELIGIBLE
+T012_PLUS                        NOT_REACHED
 ```
 
 ## Canonical next order
 
 ```text
-T006 IDs/version/errors
-  ↓
-T007 strict VerificationRequestV1
-  ↓
-T008 fixtures/tests
-  ↓
-T009 request -> canonical VerificationReceipt
-  ↓
-T010 architecture/type boundaries
-  ↓
-T011 exact-head Phase 2 gate
-  ↓
-T011A canonical EvidenceRef read-only accessors + unchanged ECR-001 semantics
+T011A EvidenceRef read-only accessors + unchanged ECR-001 serialization/canonical semantics
+  ↓ exact regression gate
+T012 decision-grade evidence
+T013 freshness
+T014 deterministic aggregate
+T015 fixtures
+T016 permutation/determinism properties
+T017 exact-head Phase 3 gate
 ```
 
 No Phase 3 evidence logic starts before T011A completes and its exact regression evidence exists.
 
 ## Parallel ECR-031 boundary
 
-ECR-031 remains a separate Draft implementation PR with the native macOS provisioning blocker at T064/T068. ECR-004 does not depend on ECR-031 and must not absorb its identity/protected-storage scope or use its blocker to authorize real sensitive evidence persistence.
+ECR-031 remains a separate Draft implementation PR with the native macOS provisioning prerequisite at T064/T068. ECR-004 does not depend on ECR-031 and must not absorb identity/protected-storage scope or persist real sensitive evidence.
 
 ECR-005 remains blocked by its complete dependency set.
