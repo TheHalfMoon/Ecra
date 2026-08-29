@@ -7,6 +7,7 @@ use ecra_verify::{
     VerificationAggregateViewV1, VerificationCheckpointFieldsV1, VerificationCheckpointV1,
     VerificationRequirementV1, VerifyErrorCode,
 };
+use proptest::prelude::*;
 use serde::Deserialize;
 
 fn target(reference: &str) -> VerificationTarget {
@@ -285,6 +286,32 @@ fn requirement_count_limit_is_enforced() {
     })
     .expect_err("checkpoint requirement limit must be enforced");
     assert_eq!(error.code(), VerifyErrorCode::ResourceLimitExceeded);
+}
+
+#[test]
+fn exact_checkpoint_requirement_max_is_accepted() {
+    let requirements = (0..MAX_CHECKPOINT_REQUIREMENTS)
+        .map(|index| {
+            requirement(
+                target(&format!("exact-max-{index}")),
+                VerificationAggregateStateV1::Verified,
+            )
+        })
+        .collect();
+    let value = VerificationCheckpointV1::from_fields(VerificationCheckpointFieldsV1 {
+        id: checkpoint_id(),
+        label: "exact max".to_owned(),
+        requirements,
+    })
+    .expect("exact checkpoint requirement max must be accepted");
+    assert_eq!(value.requirements().len(), MAX_CHECKPOINT_REQUIREMENTS);
+}
+
+proptest! {
+    #[test]
+    fn arbitrary_bounded_checkpoint_json_never_panics(bytes in proptest::collection::vec(any::<u8>(), 0..=4_096)) {
+        let _ = VerificationCheckpointV1::from_json_slice(&bytes);
+    }
 }
 
 #[test]

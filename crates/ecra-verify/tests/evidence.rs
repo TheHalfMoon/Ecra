@@ -1,12 +1,13 @@
 use ecra_core::{
     ActorId, ContentDigest, EpochMillis, EvidenceId, EvidenceKind, EvidenceRef, Fact, ReceiptId,
-    VerificationId, VerificationMethod, VerificationOutcome, VerificationTarget,
+    VerificationId, VerificationMethod, VerificationOutcome, VerificationReceipt, VerificationTarget,
 };
 use ecra_verify::{
     DecisionGradeReasonV1, DecisionGradeRuleV1, DecisionGradeStatusV1, FreshnessRuleV1,
-    VerificationRequestFieldsV1, VerificationRequestV1, VerifyErrorCode, assess_request,
-    verify_request,
+    MAX_RECEIPTS_PER_TARGET, VerificationAggregateViewV1, VerificationRequestFieldsV1,
+    VerificationRequestV1, VerifyErrorCode, assess_request, verify_request,
 };
+use proptest::prelude::*;
 
 fn verification_id(value: usize) -> VerificationId {
     VerificationId::parse_str(&format!("00000000-0000-0000-0000-{:012}", 1000 + value))
@@ -216,4 +217,49 @@ fn verification_evaluation_does_not_mutate_fact_assessment_axes() {
 
     let after = serde_json::to_vec(&fact).expect("serialize fact after verification");
     assert_eq!(before, after);
+}
+
+#[test]
+fn aggregate_exact_receipt_max_is_accepted_and_max_plus_one_is_typed() {
+    let target = VerificationTarget::Receipt(target_receipt());
+    let receipts = (0..MAX_RECEIPTS_PER_TARGET)
+        .map(|index| {
+            VerificationReceipt::new(
+                verification_id(10_000 + index),
+                ActorId::parse_str("00000000-0000-0000-0000-000000000001")
+                    .expect("actor id"),
+                target.clone(),
+                VerificationMethod::Other,
+                VerificationOutcome::NotEvaluated,
+                Vec::new(),
+            )
+            .expect("receipt")
+        })
+        .collect::<Vec<_>>();
+    let aggregate = VerificationAggregateViewV1::from_receipts(target.clone(), &receipts)
+        .expect("exact aggregate max must be accepted");
+    assert_eq!(aggregate.receipt_ids().len(), MAX_RECEIPTS_PER_TARGET);
+
+    let mut over = receipts;
+    over.push(
+        VerificationReceipt::new(
+            verification_id(20_000),
+            ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
+            target.clone(),
+            VerificationMethod::Other,
+            VerificationOutcome::NotEvaluated,
+            Vec::new(),
+        )
+        .expect("over-limit receipt"),
+    );
+    let error = VerificationAggregateViewV1::from_receipts(target, &over)
+        .expect_err("receipt max+1 must fail");
+    assert_eq!(error.code(), VerifyErrorCode::ResourceLimitExceeded);
+}
+
+proptest! {
+    #[test]
+    fn arbitrary_bounded_evidence_json_never_panics(bytes in proptest::collection::vec(any::<u8>(), 0..=4_096)) {
+        let _ = serde_json::from_slice::<EvidenceRef>(&bytes);
+    }
 }

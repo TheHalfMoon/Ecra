@@ -7,9 +7,11 @@ use ecra_run::{
     RecoveryReason, RunEvent, RunEventEnvelope, RunReducer, RunState, ensure_retry_allowed,
 };
 use ecra_verify::{
-    ReconciliationId, ReconciliationInputV1, ReconciliationOutcomeV1, ReconciliationRecordFieldsV1,
+    MAX_RECONCILIATION_NOTES_BYTES, MAX_RECONCILIATION_SUPPORT_IDS, ReconciliationId,
+    ReconciliationInputV1, ReconciliationOutcomeV1, ReconciliationRecordFieldsV1,
     ReconciliationRecordV1, RetryDispositionV1, VerifyErrorCode, reconcile, retry_disposition,
 };
+use proptest::prelude::*;
 
 fn genesis() -> RunEventEnvelope {
     RunEventEnvelope::from_json_slice(include_bytes!(
@@ -530,4 +532,68 @@ fn strict_record_json_rejects_unknown_fields_and_outcome_tampering() {
         .validate_against(&state, std::slice::from_ref(&verified))
         .expect_err("tampered outcome must fail against evidence");
     assert_eq!(error.code(), VerifyErrorCode::VerificationConflict);
+}
+
+#[test]
+fn exact_reconciliation_resource_maxima_are_accepted_and_max_plus_one_is_typed() {
+    let intent = safe_intent();
+    let attempt = attempt_for_intent(&intent, 56_001);
+    let (_, state) = unresolved_history(&attempt);
+    let support = (0..MAX_RECONCILIATION_SUPPORT_IDS)
+        .map(|index| verification_id(100_000 + u64::try_from(index).expect("index")))
+        .collect::<Vec<_>>();
+    let exact = ReconciliationRecordV1::from_fields(ReconciliationRecordFieldsV1 {
+        id: reconciliation_id(56_101),
+        run_id: state.run_id(),
+        attempt: attempt.clone(),
+        action: attempt.action().clone(),
+        outcome: ReconciliationOutcomeV1::StillUnknown,
+        verification_receipts: support,
+        reconciled_at: None,
+        notes: Some("n".repeat(MAX_RECONCILIATION_NOTES_BYTES)),
+    })
+    .expect("exact reconciliation maxima must be accepted");
+    assert_eq!(
+        exact.verification_receipts().len(),
+        MAX_RECONCILIATION_SUPPORT_IDS
+    );
+    assert_eq!(
+        exact.notes().expect("notes").len(),
+        MAX_RECONCILIATION_NOTES_BYTES
+    );
+
+    let support_error = ReconciliationRecordV1::from_fields(ReconciliationRecordFieldsV1 {
+        id: reconciliation_id(56_102),
+        run_id: state.run_id(),
+        attempt: attempt.clone(),
+        action: attempt.action().clone(),
+        outcome: ReconciliationOutcomeV1::StillUnknown,
+        verification_receipts: (0..=MAX_RECONCILIATION_SUPPORT_IDS)
+            .map(|index| verification_id(110_000 + u64::try_from(index).expect("index")))
+            .collect(),
+        reconciled_at: None,
+        notes: None,
+    })
+    .expect_err("support max+1 must fail");
+    assert_eq!(support_error.code(), VerifyErrorCode::ResourceLimitExceeded);
+
+    let notes_error = ReconciliationRecordV1::from_fields(ReconciliationRecordFieldsV1 {
+        id: reconciliation_id(56_103),
+        run_id: state.run_id(),
+        attempt,
+        action: intent.action_ref().expect("action ref"),
+        outcome: ReconciliationOutcomeV1::StillUnknown,
+        verification_receipts: Vec::new(),
+        reconciled_at: None,
+        notes: Some("n".repeat(MAX_RECONCILIATION_NOTES_BYTES + 1)),
+    })
+    .expect_err("notes max+1 must fail");
+    assert_eq!(notes_error.code(), VerifyErrorCode::ResourceLimitExceeded);
+}
+
+proptest! {
+    #[test]
+    fn arbitrary_bounded_reconciliation_json_never_panics(bytes in proptest::collection::vec(any::<u8>(), 0..=4_096)) {
+        let _ = ReconciliationRecordV1::from_json_slice(&bytes);
+    }
 }

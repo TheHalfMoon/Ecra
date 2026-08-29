@@ -6,9 +6,11 @@ use ecra_core::{
     VerificationTarget,
 };
 use ecra_verify::{
-    CheckpointId, DecisionGradeRuleV1, MAX_EVIDENCE_REFS_PER_REQUEST, ReconciliationId,
-    VerificationRequestFieldsV1, VerificationRequestV1, VerifyErrorCode, verify_request,
+    CheckpointId, DecisionGradeRuleV1, MAX_EVIDENCE_REFS_PER_REQUEST, MAX_NOTES_BYTES,
+    MAX_RULE_ID_BYTES, ReconciliationId, VerificationRequestFieldsV1, VerificationRequestV1,
+    VerifyErrorCode, verify_request,
 };
+use proptest::prelude::*;
 use serde::Deserialize;
 use serde_json::Value;
 use uuid::Uuid;
@@ -43,6 +45,28 @@ fn evidence(index: usize) -> EvidenceRef {
     )
     .expect("valid content digest");
     EvidenceRef::new(id, EvidenceKind::Other).with_content_digest(digest)
+}
+
+fn bounded_fields(
+    evidence: Vec<EvidenceRef>,
+    rule_id: String,
+    notes: Option<String>,
+) -> VerificationRequestFieldsV1 {
+    VerificationRequestFieldsV1 {
+        receipt_id: VerificationId::parse_str("00000000-0000-0000-0000-000000000601")
+            .expect("verification id"),
+        verifier: ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
+        verifier_principal: None,
+        target: VerificationTarget::Receipt(parse_receipt_id(
+            "00000000-0000-0000-0000-000000000602",
+        )),
+        method: VerificationMethod::Other,
+        evidence,
+        proposed_outcome: VerificationOutcome::NotEvaluated,
+        evaluated_at: None,
+        rule_id,
+        notes,
+    }
 }
 
 #[test]
@@ -126,24 +150,58 @@ fn unsupported_version_and_duplicate_evidence_have_machine_codes() {
 
 #[test]
 fn evidence_count_limit_is_checked_before_receipt_construction() {
-    let fields = VerificationRequestFieldsV1 {
-        receipt_id: VerificationId::parse_str("00000000-0000-0000-0000-000000000601")
-            .expect("verification id"),
-        verifier: ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
-        verifier_principal: None,
-        target: VerificationTarget::Receipt(parse_receipt_id(
-            "00000000-0000-0000-0000-000000000602",
-        )),
-        method: VerificationMethod::Other,
-        evidence: (0..=MAX_EVIDENCE_REFS_PER_REQUEST).map(evidence).collect(),
-        proposed_outcome: VerificationOutcome::NotEvaluated,
-        evaluated_at: None,
-        rule_id: "limit_check".to_owned(),
-        notes: None,
-    };
+    let fields = bounded_fields(
+        (0..=MAX_EVIDENCE_REFS_PER_REQUEST).map(evidence).collect(),
+        "limit_check".to_owned(),
+        None,
+    );
 
     let error = VerificationRequestV1::from_fields(fields).expect_err("over limit rejects");
     assert_eq!(error.code(), VerifyErrorCode::ResourceLimitExceeded);
+}
+
+#[test]
+fn request_exact_resource_maxima_are_accepted_and_max_plus_one_is_typed() {
+    let exact = VerificationRequestV1::from_fields(bounded_fields(
+        (0..MAX_EVIDENCE_REFS_PER_REQUEST).map(evidence).collect(),
+        "r".repeat(MAX_RULE_ID_BYTES),
+        Some("n".repeat(MAX_NOTES_BYTES)),
+    ))
+    .expect("exact request maxima must be accepted");
+    assert_eq!(exact.evidence().len(), MAX_EVIDENCE_REFS_PER_REQUEST);
+    assert_eq!(exact.rule_id().len(), MAX_RULE_ID_BYTES);
+    assert_eq!(exact.notes().expect("notes").len(), MAX_NOTES_BYTES);
+
+    let evidence_error = VerificationRequestV1::from_fields(bounded_fields(
+        (0..=MAX_EVIDENCE_REFS_PER_REQUEST).map(evidence).collect(),
+        "rule".to_owned(),
+        None,
+    ))
+    .expect_err("evidence max+1 must fail");
+    assert_eq!(evidence_error.code(), VerifyErrorCode::ResourceLimitExceeded);
+
+    let rule_error = VerificationRequestV1::from_fields(bounded_fields(
+        Vec::new(),
+        "r".repeat(MAX_RULE_ID_BYTES + 1),
+        None,
+    ))
+    .expect_err("rule max+1 must fail");
+    assert_eq!(rule_error.code(), VerifyErrorCode::ResourceLimitExceeded);
+
+    let notes_error = VerificationRequestV1::from_fields(bounded_fields(
+        Vec::new(),
+        "rule".to_owned(),
+        Some("n".repeat(MAX_NOTES_BYTES + 1)),
+    ))
+    .expect_err("notes max+1 must fail");
+    assert_eq!(notes_error.code(), VerifyErrorCode::ResourceLimitExceeded);
+}
+
+proptest! {
+    #[test]
+    fn arbitrary_bounded_request_json_never_panics(bytes in proptest::collection::vec(any::<u8>(), 0..=4_096)) {
+        let _ = VerificationRequestV1::from_json_slice(&bytes);
+    }
 }
 
 #[test]

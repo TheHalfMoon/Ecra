@@ -3,23 +3,32 @@ use ecra_core::{
     VerificationReceipt, VerificationTarget,
 };
 use ecra_verify::{
+    MAX_MATERIALIZED_JOURNAL_ENTRIES, MAX_VERIFICATION_JOURNAL_ENTRY_BYTES,
     MAX_VERIFICATION_JOURNAL_SEQUENCE, VerificationJournalBodyV1, VerificationJournalDigest,
-    VerificationJournalEntryV1, VerificationJournalSequence, VerifyErrorCode,
+    VerificationJournalEntryV1, VerificationJournalSequence, VerificationStore, VerifyErrorCode,
 };
+use proptest::prelude::*;
+use rusqlite::{Connection, params};
 use sha2::{Digest, Sha256};
+use tempfile::tempdir;
 
 const JOURNAL_DOMAIN: &[u8] = b"ecra/verification-journal/v1\0";
 
-fn golden_receipt() -> VerificationReceipt {
+fn receipt_with_tail(tail: u64) -> VerificationReceipt {
     VerificationReceipt::new(
-        VerificationId::parse_str("00000000-0000-0000-0000-000000090001").expect("verification id"),
+        VerificationId::parse_str(&format!("00000000-0000-0000-0000-{tail:012}"))
+            .expect("verification id"),
         ActorId::parse_str("00000000-0000-0000-0000-000000000001").expect("actor id"),
         VerificationTarget::Claim(ClaimRef::new("journal", "golden").expect("claim target")),
         VerificationMethod::Other,
         VerificationOutcome::NotEvaluated,
         Vec::new(),
     )
-    .expect("golden receipt")
+    .expect("verification receipt")
+}
+
+fn golden_receipt() -> VerificationReceipt {
+    receipt_with_tail(90_001)
 }
 
 fn golden_entry() -> VerificationJournalEntryV1 {
@@ -138,4 +147,108 @@ fn successor_requires_previous_digest() {
     )
     .expect("valid successor");
     assert_eq!(second.previous_digest(), Some(first.entry_digest()));
+}
+
+#[test]
+fn journal_entry_byte_limit_accepts_exact_boundary_and_rejects_max_plus_one_typed() {
+    let exact = vec![b' '; MAX_VERIFICATION_JOURNAL_ENTRY_BYTES];
+    let exact_error = VerificationJournalEntryV1::from_json_slice(&exact)
+        .expect_err("non-JSON exact-boundary input still fails parsing");
+    assert_ne!(
+        exact_error.code(),
+        VerifyErrorCode::ResourceLimitExceeded,
+        "exact byte ceiling must reach parsing rather than resource rejection"
+    );
+
+    let over = vec![b' '; MAX_VERIFICATION_JOURNAL_ENTRY_BYTES + 1];
+    let error = VerificationJournalEntryV1::from_json_slice(&over)
+        .expect_err("journal byte max+1 must fail");
+    assert_eq!(error.code(), VerifyErrorCode::ResourceLimitExceeded);
+}
+
+#[test]
+fn query_materialization_exact_max_is_accepted_and_max_plus_one_is_typed() {
+    let directory = tempdir().expect("tempdir");
+    let path = directory.path().join("materialization.sqlite");
+    drop(VerificationStore::open(&path).expect("initialize store"));
+
+    let mut connection = Connection::open(&path).expect("open direct fixture connection");
+    let transaction = connection.transaction().expect("fixture transaction");
+    let mut previous = None;
+    for index in 0..MAX_MATERIALIZED_JOURNAL_ENTRIES {
+        let sequence = VerificationJournalSequence::new(
+            u64::try_from(index + 1).expect("sequence fits u64"),
+        )
+        .expect("journal sequence");
+        let entry = VerificationJournalEntryV1::new(
+            sequence,
+            previous.clone(),
+            VerificationJournalBodyV1::VerificationReceipt {
+                receipt: receipt_with_tail(200_000 + u64::try_from(index).expect("index")),
+            },
+        )
+        .expect("materialization fixture entry");
+        let json = String::from_utf8(entry.canonical_bytes().expect("entry bytes"))
+            .expect("canonical UTF-8");
+        transaction
+            .execute(
+                "INSERT INTO verification_journal (sequence, entry_json, entry_digest) VALUES (?1, ?2, ?3)",
+                params![
+                    i64::try_from(sequence.get()).expect("SQLite sequence"),
+                    json,
+                    entry.entry_digest().hex()
+                ],
+            )
+            .expect("insert fixture entry");
+        previous = Some(entry.entry_digest().clone());
+    }
+    transaction.commit().expect("commit exact-max fixture");
+    drop(connection);
+
+    let store = VerificationStore::open(&path).expect("reopen exact-max store");
+    assert_eq!(
+        store.load_entries().expect("exact max materialization").len(),
+        MAX_MATERIALIZED_JOURNAL_ENTRIES
+    );
+    drop(store);
+
+    let sequence = VerificationJournalSequence::new(
+        u64::try_from(MAX_MATERIALIZED_JOURNAL_ENTRIES + 1).expect("sequence fits u64"),
+    )
+    .expect("over-limit sequence");
+    let over_entry = VerificationJournalEntryV1::new(
+        sequence,
+        previous,
+        VerificationJournalBodyV1::VerificationReceipt {
+            receipt: receipt_with_tail(300_000),
+        },
+    )
+    .expect("over-limit fixture entry");
+    let over_json = String::from_utf8(over_entry.canonical_bytes().expect("entry bytes"))
+        .expect("canonical UTF-8");
+    let connection = Connection::open(&path).expect("open direct fixture connection");
+    connection
+        .execute(
+            "INSERT INTO verification_journal (sequence, entry_json, entry_digest) VALUES (?1, ?2, ?3)",
+            params![
+                i64::try_from(sequence.get()).expect("SQLite sequence"),
+                over_json,
+                over_entry.entry_digest().hex()
+            ],
+        )
+        .expect("insert max+1 fixture entry");
+    drop(connection);
+
+    let store = VerificationStore::open(&path).expect("reopen over-limit store");
+    let error = store
+        .load_entries()
+        .expect_err("materialization max+1 must fail");
+    assert_eq!(error.code(), VerifyErrorCode::ResourceLimitExceeded);
+}
+
+proptest! {
+    #[test]
+    fn arbitrary_bounded_journal_json_never_panics(bytes in proptest::collection::vec(any::<u8>(), 0..=4_096)) {
+        let _ = VerificationJournalEntryV1::from_json_slice(&bytes);
+    }
 }
