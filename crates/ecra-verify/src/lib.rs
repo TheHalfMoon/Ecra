@@ -12,6 +12,7 @@
 //! into verification logic.
 
 pub mod aggregate;
+pub mod checkpoint;
 pub mod error;
 pub mod evidence;
 pub mod ids;
@@ -19,6 +20,11 @@ pub mod request;
 
 pub use aggregate::{
     MAX_RECEIPTS_PER_TARGET, VerificationAggregateStateV1, VerificationAggregateViewV1,
+};
+pub use checkpoint::{
+    CheckpointEvaluationV1, MAX_ACCEPTED_STATES_PER_REQUIREMENT, MAX_CHECKPOINT_LABEL_BYTES,
+    MAX_CHECKPOINT_REQUIREMENTS, VerificationCheckpointFieldsV1, VerificationCheckpointV1,
+    VerificationRequirementV1,
 };
 pub use error::{VerifyError, VerifyErrorCategory, VerifyErrorCode};
 pub use evidence::{
