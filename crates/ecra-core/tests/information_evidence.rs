@@ -180,3 +180,26 @@ fn phase5_invalid_contract_fixtures_fail_closed() {
         .is_err()
     );
 }
+
+#[test]
+fn evidence_ref_read_only_accessors_preserve_wire_and_canonical_bytes() {
+    let fixture = include_str!("../../../contracts/ecra-domain-v1/valid/evidence-snapshot.json");
+    let evidence: EvidenceRef = serde_json::from_str(fixture).expect("valid snapshot evidence");
+    let json_before = serde_json::to_vec(&evidence).expect("serialize evidence before access");
+    let jcs_before = ecra_core::to_jcs_vec(&evidence).expect("canonicalize evidence before access");
+
+    assert!(evidence.artifact().is_none());
+    assert!(evidence.observation().is_none());
+    assert!(evidence.receipt().is_none());
+    assert_eq!(evidence.external_ref(), Some("snapshot:example-report-v1"));
+    assert_eq!(
+        evidence.content_digest().expect("content digest").hex(),
+        "0000000000000000000000000000000000000000000000000000000000000000"
+    );
+    assert_eq!(evidence.as_of().expect("as-of").get(), 1900);
+
+    let json_after = serde_json::to_vec(&evidence).expect("serialize evidence after access");
+    let jcs_after = ecra_core::to_jcs_vec(&evidence).expect("canonicalize evidence after access");
+    assert_eq!(json_before, json_after);
+    assert_eq!(jcs_before, jcs_after);
+}

@@ -259,3 +259,24 @@ fn phase8_invalid_contracts_fail_closed() {
         );
     }
 }
+
+#[test]
+fn evidence_ref_accessors_do_not_change_contract_round_trip() {
+    let fixture = include_str!("../../../contracts/ecra-domain-v1/valid/evidence-snapshot.json");
+    let evidence: ecra_core::EvidenceRef =
+        serde_json::from_str(fixture).expect("valid evidence fixture");
+    let before = serde_json::to_value(&evidence).expect("serialize evidence");
+
+    let _ = evidence.artifact();
+    let _ = evidence.observation();
+    let _ = evidence.receipt();
+    let _ = evidence.external_ref();
+    let _ = evidence.content_digest();
+    let _ = evidence.as_of();
+
+    let encoded = serde_json::to_string(&evidence).expect("serialize evidence after access");
+    let round_trip: ecra_core::EvidenceRef =
+        serde_json::from_str(&encoded).expect("round trip evidence");
+    let after = serde_json::to_value(&round_trip).expect("serialize round trip evidence");
+    assert_eq!(before, after);
+}
