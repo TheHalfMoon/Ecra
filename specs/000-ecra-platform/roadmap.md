@@ -168,6 +168,6 @@ Every affected slice MUST add/update as part of Definition of Done:
 
 `ECR-031 Identity, Trust Root & Sensitive Storage Foundations` is `TASKS_READY` in canonical planning. Its live implementation branch/PR state is tracked by `EXECUTION.md`, its slice `STATUS.md`, PR #4 and exact Actions truth rather than by this architectural row.
 
-`ECR-004 Verification & Reconciliation` is now `TASKS_READY`: FR-001–FR-045 and SC-001–SC-012 are owned, Analyze Pass 2 found zero blocking planning drift after IC-001 remediated the single Pass-1 blocker, and G1–G15 pass/are explicitly N/A. This planning state must become canonical and the exact resulting `main` head must pass required ECR-001/ECR-002 regressions before an ECR-004 implementation branch is created.
+`ECR-004 Verification & Reconciliation` is `TASKS_READY`: FR-001–FR-046 and SC-001–SC-013 are owned; Analyze Pass 3 found zero blocking planning drift after A-001/IC-001 and A-002/IC-002 were remediated; G1–G15 pass/are explicitly N/A. IC-002 freezes the important execution boundary that reconciliation evidence never clears ECR-002 `unresolved_attempts` or makes the same v1 run resumable/retryable. This planning state must become canonical and the exact resulting `main` head must pass required ECR-001/ECR-002 regressions before an ECR-004 implementation branch is created.
 
 ECR-003 remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`.
