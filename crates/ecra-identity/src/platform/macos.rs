@@ -137,10 +137,7 @@ const fn key_purpose_token(purpose: KeyPurpose) -> &'static str {
     }
 }
 
-fn normalize_keychain_error(
-    error: SecurityFrameworkError,
-    context: &'static str,
-) -> IdentityError {
+fn normalize_keychain_error(error: SecurityFrameworkError, context: &'static str) -> IdentityError {
     match error.code() {
         ERR_SEC_ITEM_NOT_FOUND => IdentityError::new(
             IdentityErrorCategory::TrustBackend,
@@ -178,8 +175,7 @@ mod tests {
         let trust_root =
             TrustRootId::parse_str(&format!("00000000-0000-4000-8000-{suffix}")).unwrap();
         let key_suffix = format!("{:08x}{:04x}", process::id(), slot.wrapping_add(0x100));
-        let key = KeyId::parse_str(&format!("00000000-0000-4000-8000-{key_suffix}"))
-            .unwrap();
+        let key = KeyId::parse_str(&format!("00000000-0000-4000-8000-{key_suffix}")).unwrap();
         (trust_root, key)
     }
 
