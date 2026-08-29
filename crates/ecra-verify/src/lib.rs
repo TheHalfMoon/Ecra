@@ -16,6 +16,7 @@ pub mod checkpoint;
 pub mod error;
 pub mod evidence;
 pub mod ids;
+pub mod journal;
 pub mod reconcile;
 pub mod request;
 
@@ -33,6 +34,11 @@ pub use evidence::{
     FreshnessRuleV1, assess_request, verify_request,
 };
 pub use ids::{CheckpointId, ReconciliationId};
+pub use journal::{
+    MAX_VERIFICATION_JOURNAL_ENTRY_BYTES, MAX_VERIFICATION_JOURNAL_SEQUENCE,
+    VerificationJournalBodyV1, VerificationJournalDigest, VerificationJournalDigestAlgorithm,
+    VerificationJournalEntryV1, VerificationJournalSequence,
+};
 pub use reconcile::{
     MAX_RECONCILIATION_NOTES_BYTES, MAX_RECONCILIATION_SUPPORT_IDS, ReconciliationInputV1,
     ReconciliationOutcomeV1, ReconciliationRecordFieldsV1, ReconciliationRecordV1,
