@@ -159,3 +159,11 @@ fn verification_notes_do_not_change_verification_target_or_outcome() {
     assert_eq!(base.outcome(), decorated.outcome());
     assert_eq!(base.evidence(), decorated.evidence());
 }
+
+#[test]
+fn fact_verified_flag_remains_rejected_by_the_canonical_wire_contract() {
+    let result: Result<ecra_core::Fact, _> = serde_json::from_str(include_str!(
+        "../../../contracts/ecra-domain-v1/invalid/fact-verified-flag.json"
+    ));
+    assert!(result.is_err());
+}
