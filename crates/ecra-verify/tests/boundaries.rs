@@ -4,7 +4,7 @@ use ecra_core::{
     ActionReceipt, ActorId, ReceiptId, VerificationId, VerificationMethod, VerificationOutcome,
     VerificationReceipt, VerificationTarget,
 };
-use ecra_verify::{VerificationRequestFieldsV1, VerificationRequestV1};
+use ecra_verify::{ReconciliationRecordV1, VerificationRequestFieldsV1, VerificationRequestV1};
 
 #[test]
 fn execution_and_domain_types_have_no_parallel_verified_field() {
@@ -58,4 +58,28 @@ fn verification_request_exposes_no_authority_surface() {
             "prohibited field: {prohibited}"
         );
     }
+}
+
+#[test]
+fn reconciliation_has_no_execution_or_ecr002_mutation_surface() {
+    let source = include_str!("../src/reconcile.rs");
+    for prohibited in [
+        "RunEvent",
+        "ActionReceipt",
+        "ensure_retry_allowed",
+        "CapabilityGrant",
+        "pub fn execute",
+        "pub fn schedule",
+        "pub fn resume",
+        "retry_allowed",
+    ] {
+        assert!(
+            !source.contains(prohibited),
+            "reconciliation source contains prohibited surface: {prohibited}"
+        );
+    }
+    assert_ne!(
+        TypeId::of::<ReconciliationRecordV1>(),
+        TypeId::of::<ActionReceipt>()
+    );
 }
