@@ -15,8 +15,7 @@ fn verification_id(tail: u64) -> VerificationId {
 }
 
 fn evidence_id(tail: u64) -> EvidenceId {
-    EvidenceId::parse_str(&format!("00000000-0000-0000-0000-{tail:012}"))
-        .expect("evidence id")
+    EvidenceId::parse_str(&format!("00000000-0000-0000-0000-{tail:012}")).expect("evidence id")
 }
 
 fn target() -> VerificationTarget {
@@ -53,8 +52,7 @@ fn action() -> ActionRef {
 fn reconciliation(support: Vec<VerificationId>) -> ReconciliationRecordV1 {
     let action = action();
     let attempt = ActionAttemptRef::new(
-        ActionAttemptId::parse_str("00000000-0000-0000-0000-000000093002")
-            .expect("attempt id"),
+        ActionAttemptId::parse_str("00000000-0000-0000-0000-000000093002").expect("attempt id"),
         action.clone(),
     );
     ReconciliationRecordV1::from_fields(ReconciliationRecordFieldsV1 {
@@ -91,8 +89,8 @@ fn journal_json_formatting_and_line_endings_preserve_digest_and_canonical_bytes(
     );
     let compact_parsed =
         VerificationJournalEntryV1::from_json_slice(&compact).expect("compact parse");
-    let crlf_parsed = VerificationJournalEntryV1::from_json_slice(pretty_crlf.as_bytes())
-        .expect("CRLF parse");
+    let crlf_parsed =
+        VerificationJournalEntryV1::from_json_slice(pretty_crlf.as_bytes()).expect("CRLF parse");
 
     assert_eq!(compact_parsed, crlf_parsed);
     assert_eq!(compact_parsed.entry_digest(), crlf_parsed.entry_digest());
@@ -113,11 +111,9 @@ fn aggregate_behavior_is_independent_of_receipt_input_order() {
         &[verified.clone(), rejected.clone(), inconclusive.clone()],
     )
     .expect("forward aggregate");
-    let reverse = VerificationAggregateViewV1::from_receipts(
-        target(),
-        &[inconclusive, rejected, verified],
-    )
-    .expect("reverse aggregate");
+    let reverse =
+        VerificationAggregateViewV1::from_receipts(target(), &[inconclusive, rejected, verified])
+            .expect("reverse aggregate");
 
     assert_eq!(forward, reverse);
     assert_eq!(
@@ -155,8 +151,7 @@ fn reconciliation_support_order_and_json_field_order_are_portable() {
         ),
         serde_json::to_string(&value["notes"]).expect("notes"),
         serde_json::to_string(&value["reconciled_at"]).expect("reconciled_at"),
-        serde_json::to_string(&value["verification_receipts"])
-            .expect("verification_receipts"),
+        serde_json::to_string(&value["verification_receipts"]).expect("verification_receipts"),
         serde_json::to_string(&value["outcome"]).expect("outcome"),
         serde_json::to_string(&value["action"]).expect("action"),
         serde_json::to_string(&value["attempt"]).expect("attempt"),
