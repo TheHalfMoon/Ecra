@@ -21,6 +21,7 @@
 - [ ] **T009** Implement request validation -> canonical ECR-001 `VerificationReceipt` construction, proving output receipt ID/verifier/principal/target/method/evidence/outcome/time/notes exactly match validated request inputs and no second verification-record type exists. **Paths:** `crates/ecra-verify/src/request.rs`, `crates/ecra-verify/tests/request_contract.rs`. **FR-001–FR-009; SC-001**
 - [ ] **T010** Add architecture/type tests proving `ActionReceipt`, `Fact`, `Artifact`, notes and model/tool metadata cannot self-promote to `VerificationReceipt` or gain a parallel verified flag. **Paths:** `crates/ecra-verify/tests/boundaries.rs`, `crates/ecra-core/tests/non_authoritative_metadata.rs`. **FR-003, FR-004, FR-014, FR-015; SC-001, SC-011**
 - [ ] **T011** Run exact-head Phase 2 CI and record the immutable evidence checkpoint before evidence semantics. **Path:** `specs/004-verification-receipts/STATUS.md`. **SC-001, SC-009–SC-011**
+- [ ] **T011A** Add only the read-only canonical `EvidenceRef` accessors authorized by `implementation-clarifications.md` for existing artifact/observation/receipt/external-ref/content-digest/as-of fields; prove ECR-001 serialization/canonical semantics are unchanged and run the full ECR-001 regression suite before ECR-004 reads those fields. **Paths:** `crates/ecra-core/src/evidence.rs`, `crates/ecra-core/tests/information_evidence.rs`, `crates/ecra-core/tests/contract_fixtures.rs`. **FR-011–FR-016; SC-001, SC-008, SC-010**
 
 ## Phase 3 — Decision-grade evidence and deterministic aggregation
 
@@ -87,7 +88,7 @@
 ```text
 T001 → T002 → T003 → T004 → T005
   ↓
-T006 → T007 → T008 → T009 → T010 → T011
+T006 → T007 → T008 → T009 → T010 → T011 → T011A
   ↓
 T012 → T013 → T014 → T015 → T016 → T017
   ↓
