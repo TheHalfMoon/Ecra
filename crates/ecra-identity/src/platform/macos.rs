@@ -1,5 +1,5 @@
 use security_framework::{
-    Error as SecurityFrameworkError,
+    base::Error as SecurityFrameworkError,
     passwords::{
         PasswordOptions, delete_generic_password_options, generic_password,
         set_generic_password_options,
@@ -31,7 +31,8 @@ pub(crate) struct MacosDataProtectionKeychainBackend;
 impl MacosDataProtectionKeychainBackend {
     fn password_options(secret_ref: TrustBackendSecretRef) -> PasswordOptions {
         let account = secret_account(secret_ref);
-        let mut options = PasswordOptions::new_generic_password(ECRA_IDENTITY_KEYCHAIN_SERVICE, &account);
+        let mut options =
+            PasswordOptions::new_generic_password(ECRA_IDENTITY_KEYCHAIN_SERVICE, &account);
         options.use_protected_keychain();
         options.set_access_synchronized(Some(false));
         options
@@ -61,7 +62,9 @@ impl TrustBackend for MacosDataProtectionKeychainBackend {
                 drop(Zeroizing::new(bytes));
                 Ok(TrustBackendStatus::Available)
             }
-            Err(error) if error.code() == ERR_SEC_ITEM_NOT_FOUND => Ok(TrustBackendStatus::Available),
+            Err(error) if error.code() == ERR_SEC_ITEM_NOT_FOUND => {
+                Ok(TrustBackendStatus::Available)
+            }
             Err(error)
                 if matches!(
                     error.code(),
@@ -172,10 +175,8 @@ mod tests {
 
     fn typed_ids(slot: u16) -> (TrustRootId, KeyId) {
         let suffix = format!("{:08x}{slot:04x}", process::id());
-        let trust_root = TrustRootId::parse_str(&format!(
-            "00000000-0000-4000-8000-{suffix}"
-        ))
-        .unwrap();
+        let trust_root =
+            TrustRootId::parse_str(&format!("00000000-0000-4000-8000-{suffix}")).unwrap();
         let key_suffix = format!("{:08x}{:04x}", process::id(), slot.wrapping_add(0x100));
         let key = KeyId::parse_str(&format!("00000000-0000-4000-8000-{key_suffix}"))
             .unwrap();
