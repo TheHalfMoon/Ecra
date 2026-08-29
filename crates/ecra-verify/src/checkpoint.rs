@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, fmt};
 
 use ecra_core::{SchemaVersion, VerificationTarget};
 use serde::{Deserialize, Deserializer, Serialize, de};
@@ -11,6 +11,7 @@ use crate::{
 pub const MAX_CHECKPOINT_LABEL_BYTES: usize = 256;
 pub const MAX_CHECKPOINT_REQUIREMENTS: usize = 128;
 pub const MAX_ACCEPTED_STATES_PER_REQUIREMENT: usize = 2;
+pub const MAX_VERIFICATION_CHECKPOINT_BYTES: usize = 256 * 1024;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -23,7 +24,48 @@ pub struct VerificationRequirementV1 {
 #[serde(deny_unknown_fields)]
 struct VerificationRequirementWire {
     target: VerificationTarget,
+    #[serde(deserialize_with = "deserialize_accepted_states")]
     accepted_states: Vec<VerificationAggregateStateV1>,
+}
+
+fn deserialize_accepted_states<'de, D>(
+    deserializer: D,
+) -> Result<Vec<VerificationAggregateStateV1>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct AcceptedStatesVisitor;
+
+    impl<'de> de::Visitor<'de> for AcceptedStatesVisitor {
+        type Value = Vec<VerificationAggregateStateV1>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a bounded list of verification aggregate states")
+        }
+
+        fn visit_seq<A>(self, mut sequence: A) -> Result<Self::Value, A::Error>
+        where
+            A: de::SeqAccess<'de>,
+        {
+            let mut values = Vec::with_capacity(
+                sequence
+                    .size_hint()
+                    .unwrap_or(0)
+                    .min(MAX_ACCEPTED_STATES_PER_REQUIREMENT),
+            );
+            while let Some(value) = sequence.next_element()? {
+                if values.len() >= MAX_ACCEPTED_STATES_PER_REQUIREMENT {
+                    return Err(de::Error::custom(
+                        "verification requirement accepted_states exceeds the v1 limit",
+                    ));
+                }
+                values.push(value);
+            }
+            Ok(values)
+        }
+    }
+
+    deserializer.deserialize_seq(AcceptedStatesVisitor)
 }
 
 impl VerificationRequirementV1 {
@@ -130,7 +172,48 @@ struct VerificationCheckpointWire {
     version: SchemaVersion,
     id: CheckpointId,
     label: String,
+    #[serde(deserialize_with = "deserialize_requirements")]
     requirements: Vec<VerificationRequirementV1>,
+}
+
+fn deserialize_requirements<'de, D>(
+    deserializer: D,
+) -> Result<Vec<VerificationRequirementV1>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct RequirementsVisitor;
+
+    impl<'de> de::Visitor<'de> for RequirementsVisitor {
+        type Value = Vec<VerificationRequirementV1>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a bounded list of verification requirements")
+        }
+
+        fn visit_seq<A>(self, mut sequence: A) -> Result<Self::Value, A::Error>
+        where
+            A: de::SeqAccess<'de>,
+        {
+            let mut values = Vec::with_capacity(
+                sequence
+                    .size_hint()
+                    .unwrap_or(0)
+                    .min(MAX_CHECKPOINT_REQUIREMENTS),
+            );
+            while let Some(value) = sequence.next_element()? {
+                if values.len() >= MAX_CHECKPOINT_REQUIREMENTS {
+                    return Err(de::Error::custom(
+                        "verification checkpoint requirements exceeds the v1 limit",
+                    ));
+                }
+                values.push(value);
+            }
+            Ok(values)
+        }
+    }
+
+    deserializer.deserialize_seq(RequirementsVisitor)
 }
 
 impl VerificationCheckpointV1 {
@@ -197,15 +280,37 @@ impl VerificationCheckpointV1 {
             .map(|(_, requirement)| requirement)
             .collect();
 
-        Ok(Self {
+        let value = Self {
             version,
             id: fields.id,
             label: fields.label,
             requirements: fields.requirements,
-        })
+        };
+        let serialized = serde_json::to_vec(&value).map_err(|_| {
+            VerifyError::new(
+                VerifyErrorCategory::Validation,
+                VerifyErrorCode::InvalidTarget,
+                "verification checkpoint could not be size-checked",
+            )
+        })?;
+        if serialized.len() > MAX_VERIFICATION_CHECKPOINT_BYTES {
+            return Err(VerifyError::new(
+                VerifyErrorCategory::ResourceLimit,
+                VerifyErrorCode::ResourceLimitExceeded,
+                "verification checkpoint exceeds the complete v1 byte limit",
+            ));
+        }
+        Ok(value)
     }
 
     pub fn from_json_slice(input: &[u8]) -> Result<Self, VerifyError> {
+        if input.len() > MAX_VERIFICATION_CHECKPOINT_BYTES {
+            return Err(VerifyError::new(
+                VerifyErrorCategory::ResourceLimit,
+                VerifyErrorCode::ResourceLimitExceeded,
+                "verification checkpoint JSON exceeds the complete v1 byte limit",
+            ));
+        }
         let wire: VerificationCheckpointWire = serde_json::from_slice(input).map_err(|_| {
             VerifyError::new(
                 VerifyErrorCategory::Validation,
