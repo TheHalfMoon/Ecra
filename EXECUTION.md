@@ -52,13 +52,16 @@ Repository approval cannot create/infer those Apple credentials. Do not substitu
 ```text
 Slice: ECR-004 — Verification & Reconciliation
 Branch: 004-verification-receipts-impl
-PR: #6 — DRAFT / OPEN / NON-CANONICAL
+Review PR: #7 — READY / OPEN / NON-CANONICAL
+Superseded Draft PR: #6 — CLOSED / NOT MERGED
 Canonical implementation base: 4fb61f8b41267983fc460c666fddd7781d91653c
-Lifecycle: IMPLEMENTING_FINAL_CONVERGENCE
-Current frontier: T049 -> T050
+Lifecycle: IMPLEMENTING_REVIEW_REMEDIATION
+Current frontier: T051 review findings -> renewed exact-head gate -> review closure
 ```
 
-Verified implementation checkpoints:
+PR #6 was replaced as the review container only because the connected ready-for-review GraphQL mutation was incompatible with the live GitHub schema. PR #7 opened over the same branch and exact tested head; no implementation diff was altered by that container replacement.
+
+Verified implementation checkpoints before review remediation:
 
 ```text
 Phase 1  e223ba5fbf8c375c580e7a93f524be3fd4c311fa  run 33237728338  SUCCESS
@@ -72,29 +75,22 @@ T040     815b95ed0f95513e583aa077f04e863998d0d425  run 33250068524  SUCCESS
 T041     2a86dd909abfcb9d8658eab589787eb376a73004  run 33250250973  SUCCESS
 T043     67207e1bc91434555bfe31997f4af9f641324a76  run 33250358128  SUCCESS
 T045     90ed1bbeafea72ee655bc58a96e94696096f360e  run 33251037913  SUCCESS
+Pre-review T050  882b4ef7358aef6c416dd1b9dd67602e86334a06  run 33251589848  SUCCESS
 ```
 
-T045 exact-head job `99096645538` passed locked metadata/build, rustfmt, strict Clippy, workspace tests, complete ECR-001 regressions, complete ECR-002 regressions, all explicit ECR-004 quickstart targets, dedicated ECR-002 unresolved-state compatibility acceptance, rustdoc, offline replay, all unsafe/dependency boundaries and dependency evidence.
+The pre-review exact-head job `99098084666` passed locked metadata/build, rustfmt, strict Clippy, workspace tests, complete ECR-001 regressions, complete ECR-002 regressions, all explicit ECR-004 quickstart targets, dedicated ECR-002 unresolved-state compatibility acceptance, rustdoc, offline replay, all unsafe/dependency boundaries and dependency evidence.
 
-T046/T047 traceability/constitution closure and T048 post-implementation analyze are materialized on the implementation branch. They found zero unowned FR/SC and zero constitutional blocker. T048 found only bounded documentation convergence items, now owned by T049:
-
-```text
-C-001 data-model DecisionGradeAssessment shape/reasons
-C-002 journal domain-separator prose
-C-003 checkpoint Inconclusive satisfying-state wording
-lifecycle/index/status prose stale from planning state
-```
-
-T049 must converge these docs plus platform lifecycle/index truth. Then T050 runs the complete final exact-head ECR-004 gate. PR #6 must remain Draft until T050 succeeds.
+T046/T047 traceability/constitution closure and T048/T049 convergence were materialized before review. CodeRabbit completed with minimal merge risk and no actionable merge-blocking finding. Cubic completed its PR #7 review with 19 findings; valid findings are being repaired forward-only and review-only false positives are documented/resolved. Because review remediation changes branch content, historical T050 green is no longer final evidence. A renewed exact-head complete ECR-004 gate is mandatory before T051 can close.
 
 ## ECR-004 frozen boundaries
 
 - ECR-001 `VerificationReceipt` is the only canonical independent verification record.
-- `ActionReceipt` remains executor-observed evidence and cannot self-verify.
+- `ActionReceipt` remains executor-observed evidence and cannot self-verify, even when the receipt itself has an immutable digest/artifact binding.
 - UNKNOWN reconciliation never fabricates `ActionReceipt` or mutates ECR-002 run-event truth.
 - aggregate/checkpoint/reconciliation views preserve conflict and grant no authority.
-- `semantically_retryable*` is advisory only for a future new-attempt proposal.
+- `semantically_retryable*` is advisory only for a future new-attempt proposal and must revalidate any supplied reconciliation record against canonical supporting receipts.
 - every reconciliation outcome leaves the original ECR-002 prepared/unreceipted/unresolved state and `unresolved_attempts` unchanged.
+- `RunPhase` is unchanged by every ECR-004 reconciliation outcome.
 - same-run `RunResumed`, `ExecutionCompleted`, and blind-retry guards remain authoritative.
 - ECR-002 `RunEvent` v1 remains unchanged; no sidecar projection represents run resolution.
 - ECR-004 uses a separate append-only verification journal with rebuildable projections.
@@ -106,11 +102,11 @@ T049 must converge these docs plus platform lifecycle/index truth. Then T050 run
 ## ECR-004 remaining closure order
 
 ```text
-T049 converge package/platform/index/EXECUTION to implementation truth
+T051 repair every valid PR #7 review finding forward-only and document/resolve non-actionable findings
   ↓
-T050 complete exact-head final ECR-004 + ECR-001 + ECR-002 gate
+renew complete T050-equivalent exact-head ECR-004 + ECR-001 + ECR-002 gate on the final review-remediation head
   ↓
-T051 move PR #6 out of Draft; process all reviews/comments/threads to zero actionable blocker
+re-process PR #7 reviews/comments/threads/checks to zero actionable blocker on that exact head
   ↓
 T052 merge exact expected feature head by allowed non-rebase method
      then require ECR-004 + ECR-001 + ECR-002 workflows on canonical main
