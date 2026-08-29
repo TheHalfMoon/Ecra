@@ -1,0 +1,101 @@
+name: ECR-004 CI
+
+on:
+  push:
+    branches:
+      - 004-verification-receipts-impl
+      - main
+
+concurrency:
+  group: ecr-004-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --fail --silent --show-error https://sh.rustup.rs \
+              | sh -s -- -y --profile minimal --default-toolchain none
+            export PATH="$HOME/.cargo/bin:$PATH"
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt,clippy
+      - name: Locked metadata
+        run: cargo metadata --format-version 1 --locked --no-deps >/dev/null
+      - name: Build locked workspace
+        run: cargo build --workspace --locked
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - name: Test workspace
+        run: cargo test --workspace --locked
+      - name: ECR-001 regression contract targets
+        run: |
+          cargo test -p ecra-core --test valid_fixtures --locked
+          cargo test -p ecra-core --test invalid_fixtures --locked
+          cargo test -p ecra-core --test contract_fixtures --locked
+          cargo test -p ecra-core --test canonicalization --locked
+          cargo test -p ecra-core --test action_digest --locked
+          cargo test -p ecra-core --test properties --locked
+          cargo test -p ecra-core --test portability --locked
+          cargo test -p ecra-core --test non_authoritative_metadata --locked
+      - name: ECR-002 regression contract targets
+        run: |
+          cargo test -p ecra-run --test event_contract --locked
+          cargo test -p ecra-run --test reducer --locked
+          cargo test -p ecra-run --test attempts --locked
+          cargo test -p ecra-run --test budgets --locked
+          cargo test -p ecra-run --test migration --locked
+          cargo test -p ecra-run --test sqlite_store --locked
+          cargo test -p ecra-run --test crash_recovery --locked
+          cargo test -p ecra-run --test archive --locked
+          cargo test -p ecra-run --test boundaries --locked
+          cargo test -p ecra-run --test portability --locked
+          cargo test -p ecra-run --locked
+      - name: ECR-004 Phase 1 targets
+        run: |
+          cargo test -p ecra-verify --lib --locked
+          cargo test -p ecra-verify --tests --locked
+      - name: Rustdoc tests
+        run: cargo test --doc --workspace --locked
+      - name: Offline replay gate
+        run: cargo test --workspace --locked --offline
+      - name: ECR-001 boundaries
+        run: |
+          bash scripts/check-core-unsafe.sh
+          bash scripts/check-core-deps.sh
+          cargo tree -p ecra-core --locked
+      - name: ECR-002 boundaries
+        run: |
+          bash scripts/check-run-unsafe.sh
+          bash scripts/check-run-deps.sh
+          cargo tree -p ecra-run --locked
+      - name: ECR-004 boundaries
+        run: |
+          bash scripts/check-verify-unsafe.sh
+          bash scripts/check-verify-deps.sh
+          cargo tree -p ecra-verify --locked
+      - name: ECR-004 dependency evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustc --version
+          cargo --version
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum Cargo.lock
+          else
+            shasum -a 256 Cargo.lock
+          fi
+          grep -F 'rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled"] }' crates/ecra-verify/Cargo.toml
+          grep -F 'uuid = { version = "1", features = ["serde"] }' crates/ecra-verify/Cargo.toml
+          cargo tree -p ecra-verify --edges normal --depth 1 --locked
