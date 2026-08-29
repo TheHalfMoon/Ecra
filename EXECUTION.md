@@ -24,7 +24,7 @@ ECR-002 final closure main head: aadc19c972e619222d426674d7542dd9c00dbe44
 ECR-002 closure CI: 33155302100 — SUCCESS
 
 Selected active slice: ECR-031 — Identity, Trust Root & Sensitive Storage Foundations
-Lifecycle: IMPLEMENTING
+Lifecycle: IMPLEMENTING / BLOCKED_EXTERNAL_NATIVE_ACCEPTANCE
 Canonical implementation base / current canonical main: f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0
 Implementation branch: 031-identity-trust-root
 Implementation PR: #4 — DRAFT / NON-CANONICAL
@@ -40,29 +40,60 @@ Phase 4 closure record: 217934d1f2c334b943349af87bcf40a4ad44b889
 Phase 4 closure CI: 33196312711 / job 98934231597 — SUCCESS
 Phase 5 verified ledger head: bd066fa501476ff4f7fe43d0f4153de1e8d2fc60
 Phase 5 CI: 33198508505 / job 98941727727 — SUCCESS
-Phase 6 semantic verified head: a668df317d1718008c8008ee35a40ebb83c038a4
-Phase 6 semantic CI: 33200534586 / job 98948594548 — SUCCESS
+Phase 6 ledger head: 64c34744dd05b9850d8c9657a87e46913bd23412
+Phase 6 CI: 33200973225 — SUCCESS
 
-Current task frontier: T058 — Phase 6 ledger gate
+Phase 7 non-native evidence head: 4f2c150d2e5fd882d8554cd32a8aea4d4c5da639
+Phase 7 ECR-031 CI: 33235282966 — all non-native steps SUCCESS; native Data Protection Keychain acceptance FAILURE
+Host readiness: 33235282975 and 33235454670 — signing/provisioning assets absent
+
+Current task frontier: T064 — live trusted-macOS Data Protection Keychain acceptance — BLOCKED_EXTERNAL_NATIVE_ACCEPTANCE
 ```
 
 ## Current implementation state
 
-IC-001 prerequisite wave T043–T050/T059–T060 and the corrected Phase 4 chain T035–T042 remain complete and exact-head verified.
+IC-001 prerequisite wave T043–T050/T059–T060 and the corrected Phase 4 chain T035–T042 remain complete and verified.
 
-Phase 5 remains verified through T053.
+Phase 5 T051–T053 is complete and verified.
 
-Phase 6 semantic work T054–T057 is exact-head verified and provides:
+Phase 6 T054–T058 is complete and exact-head verified by run `33200973225` on `64c34744dd05b9850d8c9657a87e46913bd23412`.
 
-- strict bounded `ProtectedAnchorV1` wire with closed purpose/algorithm values and strict SHA-256 payload digest parsing;
-- domain-separated canonical protected-anchor signing input matching the frozen contract;
-- Ed25519 protected-anchor signing through an active purpose-specific key and backend-opened secret material copied into bounded zeroizing memory;
-- verification bound to exact trust root, key ID, purpose, algorithm, lifecycle state and signature;
-- mutation coverage for payload digest, purpose, key ID and signature;
-- type-level distinction between protected anchors, generic content digests and ECR-004 verification receipts;
-- bounded reuse of the exact ECR-002 run-created ledger digest fixture without adding an `ecra-run` dependency or changing ledger bytes/store semantics.
+Phase 7 currently has:
 
-T058 owns the Phase 6 status gate. The current ledger-convergence record must itself pass permanent exact-head ECR-031 CI before Phase 6 can close and T061 can begin.
+- T061 complete: concrete macOS Data Protection Keychain backend using `security-framework = 3.7.0`, `use_protected_keychain()`, and `synchronizing=false`;
+- T062 complete: unavailable/locked/not-found/delete failures normalized into redacted Ecra errors with no plaintext fallback;
+- T063 complete: portable v1 macOS signing assurance frozen without Secure Enclave/hardware/non-exportability/user-presence overclaim;
+- T064 open and blocked: live store/open/delete + bootstrap/reopen acceptance cannot pass until the runner has provisioning-authorized app-like code signing;
+- T065 complete: Windows v1 explicit unsupported/unverified DPAPI status, no fallback/cross-machine/hardware-signing claim;
+- T066 complete: Linux v1 explicit unsupported/unverified Secret Service status, no fallback and no secret lookup-attribute design;
+- T067 complete: architecture tests prevent assurance inflation;
+- T068 open: exact-head Phase 7 gate depends on T064.
+
+On Phase 7 evidence head `4f2c150d2e5fd882d8554cd32a8aea4d4c5da639`, permanent ECR-031 CI run `33235282966` passed stale-lock rejection, build, rustfmt, strict Clippy, workspace tests, ECR-001/ECR-002 regressions, explicit ECR-031 targets, rustdoc, offline replay, all boundary scripts, and dependency/toolchain evidence. Only `macOS Data Protection Keychain live acceptance` failed.
+
+## External native-acceptance blocker
+
+The repository-scoped self-hosted macOS runner has an interactive console user that matches the runner account and has `codesign` plus Xcode build tooling. It does not currently have the credentials/assets required for Data Protection Keychain acceptance:
+
+```text
+code-signing identity      ABSENT
+local provisioning profile ABSENT
+Xcode developer account    ABSENT
+Xcode development team     ABSENT
+```
+
+Evidence:
+
+- readiness run `33235282975`: console/user/tools succeeded; identity/profile checks failed;
+- readiness run `33235454670`: Xcode account/team, identity and profile checks failed.
+
+The runner therefore cannot use Xcode Automatic Signing to create/download a valid profile because no Apple developer account/team is configured for that macOS user.
+
+### Exact unblock action
+
+Configure a valid Apple developer account/team in Xcode for the same macOS user that owns the self-hosted runner, and allow Xcode to create/install an Apple Development code-signing identity plus a provisioning profile suitable for an app-like ECR-031 test host. Then rerun the permanent trusted branch gate and require both Data Protection Keychain live tests to pass on the exact feature head.
+
+This external prerequisite cannot be substituted by repository approval alone. Do not create or infer Apple credentials, a team identity, certificate, or provisioning profile from repository data.
 
 ## Frozen ECR-031 v1 security decisions
 
@@ -71,9 +102,11 @@ T058 owns the Phase 6 status gate. The current ledger-convergence record must it
 - Issuance is process-local/non-ambient and cannot mint for arbitrary caller-selected principals.
 - Canonical assertion/protected-anchor signing suite is Ed25519 software signing under native protected custody.
 - Protected envelopes use ChaCha20-Poly1305 + HKDF-SHA-256.
+- macOS v1 requires Data Protection Keychain with local-only/non-synchronizing behavior.
 - No Secure Enclave, hardware-backed, non-exportable or user-presence signing claim exists in portable v1.
 - No universal monotonic rollback-resistance claim exists against restoration of older valid protected+native-store state.
 - No plaintext/file/environment/memory production fallback is permitted.
+- Legacy file-based Keychain and ad-hoc signing are not acceptable substitutes for T064.
 
 ## Hard slice boundaries
 
@@ -84,22 +117,22 @@ Identity evidence answers **who / on whose behalf**, never **what is authorized*
 ## Current exact execution order
 
 ```text
-T058
+T064 [BLOCKED_EXTERNAL_NATIVE_ACCEPTANCE]
   ↓
-T061 → T062 → T063 → T064 → T065 → T066 → T067 → T068
+T068
   ↓
 T069 → T070 → T071 → T072 → T073 → T074
   ↓
 T075 → T076 → T077 → T078 → T079 → T080 → T081 → T082
 ```
 
-T061 owns the concrete macOS Data Protection Keychain backend. T065/T066 may explicitly record Windows/Linux as unsupported/unverified if exact dependency/native verification is unavailable; they may not fabricate an implementation or fallback.
+Phase 8 is not eligible before T068. ECR-003 is not eligible before ECR-031 `CLOSED_CANONICAL`. ECR-004 remains a separate dependency-eligible slice and must not be folded into this PR.
 
 ## CI architecture
 
-The repository-scoped self-hosted macOS runner `macbook` is the trusted ECR-031 oracle. Every asserted exact head must pass stale-lock rejection, locked build, rustfmt, strict Clippy, workspace tests, ECR-001 and ECR-002 regressions, explicit ECR-031 targets, rustdoc, offline replay, boundary scripts and dependency/toolchain evidence.
+The repository-scoped self-hosted macOS runner `macbook` is the trusted ECR-031 oracle. Every asserted exact head must pass stale-lock rejection, locked build, rustfmt, strict Clippy, workspace tests, ECR-001 and ECR-002 regressions, explicit ECR-031 targets, rustdoc, offline replay, boundary scripts and dependency/toolchain evidence. Phase 7 additionally requires live Data Protection Keychain acceptance.
 
-Historical success cannot be reused after a content change to claim current-head PASS.
+Historical success cannot be reused after a content change to claim current-head PASS. Bookkeeping/diagnostic commits made after an evidence head remain non-canonical until their own required gate reaches the appropriate result.
 
 ## Execution rule
 
