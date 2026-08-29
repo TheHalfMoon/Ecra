@@ -14,7 +14,7 @@ expected_direct="$({
 } | sort -u)"
 
 actual_direct="$(
-  cargo tree -p ecra-verify --edges normal --depth 1 --prefix none \
+  cargo tree --locked -p ecra-verify --edges normal --depth 1 --prefix none \
     | awk 'NR > 1 {print $1}' \
     | sort -u
 )"
@@ -26,7 +26,7 @@ fi
 
 forbidden='tokio|async-std|smol|reqwest|hyper|tonic|ureq|curl|surf|isahc|sqlx|diesel|sea-orm|mongodb|redis|playwright|chromiumoxide|fantoccini|headless_chrome|thirtyfour|async-openai|mistralrs|candle-core|cedar-policy|rmcp|opentelemetry|tracing-opentelemetry|sentry|duct|command-group'
 
-tree="$(cargo tree -p ecra-verify --edges normal --prefix none)"
+tree="$(cargo tree --locked -p ecra-verify --edges normal --prefix none)"
 
 if printf '%s\n' "$tree" | grep -Eiq "^(${forbidden})( |$)"; then
   echo "ecra-verify contains a prohibited ECR-004 runtime dependency category:" >&2
