@@ -65,10 +65,11 @@ pub enum TrustBackendKind {
     LinuxSecretService,
 }
 
-/// Select the only production-native backend candidate for this compilation
-/// target. The choice accepts no caller input, configuration string, path or
-/// environment value, so plaintext/file/memory substitutes cannot enter the
-/// production selection path.
+/// Select the only production-native backend that is implemented and accepted
+/// for this compilation target. The choice accepts no caller input,
+/// configuration string, path or environment value, so plaintext/file/memory
+/// substitutes cannot enter the production selection path. Windows and Linux
+/// remain fail-closed until their native backends receive dedicated acceptance.
 pub fn production_trust_backend_kind() -> Result<TrustBackendKind, IdentityError> {
     #[cfg(target_os = "macos")]
     {
@@ -76,11 +77,11 @@ pub fn production_trust_backend_kind() -> Result<TrustBackendKind, IdentityError
     }
     #[cfg(target_os = "windows")]
     {
-        Ok(TrustBackendKind::WindowsDpapi)
+        Err(crate::platform::windows::unsupported_backend())
     }
     #[cfg(target_os = "linux")]
     {
-        Ok(TrustBackendKind::LinuxSecretService)
+        Err(crate::platform::linux::unsupported_backend())
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
     {
@@ -401,6 +402,15 @@ mod tests {
         assert_eq!(
             production_trust_backend_kind().unwrap(),
             TrustBackendKind::MacosDataProtectionKeychain
+        );
+    }
+
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[test]
+    fn unverified_native_backends_fail_closed() {
+        assert_eq!(
+            production_trust_backend_kind().unwrap_err().code(),
+            IdentityErrorCode::BackendUnsupported
         );
     }
 }
