@@ -1,11 +1,11 @@
 # ECR-004 Status — Verification & Reconciliation
 
 **Slice:** ECR-004  
-**Lifecycle:** IMPLEMENTING_MERGE_READY  
+**Lifecycle:** IMPLEMENTING_CLOSURE_CONVERGENCE  
 **Dependencies:** ECR-001 `CLOSED_CANONICAL`, ECR-002 `CLOSED_CANONICAL`  
 **Canonical implementation base:** `4fb61f8b41267983fc460c666fddd7781d91653c`  
 **Implementation branch:** `004-verification-receipts-impl`  
-**Implementation PR:** #7  
+**Merged implementation PR:** #7  
 **Superseded review container:** #6 — closed, not merged  
 **Constitution:** v1.1.0
 
@@ -51,19 +51,8 @@ ECR-002 CI  33237289693  SUCCESS  exact head 4fb61f8b41267983fc460c666fddd7781d9
 | T043 complete quickstart | `67207e1bc91434555bfe31997f4af9f641324a76` | 33250358128 | 99094901800 | SUCCESS |
 | T045 Phase 7 closure | `90ed1bbeafea72ee655bc58a96e94696096f360e` | 33251037913 | 99096645538 | SUCCESS |
 | Pre-review T050 | `882b4ef7358aef6c416dd1b9dd67602e86334a06` | 33251589848 | 99098084666 | SUCCESS |
-| T051 review-remediation exact-head gate | `fde10b37c17f8113b81c78cf87c0de717909ab59` | 33255382842 | 99108056542 | SUCCESS |
-
-The T051 review-remediation head passed every permanent gate: locked metadata/build, rustfmt, strict Clippy, workspace tests, explicit ECR-001 regressions, explicit ECR-002 regressions, every ECR-004 quickstart target including `review_hardening`, dedicated ECR-002 unresolved-state compatibility acceptance, rustdoc, offline replay, all unsafe/dependency boundaries and dependency evidence.
-
-Toolchain/dependency evidence remains:
-
-```text
-rustc                 1.98.0 (88d9e12ae 2026-08-18)
-cargo                 1.98.0 (797e8a9bc 2026-08-05)
-Cargo.lock SHA-256    b8112ece8111599af10b92bc2a2e54dd006985ec32a300e47c5f8c356383a2f6
-```
-
-The direct normal `ecra-verify` dependency surface remains exactly the T001/T044-reviewed set: `ecra-core`, `ecra-run`, `rusqlite 0.40.2`, `serde 1.0.229`, `serde_jcs 0.2.0`, `serde_json 1.0.151`, `sha2 0.11.0`, `thiserror 2.0.20`, `uuid 1.26.0`; dev-only `proptest 1.11.0` and `tempfile 3.27.0`. `url`/`zip` remain inherited only through canonical upstream workspace crates and are not ECR-004 direct capabilities.
+| T051 review-remediation | `fde10b37c17f8113b81c78cf87c0de717909ab59` | 33255382842 | 99108056542 | SUCCESS |
+| Governance-converged merge candidate | `990addb79e6fe5a1ad2b16dae159c624959e2128` | 33255653083 | 99108796794 | SUCCESS |
 
 ## Phase 8 closure artifacts
 
@@ -77,13 +66,13 @@ The same closure document re-checks G1–G15 and executor self-verification, UNK
 
 ### T048 — Post-implementation analyze
 
-`post-implementation-analyze.md` result: `CONVERGENCE_REQUIRED_NO_IMPLEMENTATION_BLOCKER` with bounded documentation drift only. No requirement weakening was authorized.
+`post-implementation-analyze.md` found only bounded documentation convergence. No requirement weakening was authorized.
 
 ### T049 — Convergence
 
 T049 converged the package and lifecycle documentation to implementation truth, including the decision-grade assessment model, checkpoint satisfying states, journal domain separator, persistence schema/bounds, dependency/source truth, platform roadmap/status, Spec Kit index and `EXECUTION.md`.
 
-### T050 — Pre-review final exact-head gate
+### T050 — Pre-review exact-head gate
 
 ```text
 HEAD   882b4ef7358aef6c416dd1b9dd67602e86334a06
@@ -94,9 +83,9 @@ RESULT SUCCESS
 
 ### T051 — Review processing and remediation
 
-PR #7 is the active non-draft review container over the same implementation branch. Cubic reported 19 review findings. Every valid finding was repaired forward-only; non-actionable source-scan/concurrency/sentinel findings were reviewed against the owning tasks/contracts and resolved with explicit rationale rather than weakening boundaries. All 19 inline review threads are resolved. Cubic's submitted review states that all reported issues were addressed. CodeRabbit's commit status is `success`; its free-plan re-review is rate-limited but exposes no actionable blocker. Qodo is billing-paused and is not an owning acceptance gate.
+PR #7 was the active non-draft review container. Cubic reported 19 findings. Every valid finding was repaired forward-only; all 19 inline review threads were resolved. Cubic reported all findings addressed. CodeRabbit's commit status was successful and exposed no actionable blocker. Review-only non-actionable source-scan/concurrency/sentinel findings were resolved against the owning tasks/contracts without weakening safety boundaries.
 
-The resulting exact remediation head passed the renewed full gate:
+The exact remediation head passed the renewed full gate:
 
 ```text
 HEAD   fde10b37c17f8113b81c78cf87c0de717909ab59
@@ -105,38 +94,59 @@ JOB    99108056542
 RESULT SUCCESS
 ```
 
-T051 is complete. The governance-only T051 ledger convergence commits that follow this evidence must themselves pass the complete branch gate before T052 merges the exact live head.
+The subsequent governance-converged exact merge candidate also passed the complete branch gate:
+
+```text
+HEAD   990addb79e6fe5a1ad2b16dae159c624959e2128
+RUN    33255653083
+JOB    99108796794
+RESULT SUCCESS
+```
+
+### T052 — Exact-head merge and canonical-main verification
+
+PR #7 merged by the allowed non-rebase `merge` method with expected feature head `990addb79e6fe5a1ad2b16dae159c624959e2128`.
+
+```text
+CANONICAL MERGE SHA  2a95fbb4f20b1646505cb179f4822a758a546895
+PR                   #7 MERGED
+METHOD               merge
+```
+
+All three required workflows then passed on that exact canonical `main` state:
+
+```text
+ECR-001  RUN 33255780673  JOB 99109106995  SUCCESS
+ECR-002  RUN 33255780671  JOB 99109107144  SUCCESS
+ECR-004  RUN 33255780663  JOB 99109107058  SUCCESS
+```
+
+T052 is complete. T053 is now the only remaining ECR-004 task.
 
 ## Current execution state
 
 ```text
-CURRENT_TASK                    T052
-CURRENT_STATE                   MERGE_READY_PENDING_LATEST_GOVERNANCE_HEAD_GATE
-IMPLEMENTATION_BASE             4fb61f8b41267983fc460c666fddd7781d91653c
-IMPLEMENTATION_BRANCH           004-verification-receipts-impl
+CURRENT_TASK                    T053
+CURRENT_STATE                   CLOSURE_CONVERGENCE_PENDING_EXACT_HEAD_GATE
+CANONICAL_MERGE_HEAD            2a95fbb4f20b1646505cb179f4822a758a546895
+MERGED_IMPLEMENTATION_HEAD      990addb79e6fe5a1ad2b16dae159c624959e2128
 IMPLEMENTATION_PR               7
-REVIEW_REMEDIATION_HEAD         fde10b37c17f8113b81c78cf87c0de717909ab59
-REVIEW_REMEDIATION_RUN          33255382842
-REVIEW_REMEDIATION_JOB          99108056542
-REVIEW_REMEDIATION_RESULT       SUCCESS
-T001_T051                       COMPLETE_WITH_REQUIRED_EVIDENCE
-T052                            NEXT_REQUIRED_AFTER_LATEST_HEAD_GATE
-T053                            NOT_YET_ELIGIBLE
+POST_MERGE_ECR001_RUN           33255780673
+POST_MERGE_ECR001_JOB           99109106995
+POST_MERGE_ECR002_RUN           33255780671
+POST_MERGE_ECR002_JOB           99109107144
+POST_MERGE_ECR004_RUN           33255780663
+POST_MERGE_ECR004_JOB           99109107058
+T001_T052                       COMPLETE_WITH_REQUIRED_EVIDENCE
+T053                            IN_PROGRESS
 ```
 
-## Remaining canonical order
+## T053 closure rule
 
-```text
-complete branch gate on the exact live governance-converged PR #7 head
-  ↓
-T052 merge that exact expected head by an allowed non-rebase method
-     then require ECR-004 + ECR-001 + ECR-002 workflows on canonical main
-  ↓
-T053 mark CLOSED_CANONICAL only after post-merge evidence; update roadmap/status/index/EXECUTION and re-evaluate dependencies
-```
+This convergence records the complete merge/post-merge evidence but does not yet claim `CLOSED_CANONICAL`. The exact closure-convergence `main` head produced by T053 lifecycle/index updates must pass ECR-001 + ECR-002 + ECR-004. Only after that evidence may the final closure marker set T053 `[x]` and lifecycle `CLOSED_CANONICAL`; that marker head must itself pass the same three workflows before the external final closure claim is made.
+
+Dependency re-evaluation is unchanged in one important respect: ECR-004 closure alone cannot make ECR-005 implementation-eligible. ECR-005 still requires ECR-003 and ECR-031 to be `CLOSED_CANONICAL`; ECR-031 remains externally blocked on native macOS Data Protection Keychain acceptance and ECR-003 therefore remains blocked.
 
 ## Parallel ECR-031 boundary
 
 ECR-031 remains independently blocked on native macOS Data Protection Keychain acceptance because the trusted runner user lacks a valid Apple Development signing identity, suitable provisioning profile and usable developer account/team. No legacy/plaintext/ad-hoc fallback is authorized.
-
-ECR-004 does not depend on ECR-031 and can complete independently. ECR-005 nevertheless remains blocked by its full dependency set, including ECR-003 and ECR-031.
