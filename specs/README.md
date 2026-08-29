@@ -34,24 +34,45 @@ Final closure-convergence main head `aadc19c972e619222d426674d7542dd9c00dbe44` p
 
 ECR-002 owns synthetic/non-sensitive local run durability, budgets, recovery and deterministic `.ecra` interchange. It does not authorize real sensitive persistence, authentication/trust roots, authorization, independent verification, or provider execution.
 
-## Active trusted-substrate slices
-
-### ECR-031 — Identity, Trust Root & Sensitive Storage Foundations
-
-Directory: `031-identity-trust-root/`  
-Implementation PR: #4.  
-Dependencies: ECR-001 + ECR-002 `CLOSED_CANONICAL`.
-
-The implementation has progressed beyond historical planning markers, but current native macOS Data Protection Keychain acceptance remains externally blocked by the trusted runner user's missing Apple Development signing identity, suitable provisioning profile and usable developer account/team. No legacy/plaintext/ad-hoc fallback is authorized. Exact live ECR-031 package/PR/Actions truth governs its frontier.
-
 ### ECR-004 — Verification & Reconciliation
 
 Directory: `004-verification-receipts/`  
-Lifecycle: `IMPLEMENTING_FINAL_CONVERGENCE`.  
-Implementation branch: `004-verification-receipts-impl`.  
-Implementation PR: #6 (Draft until T050).  
-Canonical implementation base: `4fb61f8b41267983fc460c666fddd7781d91653c`.  
-Dependencies: ECR-001 + ECR-002 `CLOSED_CANONICAL`.
+Lifecycle: `CLOSED_CANONICAL`.  
+Merged implementation PR: #7.  
+Merged feature head: `990addb79e6fe5a1ad2b16dae159c624959e2128`.  
+Canonical implementation merge: `2a95fbb4f20b1646505cb179f4822a758a546895`.  
+Closure-convergence head: `c159c96061a73ead9710985d07608e2b417fe275`.
+
+Required workflows passed on the exact implementation merge state:
+
+```text
+ECR-001  RUN 33255780673  JOB 99109106995  SUCCESS
+ECR-002  RUN 33255780671  JOB 99109107144  SUCCESS
+ECR-004  RUN 33255780663  JOB 99109107058  SUCCESS
+```
+
+They passed again on exact closure-convergence head `c159c96061a73ead9710985d07608e2b417fe275` before the T053 lifecycle marker:
+
+```text
+ECR-001  RUN 33256430974  JOB 99110882402  SUCCESS
+ECR-002  RUN 33256430942  JOB 99110916386  SUCCESS
+ECR-004  RUN 33256430965  JOB 99110882233  SUCCESS
+```
+
+The T053 closure marker must itself pass ECR-001 + ECR-002 + ECR-004 on the exact canonical `main` head before an external `CLOSED_CANONICAL` claim is made.
+
+Frozen v1 boundaries remain:
+
+- ECR-001 `VerificationReceipt` is the only canonical independent verification record;
+- `ActionReceipt` remains executor-observed evidence and cannot self-verify;
+- Fact/artifact/run metadata gain no competing verified truth flag;
+- deterministic aggregates expose conflict rather than last-write-wins;
+- UNKNOWN reconciliation never fabricates an `ActionReceipt` or mutates ECR-002 run-event truth;
+- reconciliation never clears ECR-002 unresolved state, changes `RunPhase`, or makes the same run resumable/completable;
+- `semantically_retryable*` is advisory for a future new-attempt proposal only;
+- ECR-004 journal persistence is separate from ECR-002 run storage and v1 stores only synthetic/non-sensitive evidence metadata/references/digests;
+- journal chaining is local integrity/corruption/substitution detection, not hostile complete-store tamper resistance;
+- no browser/network/model/provider/process/policy/authorization/identity/telemetry runtime dependency enters `ecra-verify`.
 
 Package:
 
@@ -72,56 +93,23 @@ traceability-closure.md
 checklists/requirements.md
 ```
 
-Verified implementation state includes Phases 1–6, hostile-input/resource ceilings, portability, complete quickstart, donor/license/dependency reconciliation and Phase 7 closure. The exact T045 Phase 7 gate succeeded on:
+## Active trusted-substrate slice
 
-```text
-HEAD   90ed1bbeafea72ee655bc58a96e94696096f360e
-RUN    33251037913
-JOB    99096645538
-RESULT SUCCESS
-```
+### ECR-031 — Identity, Trust Root & Sensitive Storage Foundations
 
-T046/T047 traceability maps FR-001–FR-046, SC-001–SC-013 and G1–G15 with zero unowned MUST requirement and zero constitutional blocker. T048 post-implementation analyze found bounded documentation-only convergence work; T049 owns and corrects it before T050 final exact-head gate.
+Directory: `031-identity-trust-root/`  
+Implementation branch: `031-identity-trust-root`.  
+Draft implementation PR: #4.  
+Lifecycle: `IMPLEMENTING / BLOCKED_EXTERNAL_NATIVE_ACCEPTANCE`.  
+Current blocking task: T064.
 
-Frozen v1 boundaries:
-- ECR-001 `VerificationReceipt` remains the only canonical independent verification record;
-- `ActionReceipt` remains executor-observed evidence and cannot self-verify;
-- Fact/artifact/run metadata gain no competing verified truth flag;
-- deterministic aggregates preserve conflict;
-- checkpoints are exact-target requirements, not authority;
-- UNKNOWN reconciliation never fabricates an `ActionReceipt` or mutates ECR-002 run-event truth;
-- `effect_confirmed`, `no_effect_confirmed`, and `still_unknown` are independent effect-evidence outcomes only;
-- every reconciliation outcome leaves the original ECR-002 prepared/unreceipted/unresolved state and `unresolved_attempts` unchanged;
-- `semantically_retryable*` is advisory for a future new-attempt proposal only, not same-run resume/schedule/execution authorization;
-- ECR-002 `RunEvent` v1 remains unchanged and no sidecar projection represents run resolution;
-- a separate append-only ECR-004 journal stores synthetic/non-sensitive evidence metadata/references/digests only;
-- journal chaining is local integrity/corruption/substitution detection, not hostile complete-store tamper resistance;
-- no browser/network/model/provider/process/policy/authorization/identity/telemetry runtime dependency enters `ecra-verify`;
-- IC-001 permits only read-only access to already-existing canonical EvidenceRef metadata;
-- IC-002 prohibits ECR-004 from clearing ECR-002 unresolved state or counterfeiting run repair;
-- IC-003 permits empty reconciliation support only for evidence-absent `still_unknown`, never for conclusive effect/no-effect outcomes.
-
-Remaining lifecycle order:
-
-```text
-T049 package/platform/index/EXECUTION convergence
-  ↓
-T050 final exact-head ECR-004 + ECR-001 + ECR-002 gate
-  ↓
-T051 PR #6 review-ready + zero actionable review blockers
-  ↓
-T052 exact expected-head non-rebase merge + canonical-main workflows
-  ↓
-T053 post-merge lifecycle closure
-```
-
-ECR-004 is not `CLOSED_CANONICAL` before T052/T053 evidence.
+The live branch/package is authoritative for exact progress. The native macOS Data Protection Keychain acceptance gate remains blocked because the trusted runner user lacks a valid Apple Development signing identity, suitable provisioning profile, configured Xcode developer account registry and usable development team. No legacy/plaintext/ad-hoc fallback or weakened native acceptance is authorized.
 
 ## Dependency boundary
 
-ECR-004 is independently eligible from ECR-001/ECR-002 and may finish while ECR-031 remains externally blocked. That independence does not authorize ECR-031 identity/trust/sensitive-storage scope or real sensitive evidence persistence.
-
-ECR-003 remains blocked until ECR-031 is `CLOSED_CANONICAL`. ECR-005 remains blocked by its complete dependency set, including ECR-003, ECR-004 and ECR-031.
+- ECR-003 remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`.
+- ECR-005 remains blocked until every listed dependency is `CLOSED_CANONICAL`; closing ECR-004 does not satisfy the still-open ECR-003/ECR-031 requirements.
+- No later slice becomes implementation-eligible merely because ECR-031 is externally blocked.
 
 ## Future slices
 
@@ -152,6 +140,7 @@ A successful individual task, commit, CI run, review or merge does not by itself
 ## Required package contents
 
 A normal stateful implementation slice should contain, as applicable:
+
 - `STATUS.md` — execution ledger and next eligible work;
 - `spec.md` — requirements and success criteria;
 - `research.md` — primary-source/donor/dependency decisions;
