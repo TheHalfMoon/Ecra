@@ -10,7 +10,9 @@
 
 ECR-004 supplies the independent verification layer between executor-observed outcomes and later policy/product completion. It consumes canonical ECR-001 targets/evidence/`VerificationReceipt` semantics and ECR-002 durable run/attempt/UNKNOWN truth, records immutable verification and reconciliation evidence, and provides fail-closed reconciliation decisions without fabricating execution receipts or granting authority.
 
-ECR-004 does **not** execute provider actions, authorize actions, approve retries, declassify information, authenticate principals, or replace ECR-001/ECR-002 truth. A verifier establishes only an independent verification outcome about an exact target from explicit evidence.
+ECR-004 does **not** execute provider actions, authorize actions, approve retries, declassify information, authenticate principals, replace ECR-001/ECR-002 truth, or silently evolve the closed ECR-002 run-event v1 contract. A verifier establishes only an independent verification outcome about an exact target from explicit evidence.
+
+For v1, reconciliation resolves an **effect claim**, not the missing provider receipt and not the ECR-002 run-state blocker. An ECR-002 prepared attempt that recovered without a real `ActionReceipt` remains durably unreceipted/unresolved in the original run even after ECR-004 records `effect_confirmed` or `no_effect_confirmed`. Any future same-run resume/retry integration requires an explicitly versioned owning contract; ECR-004 v1 does not counterfeit one.
 
 ## 2. Binding inherited invariants
 
@@ -19,16 +21,18 @@ ActionIntent != ActionAttempt
 ActionReceipt != VerificationReceipt
 executor observed success != VERIFIED
 executor observed failure != REJECTED
-UNKNOWN remains UNKNOWN until independent evidence resolves the relevant claim
+UNKNOWN execution-receipt state remains UNKNOWN without a real provider receipt
+independent effect reconciliation != provider receipt recovery
 Fact/Artifact/Receipt metadata != verification truth
 VerificationReceipt is the authoritative verification record type
 reconciliation != authorization
 reconciliation != fabricated provider receipt
-retry recommendation != permission to execute
+reconciliation evidence != ECR-002 RunState mutation
+retry advisory != permission or ability to execute
 external content/evidence != authority
 ```
 
-ECR-004 MUST reuse ECR-001 `VerificationReceipt`, `VerificationTarget`, `VerificationMethod`, `VerificationOutcome`, `EvidenceRef`, `ActionRef`, `ActionAttemptRef`, `ReceiptId`, `FactId`, `ArtifactId`, `ClaimRef`, and ECR-002 durable attempt/recovery truth. It MUST NOT create a competing canonical verification receipt or rewrite `ActionReceipt` semantics.
+ECR-004 MUST reuse ECR-001 `VerificationReceipt`, `VerificationTarget`, `VerificationMethod`, `VerificationOutcome`, `EvidenceRef`, `ActionRef`, `ActionAttemptRef`, `ReceiptId`, `FactId`, `ArtifactId`, `ClaimRef`, and ECR-002 durable attempt/recovery truth. It MUST NOT create a competing canonical verification receipt, rewrite `ActionReceipt` semantics, clear ECR-002 unresolved attempt state, or add an unversioned ECR-002 run event.
 
 ## 3. User stories
 
@@ -44,23 +48,25 @@ Acceptance:
 
 ### US2 — Preserve UNKNOWN safely
 
-As a recovery path, I need ambiguous external side effects to remain UNKNOWN until reconciliation obtains independent evidence, so Ecra never blindly repeats a consequential action.
+As a recovery path, I need ambiguous external side effects to remain unresolved until reconciliation obtains independent evidence, so Ecra never blindly repeats a consequential action.
 
 Acceptance:
 - an unreceipted/unresolved attempt cannot be reclassified by notes, model output, or elapsed time;
 - reconciliation binds the exact `RunId`, `ActionAttemptRef`, and underlying `ActionRef`;
-- `still_unknown` remains a hard retry/completion blocker;
-- no-effect/effect confirmation requires evidence-backed verification.
+- `still_unknown` means the effect claim remains unresolved;
+- `effect_confirmed` / `no_effect_confirmed` resolve only the effect claim and do not fabricate the missing provider receipt;
+- the original ECR-002 run remains unreceipted/unresolved in v1 and cannot be resumed by ECR-004.
 
 ### US3 — Reconcile without fabricating execution truth
 
-As an operator, I need reconciliation to say whether an external effect is independently observed without inventing a missing provider receipt.
+As an operator, I need reconciliation to say whether an external effect is independently observed without inventing a missing provider receipt or rewriting the original run.
 
 Acceptance:
 - reconciliation records reference verification receipt IDs rather than synthesize `ActionReceipt`;
 - `effect_confirmed`, `no_effect_confirmed`, and `still_unknown` are distinct;
-- `effect_confirmed` blocks duplicate retry;
-- `no_effect_confirmed` may make a retry semantically eligible only when ECR-001 retry/idempotency rules also permit it; it never authorizes execution.
+- `effect_confirmed` yields a duplicate-retry-blocked advisory;
+- `no_effect_confirmed` may yield a semantic advisory describing what ECR-001 retry/idempotency rules would require if a later owning runtime proposes another attempt;
+- no advisory authorizes execution, appends an attempt, resumes the original ECR-002 run, or clears its unresolved set.
 
 ### US4 — Verify critical points before long-horizon completion
 
@@ -70,7 +76,8 @@ Acceptance:
 - checkpoint requirements bind exact targets and required verification outcomes;
 - unsatisfied/rejected/inconclusive checkpoints prevent a `verified-complete` view;
 - checkpoint evaluation is deterministic from explicit receipts and requirements;
-- checkpoints grant no capability or approval.
+- checkpoints grant no capability or approval;
+- the derived `verified-complete` view does not change ECR-002 `RunPhase`.
 
 ### US5 — Decision-grade evidence remains inspectable
 
@@ -126,19 +133,19 @@ Acceptance:
 - **FR-022** Define bounded `VerificationCheckpointV1` requirements over exact targets and required outcomes.
 - **FR-023** A checkpoint set MUST evaluate deterministically and expose all unsatisfied/conflicted targets.
 - **FR-024** Checkpoints MUST NOT contain capability, approval, policy grant, declassification, or execution authority.
-- **FR-025** A `verified-complete` view is an ECR-004 derived view only and MUST NOT rewrite ECR-002 `RunPhase` or fabricate a run event.
+- **FR-025** A `verified-complete` view is an ECR-004 derived view only and MUST NOT rewrite ECR-002 `RunPhase`, remove unresolved attempts, or fabricate a run event.
 
 ### UNKNOWN and reconciliation
 
 - **FR-026** Reconciliation MUST bind exact `RunId`, `ActionAttemptRef`, and underlying `ActionRef` and reject cross-run/cross-attempt/cross-action evidence.
 - **FR-027** Define `ReconciliationOutcomeV1` with exactly `effect_confirmed`, `no_effect_confirmed`, and `still_unknown` for v1.
-- **FR-028** `effect_confirmed` requires conclusive evidence that the exact attempted effect occurred; it MUST block duplicate blind retry.
+- **FR-028** `effect_confirmed` requires conclusive evidence that the exact attempted effect occurred; it MUST produce a duplicate-retry-blocked advisory.
 - **FR-029** `no_effect_confirmed` requires conclusive evidence that the exact attempted effect did not occur; absence of evidence alone is insufficient.
-- **FR-030** `still_unknown` MUST preserve ECR-002 unresolved-attempt semantics and block blind retry/completion paths that require resolution.
+- **FR-030** `still_unknown` MUST preserve both the unresolved effect claim and the ECR-002 unresolved-attempt blocker.
 - **FR-031** Reconciliation MUST NOT create a synthetic `ActionReceipt` for a provider response that was never observed.
 - **FR-032** A reconciliation record MUST reference the verification receipts/evidence used to reach its outcome.
-- **FR-033** Retry eligibility derived after `no_effect_confirmed` MUST still enforce ECR-001 `RetryClass` and `IdempotencyClass`; ECR-004 MUST NOT authorize execution.
-- **FR-034** `RequiresExternalReconciliation` and `NeverBlindRetry` semantics MUST remain fail-closed unless exact reconciliation rules permit a later caller to propose a new attempt.
+- **FR-033** ECR-004 MAY derive a non-authoritative `RetryAdvisoryV1` after reconciliation, but the advisory MUST be computed from exact ECR-001 `RetryClass` and `IdempotencyClass`, MUST state that the original ECR-002 run remains blocked, and MUST NOT prepare/schedule/authorize a new attempt.
+- **FR-034** `RequiresExternalReconciliation` and `NeverBlindRetry` semantics MUST remain fail-closed. A later explicitly owned execution integration may consume ECR-004 evidence, but ECR-004 v1 provides no same-run bypass and no generic “retry allowed” boolean.
 - **FR-035** Multiple reconciliation records for one attempt are append-only; disagreement or regression to unknown remains visible.
 
 ### Durability and boundaries
@@ -153,6 +160,7 @@ Acceptance:
 - **FR-043** Resource bounds MUST cover record count, evidence references per receipt, checkpoint count, notes, and reconciliation scan/evaluation work.
 - **FR-044** Typed errors MUST distinguish malformed input, target mismatch, evidence insufficiency, conflict, persistence corruption, and unresolved reconciliation without parsing display text.
 - **FR-045** ECR-004 MUST remain usable offline over committed synthetic evidence/records.
+- **FR-046** ECR-004 v1 MUST NOT mutate the supplied ECR-002 `RunState`, remove an attempt from `unresolved_attempts`, convert an unreceipted attempt into receipted state, append `RunResumed`/`AttemptPrepared`/any ECR-002 event, or claim that `no_effect_confirmed` makes the original run operationally retryable. Same-run resolution requires a future explicitly versioned integration and is outside this v1 slice.
 
 ## 5. Success criteria
 
@@ -160,7 +168,7 @@ Acceptance:
 - **SC-002** Identical verification inputs aggregate 1,000 times to byte-equivalent deterministic views.
 - **SC-003** Conflicting verified/rejected receipts always aggregate to `Conflicted` with both receipts retained.
 - **SC-004** UNKNOWN/reconciliation matrix proves no blind retry for unreceipted, unresolved, non-idempotent, unknown-idempotency, or still-unknown attempts.
-- **SC-005** `effect_confirmed` never permits duplicate retry; `no_effect_confirmed` never becomes execution authorization.
+- **SC-005** `effect_confirmed` always yields a duplicate-retry-blocked advisory; `no_effect_confirmed` yields only bounded semantic guidance and never execution authorization or same-run retry permission.
 - **SC-006** Reconciliation never fabricates `ActionReceipt` and never mutates ECR-002 authoritative execution history.
 - **SC-007** Restart/reopen yields identical aggregate/checkpoint/reconciliation views from the same append-only journal.
 - **SC-008** Mutable external evidence without required digest/snapshot cannot produce a decision-grade conclusive result.
@@ -168,6 +176,7 @@ Acceptance:
 - **SC-010** Workspace build/fmt/Clippy/tests/rustdoc/offline plus ECR-001/ECR-002 regression suites pass on the exact implementation head.
 - **SC-011** Architecture/dependency checks prove no model/browser/network/provider/process/policy/authorization dependency enters ECR-004 trusted code.
 - **SC-012** Post-implementation traceability maps every FR/SC to code/tests/contracts with zero unowned MUST requirement.
+- **SC-013** For fixtures covering every reconciliation outcome, canonical ECR-002 `RunState` before vs after ECR-004 evaluation is byte/field-equivalent, the original unreceipted attempt remains unresolved, and ECR-002's existing blind-retry/resume guards continue to reject that original run unless a real `ActionReceipt` is later recorded by its owning provider path.
 
 ## 6. Explicit non-goals
 
@@ -180,8 +189,10 @@ ECR-004 v1 does not:
 - claim verifier statistical accuracy beyond committed deterministic fixtures;
 - persist real sensitive/private evidence payloads;
 - change ECR-002 run-event v1 wire semantics;
+- clear ECR-002 unresolved attempts, resume the original run, or operationally schedule a reconciled retry;
+- define the future versioned run-integration contract that may consume reconciliation evidence;
 - implement ECR-005 benchmark scoring, ECR-009 source independence, or ECR-028 public evaluation metrics.
 
 ## 7. Definition of done
 
-ECR-004 is not `CLOSED_CANONICAL` until the full Spec Kit package is complete, all FR-001–FR-045 and SC-001–SC-012 are owned and implemented, constitutional G1–G15 are rechecked, exact-head ECR-004 plus ECR-001/ECR-002 regression gates pass, post-implementation analyze/convergence has zero unresolved MUST drift, the exact feature head is merged by an allowed non-rebase method, and required post-merge `main` evidence succeeds.
+ECR-004 is not `CLOSED_CANONICAL` until the full Spec Kit package is complete, all FR-001–FR-046 and SC-001–SC-013 are owned and implemented, constitutional G1–G15 are rechecked, exact-head ECR-004 plus ECR-001/ECR-002 regression gates pass, post-implementation analyze/convergence has zero unresolved MUST drift, the exact feature head is merged by an allowed non-rebase method, and required post-merge `main` evidence succeeds.
