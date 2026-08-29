@@ -164,10 +164,16 @@ fn normalize_keychain_error(error: SecurityFrameworkError, context: &'static str
 
 #[cfg(test)]
 mod tests {
-    use std::process;
+    use std::{env, fs, path::PathBuf, process};
+
+    use ecra_core::EpochMillis;
 
     use super::MacosDataProtectionKeychainBackend;
-    use crate::backend::{TrustBackend, TrustBackendSecretRef, TrustBackendStatus};
+    use crate::backend::{
+        DeterministicSecureRandom, TrustBackend, TrustBackendSecretRef, TrustBackendStatus,
+    };
+    use crate::bootstrap::bootstrap_or_reopen_local_principal;
+    use crate::store::{BootstrapStoreLocation, ProtectedTrustStateStore};
     use crate::{IdentityErrorCode, KeyId, KeyPurpose, SensitiveBytes, TrustRootId};
 
     fn typed_ids(slot: u16) -> (TrustRootId, KeyId) {
@@ -182,6 +188,30 @@ mod tests {
     fn secret_ref(slot: u16, purpose: KeyPurpose) -> TrustBackendSecretRef {
         let (trust_root_id, key_id) = typed_ids(slot);
         TrustBackendSecretRef::new(trust_root_id, key_id, 1, purpose).unwrap()
+    }
+
+    fn timestamp(value: i64) -> EpochMillis {
+        EpochMillis::new(value).unwrap()
+    }
+
+    fn native_bootstrap_location() -> (PathBuf, BootstrapStoreLocation) {
+        let directory = env::temp_dir().join(format!(
+            "ecra-identity-macos-native-bootstrap-{}",
+            process::id()
+        ));
+        let _ = fs::remove_dir_all(&directory);
+        fs::create_dir_all(&directory).unwrap();
+        let location =
+            BootstrapStoreLocation::new(directory.join("protected-trust-state.json")).unwrap();
+        (directory, location)
+    }
+
+    fn native_bootstrap_random() -> DeterministicSecureRandom {
+        let pid = process::id() as usize;
+        let bytes = (0..512)
+            .map(|index| ((index * 37 + pid + 11) % 251) as u8)
+            .collect();
+        DeterministicSecureRandom::new(bytes)
     }
 
     #[test]
@@ -221,5 +251,56 @@ mod tests {
             let error = backend.open_protected_secret(reference).unwrap_err();
             assert_eq!(error.code(), IdentityErrorCode::KeyNotFound);
         }
+    }
+
+    #[test]
+    fn native_keychain_bootstrap_publishes_and_reopens_same_identity() {
+        let backend = MacosDataProtectionKeychainBackend;
+        assert_eq!(backend.status().unwrap(), TrustBackendStatus::Available);
+        let (directory, location) = native_bootstrap_location();
+        let mut random = native_bootstrap_random();
+
+        let first =
+            bootstrap_or_reopen_local_principal(&location, &backend, &mut random, timestamp(1_000))
+                .unwrap();
+        assert!(ProtectedTrustStateStore::store_exists(location.path()).unwrap());
+        assert!(!ProtectedTrustStateStore::bootstrap_marker_exists(location.path()).unwrap());
+
+        let mut no_more_randomness = DeterministicSecureRandom::new(Vec::new());
+        let reopened = bootstrap_or_reopen_local_principal(
+            &location,
+            &backend,
+            &mut no_more_randomness,
+            timestamp(2_000),
+        )
+        .unwrap();
+        assert_eq!(reopened.principal(), first.principal());
+        assert_eq!(reopened.enrollment_id(), first.enrollment_id());
+        assert_eq!(reopened.trust_root_id(), first.trust_root_id());
+        assert_eq!(reopened.trust_state_digest(), first.trust_state_digest());
+
+        let (_, authenticated) =
+            ProtectedTrustStateStore::open_existing(location.path().to_path_buf(), &backend)
+                .unwrap();
+        let secret_refs = authenticated
+            .state()
+            .keys()
+            .iter()
+            .map(|key| {
+                TrustBackendSecretRef::new(
+                    authenticated.state().trust_root_id(),
+                    key.key_id(),
+                    key.generation(),
+                    key.purpose(),
+                )
+                .unwrap()
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(secret_refs.len(), 2);
+
+        for secret_ref in secret_refs {
+            backend.delete_backend_material(secret_ref).unwrap();
+        }
+        fs::remove_dir_all(directory).unwrap();
     }
 }
