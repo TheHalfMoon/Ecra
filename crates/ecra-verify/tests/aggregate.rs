@@ -23,7 +23,10 @@ fn receipt(value: usize, outcome: VerificationOutcome) -> VerificationReceipt {
     let evidence = if outcome == VerificationOutcome::NotEvaluated {
         Vec::new()
     } else {
-        vec![EvidenceRef::new(evidence_id(value), EvidenceKind::Computation)]
+        vec![EvidenceRef::new(
+            evidence_id(value),
+            EvidenceKind::Computation,
+        )]
     };
     VerificationReceipt::new(
         verification_id(value),
@@ -89,8 +92,18 @@ fn aggregation_fixture_matrix_preserves_conflict_and_not_evaluated_semantics() {
             .collect::<Vec<_>>();
         let aggregate = VerificationAggregateViewV1::from_receipts(target(), &receipts)
             .unwrap_or_else(|error| panic!("fixture {} failed: {error}", case.name));
-        assert_eq!(aggregate.state(), state(&case.expected_state), "{}", case.name);
-        assert_eq!(aggregate.receipt_ids().len(), receipts.len(), "{}", case.name);
+        assert_eq!(
+            aggregate.state(),
+            state(&case.expected_state),
+            "{}",
+            case.name
+        );
+        assert_eq!(
+            aggregate.receipt_ids().len(),
+            receipts.len(),
+            "{}",
+            case.name
+        );
     }
 }
 
@@ -136,8 +149,7 @@ fn receipt_order_permutations_are_byte_equivalent() {
     ];
 
     let expected = serde_jcs::to_vec(
-        &VerificationAggregateViewV1::from_receipts(target(), &permutations[0])
-            .expect("aggregate"),
+        &VerificationAggregateViewV1::from_receipts(target(), &permutations[0]).expect("aggregate"),
     )
     .expect("canonical aggregate");
 
@@ -164,6 +176,9 @@ fn one_thousand_identical_aggregate_evaluations_are_byte_equivalent() {
     for _ in 0..1_000 {
         let aggregate =
             VerificationAggregateViewV1::from_receipts(target(), &receipts).expect("aggregate");
-        assert_eq!(serde_jcs::to_vec(&aggregate).expect("canonical aggregate"), expected);
+        assert_eq!(
+            serde_jcs::to_vec(&aggregate).expect("canonical aggregate"),
+            expected
+        );
     }
 }
