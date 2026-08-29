@@ -135,6 +135,7 @@ jobs:
         run: |
           bash scripts/check-identity-unsafe.sh
           bash scripts/check-identity-deps.sh
+          bash -n scripts/run-ecr031-macos-live-acceptance.sh
           cargo tree -p ecra-identity --locked
 
       - name: ECR-031 dependency and toolchain evidence
@@ -161,74 +162,10 @@ jobs:
           cargo tree -p ecra-identity --edges normal --depth 1 --locked
           cargo tree -p ecra-identity --edges normal --locked
 
-      - name: macOS Data Protection host readiness evidence
+      - name: macOS Data Protection app-like host readiness
         shell: bash
-        run: |
-          set -u
-
-          runner_user="$(id -un 2>/dev/null || printf 'unknown')"
-          console_user="$(stat -f '%Su' /dev/console 2>/dev/null || printf 'unknown')"
-          if [[ "$console_user" != "root" && "$console_user" != "loginwindow" && "$console_user" != "unknown" ]]; then
-            echo "interactive_console_session=true"
-          else
-            echo "interactive_console_session=false"
-          fi
-          if [[ "$runner_user" == "$console_user" ]]; then
-            echo "runner_matches_console_user=true"
-          else
-            echo "runner_matches_console_user=false"
-          fi
-
-          if command -v security >/dev/null 2>&1; then
-            identity_output="$(security find-identity -v -p codesigning 2>/dev/null || true)"
-            identity_count="$(printf '%s\n' "$identity_output" | awk '/^[[:space:]]*[0-9]+\)/ {count++} END {print count+0}')"
-            echo "code_signing_identity_count=${identity_count}"
-          else
-            echo "code_signing_identity_count=0"
-          fi
-
-          profile_count=0
-          for directory in \
-            "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
-            "$HOME/Library/MobileDevice/Provisioning Profiles"; do
-            if [[ -d "$directory" ]]; then
-              count="$(find "$directory" -maxdepth 1 -type f \( -name '*.mobileprovision' -o -name '*.provisionprofile' \) 2>/dev/null | awk 'END {print NR+0}')"
-              profile_count=$((profile_count + count))
-            fi
-          done
-          echo "provisioning_profile_count=${profile_count}"
-
-          if command -v xcodebuild >/dev/null 2>&1; then
-            echo "xcodebuild_available=true"
-            xcodebuild -version 2>/dev/null || true
-          else
-            echo "xcodebuild_available=false"
-          fi
-          if command -v codesign >/dev/null 2>&1; then
-            echo "codesign_available=true"
-          else
-            echo "codesign_available=false"
-          fi
+        run: bash scripts/run-ecr031-macos-live-acceptance.sh --readiness-only
 
       - name: macOS Data Protection Keychain live acceptance
         shell: bash
-        run: |
-          set -uo pipefail
-          status=0
-
-          if ! cargo test -p ecra-identity --lib --locked \
-            platform::macos::tests::data_protection_keychain_roundtrips_all_v1_secret_purposes \
-            -- --exact --ignored; then
-            status=1
-          fi
-
-          if ! cargo test -p ecra-identity --lib --locked \
-            platform::macos::tests::native_keychain_bootstrap_publishes_and_reopens_same_identity \
-            -- --exact --ignored; then
-            status=1
-          fi
-
-          if [[ "$status" -ne 0 ]]; then
-            echo "macOS Data Protection Keychain live acceptance failed closed. The runner host must provide a user-context, provisioning-authorized app-like execution identity; do not substitute the legacy file-based keychain." >&2
-          fi
-          exit "$status"
+        run: bash scripts/run-ecr031-macos-live-acceptance.sh
