@@ -2,7 +2,7 @@
 
 **Status:** CANONICAL_IMPLEMENTATION_LEDGER  
 **Created:** 2026-08-27  
-**Updated:** 2026-08-28 for ECR-002 Phase 8 exact locked-dependency evidence
+**Updated:** 2026-08-28 for ECR-031 T001 implementation-time dependency disposition
 
 This ledger separates **conceptual reference**, **dependency candidate**, **locked dependency**, and **source-reuse candidate**. Listing a project here never authorizes copying its source. Source reuse requires exact-file review, license compatibility, notice handling, and an implementation change that records what was copied/modified.
 
@@ -149,6 +149,47 @@ archive profile       Stored-only; Ecra-owned deterministic metadata/order and f
 
 The dependency-evidence step also re-read the direct runtime tree as `ecra-core`, `rusqlite`, `serde`, `serde_jcs`, `serde_json`, `sha2`, `thiserror`, and `zip`; it introduced no new runtime provider/network/process dependency. The exact final Phase 8 ledger head remains subject to its own full gate before T060–T066 are marked complete.
 
+## ECR-031 T001 Accepted Dependency Candidates
+
+T001 performed an implementation-time review on 2026-08-28 before manifest adoption. The entries below are **accepted direct candidates**, not yet `LOCKED_DEPENDENCY`: promotion to locked status requires the committed generated `Cargo.lock`, exact resolved tree, native-boundary evidence and Phase 1 exact-head CI/T010 disposition.
+
+| Package / component | Exact direct version | Planned direct feature shape | License | Scope / boundary | T001 status |
+|---|---:|---|---|---|---|
+| `ed25519-dalek` | 3.0.0 | `default-features=false`, `fast`, `zeroize` | BSD-3-Clause | portable v1 Ed25519 sign/verify; no rand/serde/PKCS8/PEM/batch/hazmat | ACCEPTED_CANDIDATE |
+| `chacha20poly1305` | 0.11.0 | `default-features=false`, `alloc`, `zeroize` | Apache-2.0 OR MIT | RFC 8439 AEAD; dependency-owned randomness disabled | ACCEPTED_CANDIDATE |
+| `hkdf` | 0.13.0 | `default-features=false` | MIT OR Apache-2.0 | HKDF-SHA-256; optional generic `kdf` feature disabled | ACCEPTED_CANDIDATE |
+| `sha2` | 0.11.0 | `default-features=false` | MIT OR Apache-2.0 | SHA-256; same release already locked by ECR-001/ECR-002 | ACCEPTED_CANDIDATE |
+| `zeroize` | 1.9.0 | `default-features=false`, `alloc` | MIT OR Apache-2.0 | bounded secret wrapper; derive disabled | ACCEPTED_CANDIDATE |
+| `getrandom` | 0.4.3 | `default-features=false` | MIT OR Apache-2.0 | explicit fallible system CSPRNG boundary; no `rand`, `wasm_js` or `sys_rng` | ACCEPTED_CANDIDATE |
+| `security-framework` | 3.7.0 | macOS target only; `default-features=false`, `OSX_10_15` | MIT OR Apache-2.0 | Data Protection Keychain integration; native Security.framework/CoreFoundation FFI boundary | ACCEPTED_CANDIDATE |
+
+All seven candidates declare MSRV 1.85 and are compatible with the repository's pinned Rust 1.98.0 toolchain. No source from these projects is copied or adapted; Ecra uses dependency APIs and independently written domain/security code.
+
+### ECR-031 T001 advisory and native-boundary disposition
+
+- RustSec RUSTSEC-2022-0093 affects `ed25519-dalek <2`; 3.0.0 is outside the affected range. `hazmat` remains disabled.
+- RustSec RUSTSEC-2024-0344 for `curve25519-dalek` is patched in `>=4.1.3`; the accepted Ed25519 release requires curve25519-dalek 5.0.0.
+- RustSec RUSTSEC-2021-0100 for `sha2` is patched in `>=0.9.8`; 0.11.0 is outside the affected range.
+- RustSec RUSTSEC-2019-0029 for `chacha20` is patched in `>=0.2.3`; the advisory also states `chacha20poly1305` is unaffected by the overflow issue. The accepted AEAD release uses modern chacha20 0.10.
+- `zeroize_derive` is intentionally not enabled; the old derive advisory does not justify adding the derive surface.
+- the historical `security-framework` TLS-hostname advisory is patched long before 3.7.0; ECR-031 also disables the crate's Secure Transport/ALPN/session-ticket default features and uses it only for the Keychain path.
+- `security-framework`/`security-framework-sys` are an explicit reviewed native/FFI boundary outside Ecra-authored `#![forbid(unsafe_code)]`.
+- `getrandom` may use target-specific OS/FFI dependencies for entropy. This is accepted for `SecureRandom` only and does not constitute or authorize a Windows/Linux `TrustBackend`.
+
+Current RustSec records were reviewed before this disposition. The eventual exact lockfile must still be rechecked as a graph during T008–T010; this table is not a permanent advisory waiver.
+
+### Rejected/deferred ECR-031 dependency surface
+
+- `rand`/`rand_chacha`: rejected as unnecessary ambient RNG abstraction; use the explicit `getrandom` boundary.
+- OpenSSL, libsodium, `ring` or general crypto suites: rejected because they broaden algorithms/native capability beyond the frozen suite.
+- Ed25519 batch/serde/PEM/PKCS8/hazmat/legacy features: rejected as unnecessary for the strict Ecra v1 wire/custody contract.
+- `chacha20poly1305` default `getrandom` feature: rejected because nonce/randomness ownership must stay explicit.
+- `security-framework` default Secure Transport/ALPN/session-ticket feature set: rejected as unrelated to Keychain custody.
+- Secure Enclave signing as the portable v1 Ed25519 implementation: rejected by the frozen algorithm/custody contract.
+- Windows DPAPI and Linux Secret Service crates: deferred; no platform backend crate may be added until the corresponding backend is implemented and evidenceable.
+
+Primary implementation-time dependency review details and links are maintained in `specs/031-identity-trust-root/research.md` §23.
+
 ## Durable Execution References With Licensing Caution
 
 | Project | Role | Observed license | Status | Ecra use / constraint |
@@ -200,4 +241,41 @@ Before a candidate becomes a locked dependency:
 
 ## Current Authorization
 
-ECR-001 remains authorized only for its locked trusted-domain dependency set. ECR-002 is additionally authorized for the locked `ecra-run` dependency delta recorded above, including the bounded bundled-SQLite native boundary and Stored-only ZIP substrate. Neither authorization permits copied donor source, ambient network/provider execution, real sensitive-state persistence, authentication/trust-root semantics, authorization/declassification policy, or independent verification/reconciliation behavior. Later-slice dependencies remain governed by their owning ECR package and require separate review.
+ECR-001 remains authorized only for its locked trusted-domain dependency set. ECR-002 is additionally authorized for the locked `ecra-run` dependency delta recorded above, including the bounded bundled-SQLite native boundary and Stored-only ZIP substrate. ECR-031 T001 has authorized only the accepted candidate/direct-feature set recorded above for Phase 1 adoption; those candidates are not `LOCKED_DEPENDENCY` until the generated lockfile and exact-head T009/T010 evidence converge. No authorization permits copied donor source, ambient network/provider execution, downstream sensitive-state persistence, general authorization/declassification policy, or independent verification/reconciliation behavior.
+
+## ECR-031 Phase 1 Locked Dependency Evidence
+
+The accepted T001 candidates were promoted to the ECR-031 v1 Phase 1 locked dependency set only after Cargo generated the committed lock graph and the permanent workflow passed on exact head `0289596bb7cdbb81d5f03c445fd324e985294143` in ECR-031 CI run `33161529028`, job `98816955646`.
+
+```text
+Cargo.lock SHA-256        5bd1b14d1643ff59492bafb7c6195b270cfc1424832788ad8078e62f22d907bc
+rustc / cargo             repository-pinned 1.98.0
+ed25519-dalek             =3.0.0, default-features=false, fast+zeroize
+chacha20poly1305          =0.11.0, default-features=false, alloc+zeroize
+hkdf                      =0.13.0, default-features=false
+sha2                      =0.11.0, default-features=false
+zeroize                   =1.9.0, default-features=false, alloc
+getrandom                 =0.4.3, default-features=false
+security-framework        =3.7.0, macOS target only, default-features=false, OSX_10_15
+security-framework-sys    2.17.0, transitive native/FFI boundary
+core-foundation           0.10.1, transitive Apple framework wrapper
+core-foundation-sys       0.8.7, transitive native/FFI boundary
+```
+
+`security-framework` / `security-framework-sys` and their CoreFoundation bridge remain reviewed dependency-owned Apple native/FFI boundaries; Ecra-authored `ecra-identity` Rust remains `#![forbid(unsafe_code)]`. No Windows DPAPI or Linux Secret Service backend dependency was adopted. `rand`/`rand_chacha` may appear elsewhere in workspace dev/test trees through the pre-existing ECR-001 `proptest` dev dependency, but they are absent from the normal `ecra-identity` dependency tree and are not an ECR-031 production RNG surface. No model/browser/network/protocol/policy/process framework entered the allowed identity runtime surface.
+
+Any future dependency, feature, native-boundary, or platform-backend change requires a new review and exact-head evidence rather than inheriting this disposition.
+
+**T010 disposition:** `LOCKED_DEPENDENCY_FOR_ECR031_V1_PHASE1`.
+
+## ECR-031 Phase 2 Support Dependency Delta
+
+Phase 2 adds only direct access to packages already present in the committed workspace lock graph and already reviewed for ECR-001. This avoids a second UUID/JSON implementation inside the identity trust boundary.
+
+| Package | Exact locked version | License | Phase 2 role | Feature disposition |
+|---|---:|---|---|---|
+| `serde` | 1.0.229 | MIT OR Apache-2.0 | strict typed serialization/deserialization | `default-features=false`, `derive`, `std` |
+| `serde_json` | 1.0.151 | MIT OR Apache-2.0 | strict JSON parsing for ECR-031 wire fixtures/contracts | `default-features=false`, `std` |
+| `uuid` | 1.26.0 | Apache-2.0 OR MIT | repository-aligned 128-bit typed identifiers | `default-features=false`, `serde`; no generation feature |
+
+No package version is newly introduced to the workspace by this delta; only `ecra-identity`'s direct edge set changes. UUID randomness remains owned by the explicit `getrandom`/`SecureRandom` boundary rather than enabling uuid generation features. No donor source is copied or adapted. Any future direct dependency or feature change still requires its own reviewed delta and exact-head evidence.

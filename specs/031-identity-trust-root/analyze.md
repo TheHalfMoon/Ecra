@@ -1,9 +1,9 @@
 # ECR-031 Planning Analyze
 
-**Pass:** 2  
-**Date:** 2026-08-28  
-**Result:** `ZERO_BLOCKING_PLANNING_DRIFT_FOUND`  
-**Implementation:** eligible only after lifecycle/status convergence to `TASKS_READY` on an exact green planning head.
+**Pass:** 3 — implementation dependency revalidation
+**Date:** 2026-08-28
+**Result:** `IMPLEMENTATION_DEPENDENCY_DRIFT_REMEDIATED`
+**Implementation:** Phase 3 exact closure is green; post-Phase-3 semantic work resumes only after IC-001 convergence is exact-green, starting at corrected prerequisite T043.
 
 ## 1. Inputs reviewed
 
@@ -183,4 +183,30 @@ PASS_1_BLOCKERS_FOUND=4
 PASS_1_BLOCKERS_REMEDIATED=4
 RESULT=ZERO_BLOCKING_PLANNING_DRIFT_FOUND
 NEXT=CONVERGE_LIFECYCLE_TO_TASKS_READY_AND_REQUIRE_EXACT_GREEN_PLANNING_HEAD
+```
+
+## 9. Pass-3 implementation dependency revalidation
+
+After Phase 3 closed on exact head `7eaede3f9f10461c307c8900c021273a4dbffa03`, implementation-time dependency review found one MUST-level ordering defect that Pass 2 did not expose:
+
+```text
+T035/T040 need SecureRandom                       -> T044
+T037/T040 bootstrap/rotation need secret custody -> T043 + T059/T060
+T041 authenticated store needs envelope          -> T045–T050
+T040 crash tests need the store/bootstrap        -> T041/T041A
+```
+
+The original linear phase order would therefore require either implementing later prerequisites implicitly or weakening fail-closed security contracts. Both are prohibited.
+
+IC-001 remediates the dependency graph while preserving stable existing task IDs and all FR/SC/C1–C4 semantics. T035 is narrowed only as a task unit to pure schema/invariant work; the displaced complete bootstrap transaction is explicitly owned by new convergence subtask T041A, so no requirement is dropped.
+
+```text
+UNOWNED_FR=0
+UNOWNED_SC=0
+MUST_LEVEL_REQUIREMENT_GAPS=0
+MUST_LEVEL_DEPENDENCY_DEFECTS_FOUND=1
+MUST_LEVEL_DEPENDENCY_DEFECTS_REMEDIATED=1
+FAILED_CONSTITUTION_GATES=0
+RESULT=IMPLEMENTATION_DEPENDENCY_DRIFT_REMEDIATED
+NEXT=REQUIRE_EXACT_GREEN_IC001_CONVERGENCE_HEAD_THEN_T043
 ```

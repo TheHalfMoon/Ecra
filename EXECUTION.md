@@ -1,6 +1,6 @@
 # Ecra Execution Guide
 
-> **Operational start-here document.** Recover live work from this file, platform roadmap/status, the active slice package, and exact GitHub truth; do not depend on private chat state.
+> **Operational start-here document.** Recover live work from this file, platform roadmap/status, active slice package, and exact GitHub truth. Live repository/PR/Actions truth overrides stale prose.
 
 ## Source-of-truth order
 
@@ -8,141 +8,132 @@
 2. `EXECUTION.md`
 3. `specs/000-ecra-platform/roadmap.md`
 4. `specs/000-ecra-platform/STATUS.md`
-5. relevant platform architecture/threat/gap/risk/benchmark/decision artifacts
+5. relevant architecture/threat/gap/risk/benchmark/decision artifacts
 6. `specs/README.md`
 7. active slice package
-8. exact live branch/head, PR, CI, reviews and changed files
-
-Stale prose must be updated to live evidence, never the reverse.
+8. exact live branch/head, PR, Actions, reviews and changed files
 
 ## Current execution truth
 
 ```text
 ECR-001 — Trusted Domain Kernel: CLOSED_CANONICAL
-Closure ledger head: 85e4bf657b6c33e3f88d83e92e7a35279d177349
-Closure CI: 33099434232 — SUCCESS
+ECR-001 closure CI: 33099434232 — SUCCESS
 
 ECR-002 — Durable Run, Ledger & Budgets: CLOSED_CANONICAL
-Final feature head: 87fd9fc560bf5ca21a07a4d25473f305b4c05f05
-Merge commit: 40efc8a64a9562f0f3eb2555b350cfa03d3e0675
-Final closure-convergence main head: aadc19c972e619222d426674d7542dd9c00dbe44
-ECR-002 closure-head CI: 33155302100 — SUCCESS
-ECR-001 regression on closure head: 33155302026 — SUCCESS
+ECR-002 final closure main head: aadc19c972e619222d426674d7542dd9c00dbe44
+ECR-002 closure CI: 33155302100 — SUCCESS
 
 Selected active slice: ECR-031 — Identity, Trust Root & Sensitive Storage Foundations
-Lifecycle: TASKS_READY_PENDING_EXACT_GREEN_HEAD
-Analyze Pass 1: 44e85aa9ccd28e185a5761889aa12b50459f286e — PLANNING_REWORK_REQUIRED
-Analyze Pass 2: a3c7d563c139c65886f169f9181c07a997038f1f — ZERO_BLOCKING_PLANNING_DRIFT_FOUND
-Requirements checklist: PASS_FOR_ANALYZE_PASS_2
-Implementation branch: NOT YET CREATED
-Implementation PR: NOT YET CREATED
+Lifecycle: IMPLEMENTING / BLOCKED_EXTERNAL_NATIVE_ACCEPTANCE
+Canonical implementation base / current canonical main: f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0
+Implementation branch: 031-identity-trust-root
+Implementation PR: #4 — DRAFT / NON-CANONICAL
+Implementation clarification: IC-001 — Phase 4 dependency-order correction
+
+Phase 1 verified head: 0289596bb7cdbb81d5f03c445fd324e985294143
+Phase 1 CI: 33161529028 / job 98816955646 — SUCCESS
+Phase 2 verified head: 4ddb6da267ebc90647e27fde382385a9d2529452
+Phase 2 CI: 33163366128 / job 98822931741 — SUCCESS
+Phase 3 closure head: 7eaede3f9f10461c307c8900c021273a4dbffa03
+Phase 3 closure CI: 33165941748 / job 98831297208 — SUCCESS
+Phase 4 closure record: 217934d1f2c334b943349af87bcf40a4ad44b889
+Phase 4 closure CI: 33196312711 / job 98934231597 — SUCCESS
+Phase 5 verified ledger head: bd066fa501476ff4f7fe43d0f4153de1e8d2fc60
+Phase 5 CI: 33198508505 / job 98941727727 — SUCCESS
+Phase 6 ledger head: 64c34744dd05b9850d8c9657a87e46913bd23412
+Phase 6 CI: 33200973225 — SUCCESS
+
+Phase 7 non-native evidence head: 4f2c150d2e5fd882d8554cd32a8aea4d4c5da639
+Phase 7 ECR-031 CI: 33235282966 — all non-native steps SUCCESS; native Data Protection Keychain acceptance FAILURE
+Host readiness: 33235282975 and 33235454670 — signing/provisioning assets absent
+
+Current task frontier: T064 — live trusted-macOS Data Protection Keychain acceptance — BLOCKED_EXTERNAL_NATIVE_ACCEPTANCE
 ```
 
-ECR-031 implementation becomes authorized only after the final planning/lifecycle-convergence `main` head passes both permanent ECR-001 and ECR-002 workflows. The implementation branch MUST be created from that exact green SHA.
+## Current implementation state
 
-## ECR-031 package
+IC-001 prerequisite wave T043–T050/T059–T060 and the corrected Phase 4 chain T035–T042 remain complete and verified.
 
-Read in order:
+Phase 5 T051–T053 is complete and verified.
+
+Phase 6 T054–T058 is complete and exact-head verified by run `33200973225` on `64c34744dd05b9850d8c9657a87e46913bd23412`.
+
+Phase 7 currently has:
+
+- T061 complete: concrete macOS Data Protection Keychain backend using `security-framework = 3.7.0`, `use_protected_keychain()`, and `synchronizing=false`;
+- T062 complete: unavailable/locked/not-found/delete failures normalized into redacted Ecra errors with no plaintext fallback;
+- T063 complete: portable v1 macOS signing assurance frozen without Secure Enclave/hardware/non-exportability/user-presence overclaim;
+- T064 open and blocked: live store/open/delete + bootstrap/reopen acceptance cannot pass until the runner has provisioning-authorized app-like code signing;
+- T065 complete: Windows v1 explicit unsupported/unverified DPAPI status, no fallback/cross-machine/hardware-signing claim;
+- T066 complete: Linux v1 explicit unsupported/unverified Secret Service status, no fallback and no secret lookup-attribute design;
+- T067 complete: architecture tests prevent assurance inflation;
+- T068 open: exact-head Phase 7 gate depends on T064.
+
+On Phase 7 evidence head `4f2c150d2e5fd882d8554cd32a8aea4d4c5da639`, permanent ECR-031 CI run `33235282966` passed stale-lock rejection, build, rustfmt, strict Clippy, workspace tests, ECR-001/ECR-002 regressions, explicit ECR-031 targets, rustdoc, offline replay, all boundary scripts, and dependency/toolchain evidence. Only `macOS Data Protection Keychain live acceptance` failed.
+
+## External native-acceptance blocker
+
+The repository-scoped self-hosted macOS runner has an interactive console user that matches the runner account and has `codesign` plus Xcode build tooling. It does not currently have the credentials/assets required for Data Protection Keychain acceptance:
 
 ```text
-specs/031-identity-trust-root/STATUS.md
-specs/031-identity-trust-root/spec.md
-specs/031-identity-trust-root/research.md
-specs/031-identity-trust-root/data-model.md
-specs/031-identity-trust-root/contracts/identity-trust-v1.md
-specs/031-identity-trust-root/threat-model.md
-specs/031-identity-trust-root/plan.md
-specs/031-identity-trust-root/tasks.md
-specs/031-identity-trust-root/quickstart.md
-specs/031-identity-trust-root/analyze.md
-specs/031-identity-trust-root/checklists/requirements.md
+code-signing identity      ABSENT
+local provisioning profile ABSENT
+Xcode developer account    ABSENT
+Xcode development team     ABSENT
 ```
 
-Planning result:
+Evidence:
 
-```text
-FR-001–FR-058 OWNED
-SC-001–SC-016 OWNED
-G1–G15 PASS / explicit PASS-N/A
-UNOWNED_FR=0
-UNOWNED_SC=0
-MUST_LEVEL_PLANNING_GAPS=0
-FAILED_CONSTITUTION_GATES=0
-PASS_1_BLOCKERS_FOUND=4
-PASS_1_BLOCKERS_REMEDIATED=4
-```
+- readiness run `33235282975`: console/user/tools succeeded; identity/profile checks failed;
+- readiness run `33235454670`: Xcode account/team, identity and profile checks failed.
+
+The runner therefore cannot use Xcode Automatic Signing to create/download a valid profile because no Apple developer account/team is configured for that macOS user.
+
+### Exact unblock action
+
+Configure a valid Apple developer account/team in Xcode for the same macOS user that owns the self-hosted runner, and allow Xcode to create/install an Apple Development code-signing identity plus a provisioning profile suitable for an app-like ECR-031 test host. Then rerun the permanent trusted branch gate and require both Data Protection Keychain live tests to pass on the exact feature head.
+
+This external prerequisite cannot be substituted by repository approval alone. Do not create or infer Apple credentials, a team identity, certificate, or provisioning profile from repository data.
 
 ## Frozen ECR-031 v1 security decisions
 
-### Local identity bootstrap
-
-```text
-Ecra-local PrincipalId only
-!= OS username/email/display name
-!= legal/external identity proofing
-!= NIST IAL/AAL/FAL certification
-```
-
-Bootstrap returns no usable enrolled identity until native protected material and `ProtectedTrustStateV1` are durably published and successfully reopened/authenticated. A partial crash yields `incomplete_bootstrap`; it never silently mints a second principal/root.
-
-### Authoritative lifecycle state
-
-`ProtectedTrustStateV1` is the authenticated authority for enrollment, active key generation, retirement and revocation. Ordinary DB/file metadata is rebuildable/non-authoritative. Only authenticated protected state can produce `VerifiedTrustSnapshot` for validation or issuance.
-
-V1 does not claim universal monotonic rollback resistance against restoration of an older valid protected state together with equivalent authorized OS trust-store state.
-
-### Non-ambient issuance
-
-No `issue(arbitrary_principal_id, ...)` production API exists. `EnrolledPrincipalHandle` + current `VerifiedTrustSnapshot` create a non-serializable process-local `IssuerSession` fixed to one principal/root/signing key. Caller-selected subject substitution is rejected. No ECR-031 IPC/network assertion issuer exists.
-
-### Portable v1 crypto custody
-
-```text
-assertion signing       Ed25519 software key
-protected-anchor sign   Ed25519 software key, purpose-separated
-key at rest             protected by native TrustBackend
-bounded key use         redacted/zeroizing process materialization
-protected envelope      ChaCha20-Poly1305 + HKDF-SHA-256 direction
-macOS v1 claim          Data Protection Keychain custody at rest
-NOT claimed             Secure Enclave signing / hardware-backed / non-exportable signing
-```
-
-Exact dependency versions/features/licenses/advisories/MSRV remain T001 and must be re-verified immediately before adoption.
+- Local bootstrap creates only opaque Ecra-local identity; username/email/display label/path are never PrincipalId authority.
+- `ProtectedTrustStateV1` is lifecycle authority; ordinary metadata is rebuildable/non-authoritative.
+- Issuance is process-local/non-ambient and cannot mint for arbitrary caller-selected principals.
+- Canonical assertion/protected-anchor signing suite is Ed25519 software signing under native protected custody.
+- Protected envelopes use ChaCha20-Poly1305 + HKDF-SHA-256.
+- macOS v1 requires Data Protection Keychain with local-only/non-synchronizing behavior.
+- No Secure Enclave, hardware-backed, non-exportable or user-presence signing claim exists in portable v1.
+- No universal monotonic rollback-resistance claim exists against restoration of older valid protected+native-store state.
+- No plaintext/file/environment/memory production fallback is permitted.
+- Legacy file-based Keychain and ad-hoc signing are not acceptable substitutes for T064.
 
 ## Hard slice boundaries
 
-ECR-031 MUST NOT absorb:
-- general authorization/declassification/approval/secret-use policy — ECR-003;
-- independent action outcome verification/reconciliation — ECR-004;
-- protocol auth/token mapping — ECR-016;
-- browser/model/tool/provider/process execution;
-- local-model gateway — ECR-021;
-- multi-device sync/recovery — ECR-022;
-- privacy/telemetry product controls — ECR-025;
-- general portability/export — ECR-029.
+ECR-031 does not own general authorization/declassification/approval (ECR-003), independent outcome verification (ECR-004), protocol token mapping (ECR-016), browser/model/tool/provider/process execution, local-model gateway (ECR-021), sync/recovery (ECR-022), privacy/telemetry product controls (ECR-025), or general portability/export (ECR-029).
 
-Identity evidence answers **who / on whose behalf**. It never means **what is authorized**.
+Identity evidence answers **who / on whose behalf**, never **what is authorized**.
 
-## Next exact execution order
+## Current exact execution order
 
 ```text
-1. Converge roadmap/platform status/spec indexes/tasks header to ECR-031 TASKS_READY planning truth.
-2. Freeze resulting canonical main SHA.
-3. Require ECR-001 and ECR-002 permanent workflows SUCCESS on that exact SHA.
-4. Create branch 031-identity-trust-root from that exact SHA.
-5. Create Draft ECR-031 implementation PR.
-6. Execute T001 dependency/license/advisory/MSRV re-verification.
-7. Continue T002–T082 strictly in tasks.md dependency order.
+T064 [BLOCKED_EXTERNAL_NATIVE_ACCEPTANCE]
+  ↓
+T068
+  ↓
+T069 → T070 → T071 → T072 → T073 → T074
+  ↓
+T075 → T076 → T077 → T078 → T079 → T080 → T081 → T082
 ```
 
-ECR-004 remains independently planning-eligible but must remain a separate slice. ECR-003 remains implementation-blocked until ECR-031 is `CLOSED_CANONICAL`.
+Phase 8 is not eligible before T068. ECR-003 is not eligible before ECR-031 `CLOSED_CANONICAL`. ECR-004 remains a separate dependency-eligible slice and must not be folded into this PR.
 
 ## CI architecture
 
-The repository-scoped self-hosted macOS runner `macbook` remains the trusted execution oracle. Persistent personal runners must not execute untrusted fork PR code.
+The repository-scoped self-hosted macOS runner `macbook` is the trusted ECR-031 oracle. Every asserted exact head must pass stale-lock rejection, locked build, rustfmt, strict Clippy, workspace tests, ECR-001 and ECR-002 regressions, explicit ECR-031 targets, rustdoc, offline replay, boundary scripts and dependency/toolchain evidence. Phase 7 additionally requires live Data Protection Keychain acceptance.
 
-Closed ECR-001/ECR-002 workflows remain push gates on `main`. ECR-031 implementation will add its own trusted push-only branch/main workflow with explicit bootstrap, validation, issuance, trust-state, envelope, anchor, redaction, boundaries and live macOS targets.
+Historical success cannot be reused after a content change to claim current-head PASS. Bookkeeping/diagnostic commits made after an evidence head remain non-canonical until their own required gate reaches the appropriate result.
 
 ## Execution rule
 
-Follow T001–T082 in dependency order after exact-head planning authorization. Fix actual CI/review blockers and immediately resume. Do not weaken tests/security boundaries to make gates green. No force-push, rebase or destructive history rewriting. Never mark PASS, MERGED or `CLOSED_CANONICAL` without exact-head/post-merge evidence.
+Follow `tasks.md` dependency order. Fix actual CI/review blockers forward-only and immediately resume. Do not weaken tests/security boundaries to make gates green. No force-push, rebase or destructive history rewriting. Never mark PASS, MERGED, `VERIFIED_ON_BRANCH`, or `CLOSED_CANONICAL` without exact evidence required by the active package.

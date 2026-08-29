@@ -1,0 +1,22 @@
+{
+  "version": {"major": 2, "minor": 0},
+  "assertion_id": "00000000-0000-0000-0000-000000000001",
+  "issuer": {
+    "trust_root_id": "00000000-0000-0000-0000-000000000002",
+    "key_id": "00000000-0000-0000-0000-000000000003"
+  },
+  "subject_principal_id": "00000000-0000-0000-0000-000000000004",
+  "actor_binding": {"actor_id": "00000000-0000-0000-0000-000000000005"},
+  "on_behalf_of": null,
+  "audience": {"service": "ecra_policy_local", "instance_id": null},
+  "issued_at": 1000,
+  "not_before": 1000,
+  "expires_at": 2000,
+  "nonce": null,
+  "attributes": {},
+  "signature": {
+    "algorithm": "ed25519",
+    "key_id": "00000000-0000-0000-0000-000000000003",
+    "bytes_b64url": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  }
+}

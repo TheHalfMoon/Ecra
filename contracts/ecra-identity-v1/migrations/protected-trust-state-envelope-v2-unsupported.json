@@ -1,0 +1,14 @@
+{
+  "version":{"major":2,"minor":0},
+  "object_id":"00000000-0000-0000-0000-000000000010",
+  "purpose":"trust_state",
+  "information_class":"sensitive",
+  "key_ref":{
+    "trust_root_id":"00000000-0000-0000-0000-000000000002",
+    "key_id":"00000000-0000-0000-0000-000000000011",
+    "generation":1
+  },
+  "algorithm":"chacha20_poly1305_rfc8439",
+  "nonce_b64url":"AAAAAAAAAAAAAAAA",
+  "ciphertext_b64url":"AAAAAAAAAAAAAAAAAAAAAA"
+}

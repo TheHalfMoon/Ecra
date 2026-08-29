@@ -1,0 +1,109 @@
+name: ECR-031 macOS Host Readiness
+
+on:
+  push:
+    branches:
+      - 031-identity-trust-root
+
+concurrency:
+  group: ecr-031-host-readiness-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  host-readiness:
+    name: macOS Data Protection host readiness
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Require logged-in console user
+        shell: bash
+        run: |
+          set -euo pipefail
+          console_user="$(stat -f '%Su' /dev/console 2>/dev/null || printf 'unknown')"
+          [[ "$console_user" != "root" ]]
+          [[ "$console_user" != "loginwindow" ]]
+          [[ "$console_user" != "unknown" ]]
+
+      - name: Require runner user to own console session
+        shell: bash
+        run: |
+          set -euo pipefail
+          runner_user="$(id -un)"
+          console_user="$(stat -f '%Su' /dev/console 2>/dev/null || printf 'unknown')"
+          [[ "$runner_user" == "$console_user" ]]
+
+      - name: Require codesign and Xcode build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v codesign >/dev/null 2>&1
+          command -v xcodebuild >/dev/null 2>&1
+
+      - name: Detect code-signing identity
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          security find-identity -v -p codesigning 2>/dev/null \
+            | grep -Eq '^[[:space:]]*[0-9]+\)'
+
+      - name: Detect local provisioning profile
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for directory in \
+            "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
+            "$HOME/Library/MobileDevice/Provisioning Profiles"; do
+            if [[ -d "$directory" ]] && find "$directory" -maxdepth 1 -type f \
+              \( -name '*.mobileprovision' -o -name '*.provisionprofile' \) \
+              -print -quit 2>/dev/null | grep -q .; then
+              found=1
+              break
+            fi
+          done
+          [[ "$found" -eq 1 ]]
+
+      - name: Detect Xcode developer account registry
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import plistlib
+          import sys
+
+          path = Path.home() / "Library/Preferences/com.apple.dt.Xcode.plist"
+          if not path.is_file():
+              sys.exit(1)
+          with path.open("rb") as handle:
+              data = plistlib.load(handle)
+          accounts = data.get("DVTDeveloperAccountManagerAppleIDLists")
+          if not accounts:
+              sys.exit(1)
+          PY
+
+      - name: Detect Xcode development team
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import plistlib
+          import sys
+
+          path = Path.home() / "Library/Preferences/com.apple.dt.Xcode.plist"
+          if not path.is_file():
+              sys.exit(1)
+          with path.open("rb") as handle:
+              data = plistlib.load(handle)
+          teams = data.get("IDEProvisioningTeamByIdentifier") or data.get("IDEProvisioningTeams")
+          if not isinstance(teams, dict) or not teams:
+              sys.exit(1)
+          PY

@@ -1,0 +1,2 @@
+ecra.protected-anchor.v1
+{"algorithm":"ed25519","key_id":"00000000-0000-0000-0000-000000000021","payload_digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","purpose":"run_ledger_head","trust_root_id":"00000000-0000-0000-0000-000000000002","version":{"major":1,"minor":0}}

@@ -1,8 +1,8 @@
 # ECR-031 Research — Identity, Trust Root & Sensitive Storage Foundations
 
-**Status:** PLANNING_RESEARCH / PASS_1_REMEDIATED  
+**Status:** PLANNING_RESEARCH / PASS_1_REMEDIATED / T001_REVIEWED  
 **Date:** 2026-08-28  
-**Scope:** primary standards/platform documentation and repository architecture decisions only; no donor source copied.
+**Scope:** primary standards/platform documentation and implementation-time dependency review; no donor source copied.
 
 ## 1. Research questions
 
@@ -212,3 +212,118 @@ Pass-1 blockers are now resolved in research direction:
 - C4 portable Ed25519 software signing under native custody -> R8.
 
 Exact dependency selection remains T001 and may stop implementation if current versions/security evidence fail the plan. It is not permission to weaken these decisions.
+
+## 23. T001 implementation-time dependency review — 2026-08-28
+
+T001 was re-run immediately before dependency adoption against current upstream crate manifests/documentation, the repository Rust 1.98.0 toolchain contract, and current RustSec package/advisory records. This section freezes the direct dependency *intent* for T003; the generated `Cargo.lock` remains the exact transitive version authority and must receive its own exact-head CI/dependency evidence before T009/T010 can pass.
+
+### 23.1 Toolchain compatibility
+
+Repository toolchain: Rust/Cargo 1.98.0, edition 2024.
+
+All accepted direct candidates below declare MSRV 1.85, so none requires lowering or changing the repository toolchain:
+
+| Candidate | Exact direct version | Upstream MSRV | License | T001 disposition |
+|---|---:|---:|---|---|
+| `ed25519-dalek` | `=3.0.0` | 1.85 | BSD-3-Clause | ACCEPT |
+| `chacha20poly1305` | `=0.11.0` | 1.85 | Apache-2.0 OR MIT | ACCEPT |
+| `hkdf` | `=0.13.0` | 1.85 | MIT OR Apache-2.0 | ACCEPT |
+| `sha2` | `=0.11.0` | 1.85 | MIT OR Apache-2.0 | ACCEPT; same version already used by ECR-001/ECR-002 |
+| `zeroize` | `=1.9.0` | 1.85 | MIT OR Apache-2.0 | ACCEPT |
+| `getrandom` | `=0.4.3` | 1.85 | MIT OR Apache-2.0 | ACCEPT |
+| `security-framework` | `=3.7.0` | 1.85 | MIT OR Apache-2.0 | ACCEPT on `cfg(target_os = "macos")` only |
+
+Primary manifests/reference pages reviewed:
+
+- https://docs.rs/crate/ed25519-dalek/3.0.0/source/Cargo.toml
+- https://docs.rs/crate/chacha20poly1305/0.11.0/source/Cargo.toml
+- https://docs.rs/crate/hkdf/0.13.0/source/Cargo.toml
+- https://docs.rs/crate/sha2/0.11.0/source/Cargo.toml
+- https://docs.rs/crate/zeroize/1.9.0
+- https://docs.rs/crate/getrandom/0.4.3/source/Cargo.toml.orig
+- https://docs.rs/crate/security-framework/3.7.0/source/Cargo.toml
+
+### 23.2 Minimal feature lock
+
+T003 should adopt only these direct feature shapes unless implementation proves a documented necessity and this review is amended first:
+
+```toml
+ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["fast", "zeroize"] }
+chacha20poly1305 = { version = "=0.11.0", default-features = false, features = ["alloc", "zeroize"] }
+hkdf = { version = "=0.13.0", default-features = false }
+sha2 = { version = "=0.11.0", default-features = false }
+zeroize = { version = "=1.9.0", default-features = false, features = ["alloc"] }
+getrandom = { version = "=0.4.3", default-features = false }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = { version = "=3.7.0", default-features = false, features = ["OSX_10_15"] }
+```
+
+Reasons:
+
+- `ed25519-dalek`: keep `zeroize`; retain `fast` precomputed tables; do not enable `rand_core`, `batch`, `serde`, `pem`, `pkcs8`, `hazmat` or legacy compatibility. Ecra owns seed generation through `SecureRandom` and stores its own strict wire form.
+- `chacha20poly1305`: disable its default `getrandom` feature so AEAD does not own hidden randomness; Ecra supplies nonces through its explicit randomness boundary. Keep only allocation and zeroization support needed by the planned envelope implementation.
+- `hkdf`: 0.13.0 has no default features. Do not enable the optional `kdf` trait dependency unless an implementation-time need is separately justified.
+- `sha2`: use SHA-256 only through the existing RustCrypto implementation; no competing hash package or copied implementation.
+- `zeroize`: enable allocation support for the planned `SensitiveBytes` container; do not enable derive unless a later implementation task demonstrates a bounded need and re-reviews `zeroize_derive`.
+- `getrandom`: use the direct fallible system RNG API; do not enable `wasm_js` or `sys_rng`, and do not add `rand` merely to generate ECR-031 secrets/IDs/nonces.
+- `security-framework`: disable its default Secure Transport/ALPN/session-ticket feature set. Enable only `OSX_10_15`, which exposes the Data Protection Keychain location used by the frozen macOS v1 acceptance path. This dependency is macOS-target-only.
+
+### 23.3 Native / unsafe boundary
+
+Ecra-authored trusted Rust remains `#![forbid(unsafe_code)]`.
+
+Accepted dependencies are not being claimed universally unsafe-free. In particular:
+
+- `security-framework` and `security-framework-sys` wrap Apple's C Security.framework/CoreFoundation APIs and therefore form an explicit reviewed native/FFI boundary outside Ecra-authored Rust;
+- `getrandom` uses platform OS entropy APIs and target-specific system dependencies; this is accepted solely for the explicit CSPRNG boundary and does **not** create or verify a Windows/Linux `TrustBackend`;
+- cryptographic crates may contain dependency-owned low-level/architecture-specific implementation code; T004 records the boundary and forbids Ecra-authored unsafe rather than making a false whole-dependency-graph `unsafe` claim.
+
+No Windows DPAPI crate and no Linux Secret Service crate is accepted in Phase 1. Their appearance in planning research does not authorize dependency adoption. Windows/Linux native trust backends remain unimplemented/unverified.
+
+### 23.4 Advisory review
+
+RustSec package/advisory records were checked immediately before adoption intent was recorded.
+
+- `ed25519-dalek`: RUSTSEC-2022-0093 is patched in `>=2`; candidate 3.0.0 is outside the affected range. The optional `hazmat` feature remains disabled.
+- `curve25519-dalek`: the historical timing advisory RUSTSEC-2024-0344 is patched in `>=4.1.3`; `ed25519-dalek 3.0.0` requires curve25519-dalek 5.0.0.
+- `sha2`: RUSTSEC-2021-0100 affected 0.9.7 and is patched in `>=0.9.8`; candidate 0.11.0 is outside the affected range.
+- `chacha20`: RUSTSEC-2019-0029 is patched in `>=0.2.3`, and the advisory explicitly states `chacha20poly1305` is unaffected by that counter-overflow issue; candidate `chacha20poly1305 0.11.0` uses modern `chacha20 0.10`.
+- `zeroize_derive`: RUSTSEC-2021-0115 concerns old derive behavior; ECR-031 does not enable the derive feature in the T001 feature lock.
+- `security-framework`: the historical RUSTSEC-2017-0003 issue is patched in `>=0.1.12`; candidate 3.7.0 is outside the affected range. ECR-031 also disables Secure Transport-oriented default features and uses the crate only for Keychain integration.
+
+No direct candidate was found to be in an affected range during this implementation-time review. This is not a permanent security guarantee: after `Cargo.lock` is generated, T008/T009 dependency evidence must review the exact resolved graph, and future lockfile/feature changes require a fresh advisory disposition.
+
+RustSec references:
+
+- https://rustsec.org/packages/ed25519-dalek.html
+- https://rustsec.org/advisories/RUSTSEC-2022-0093.html
+- https://rustsec.org/advisories/RUSTSEC-2024-0344.html
+- https://rustsec.org/advisories/RUSTSEC-2021-0100.html
+- https://rustsec.org/advisories/RUSTSEC-2019-0029.html
+- https://rustsec.org/packages/zeroize_derive.html
+- https://rustsec.org/packages/security-framework.html
+
+### 23.5 Rejected / deferred candidates
+
+Rejected for this v1 dependency boundary:
+
+- `rand`/`rand_chacha` as an ambient production RNG layer — unnecessary; `getrandom` is the explicit system entropy boundary;
+- `ring`, OpenSSL, libsodium, platform TLS stacks or general crypto suites — broader capability/native surface than the frozen algorithms require;
+- `ed25519-dalek` serialization/PKCS#8/PEM/batch/hazmat/legacy features — not required by the ECR-031 wire or custody contract;
+- `chacha20poly1305` default randomness feature — conflicts with explicit nonce/randomness ownership;
+- `security-framework` default Secure Transport/ALPN/session-ticket features — unrelated to Keychain custody;
+- Secure Enclave signing APIs as the v1 Ed25519 path — contradict the frozen portable software-Ed25519 custody decision;
+- Windows DPAPI and Linux Secret Service crates — deferred until their corresponding native backend is actually implemented and can produce platform-specific evidence.
+
+### 23.6 T001 conclusion
+
+T001 dependency research is complete enough to authorize T002 and the bounded T003 manifest delta above. It does **not** authorize marking T003/T009/T010 complete until the exact generated lockfile, dependency tree, native boundary, CI and license/advisory evidence are committed and pass on the exact branch head.
+
+## 23. Phase 2 support dependency delta
+
+T011–T019 require the repository's existing typed UUID and strict JSON/Serde conventions. Reimplementing UUID parsing or JSON semantics inside `ecra-identity` would create a competing trusted primitive, so Phase 2 directly reuses the exact versions already locked and reviewed by ECR-001: `serde 1.0.229`, `serde_json 1.0.151`, and `uuid 1.26.0`. No new third-party package version is introduced into the workspace by this delta.
+
+Accepted features are minimal for the Phase 2 contract: Serde `derive+std`, serde_json `std`, and uuid `serde`, all with default features disabled. The repository-pinned Rust 1.98.0 exceeds the previously reviewed compatibility floor for these already-locked packages. The 2026-08-28 RustSec package/advisory review found no advisory entry naming these three packages; similarly named packages such as `serde-json-wasm` are not dependencies. The full resolved `ecra-identity` graph remains subject to the permanent dependency allowlist and exact-head CI before semantic Phase 2 work is accepted.
+
+No source is copied. The dependency APIs are used only for typed UUID representation and strict JSON/Serde wire handling. This delta does not widen native, network, browser, model, protocol, policy, process, telemetry, or platform-backend authority.

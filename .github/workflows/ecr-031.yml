@@ -1,0 +1,234 @@
+name: ECR-031 CI
+
+on:
+  push:
+    branches:
+      - 031-identity-trust-root
+      - main
+
+concurrency:
+  group: ecr-031-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  identity-trust-root:
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --fail --silent --show-error https://sh.rustup.rs \
+              | sh -s -- -y --profile minimal --default-toolchain none
+            export PATH="$HOME/.cargo/bin:$PATH"
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt,clippy
+
+      - name: Fail closed on stale Cargo.lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          if cargo metadata --format-version 1 --locked --no-deps >/dev/null 2>ecr-031-lock-error.txt; then
+            echo "Committed Cargo.lock is synchronized with workspace manifests."
+          else
+            cat ecr-031-lock-error.txt >&2
+            cargo generate-lockfile
+            echo "BEGIN_ECR031_CARGO_LOCK_CANDIDATE"
+            cat Cargo.lock
+            echo "END_ECR031_CARGO_LOCK_CANDIDATE"
+            echo "Committed Cargo.lock is stale; generated candidate is diagnostic only and this job fails closed." >&2
+            exit 1
+          fi
+
+      - name: Build locked workspace
+        run: cargo build --workspace --locked
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+      - name: Test workspace
+        run: cargo test --workspace --locked
+
+      - name: ECR-001 regression contract targets
+        run: |
+          cargo test -p ecra-core --test valid_fixtures --locked
+          cargo test -p ecra-core --test invalid_fixtures --locked
+          cargo test -p ecra-core --test contract_fixtures --locked
+          cargo test -p ecra-core --test canonicalization --locked
+          cargo test -p ecra-core --test action_digest --locked
+          cargo test -p ecra-core --test properties --locked
+          cargo test -p ecra-core --test portability --locked
+          cargo test -p ecra-core --test non_authoritative_metadata --locked
+
+      - name: ECR-002 regression contract targets
+        run: |
+          cargo test -p ecra-run --test event_contract --locked
+          cargo test -p ecra-run --test reducer --locked
+          cargo test -p ecra-run --test attempts --locked
+          cargo test -p ecra-run --test budgets --locked
+          cargo test -p ecra-run --test migration --locked
+          cargo test -p ecra-run --test sqlite_store --locked
+          cargo test -p ecra-run --test crash_recovery --locked
+          cargo test -p ecra-run --test archive --locked
+          cargo test -p ecra-run --test boundaries --locked
+          cargo test -p ecra-run --test portability --locked
+          cargo test -p ecra-run --locked
+
+      - name: ECR-031 explicit phase targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo test -p ecra-identity --lib --locked
+
+          run_identity_target() {
+            local target="$1"
+            local path="crates/ecra-identity/tests/${target}.rs"
+            if [[ -f "$path" ]]; then
+              cargo test -p ecra-identity --test "$target" --locked
+            else
+              echo "ECR-031 target '${target}' is not materialized in the current task phase; it becomes mandatory when its owning task creates ${path}."
+            fi
+          }
+
+          run_identity_target bootstrap
+          run_identity_target assertion_contract
+          run_identity_target validation
+          run_identity_target issuance
+          run_identity_target key_lifecycle
+          run_identity_target envelope
+          run_identity_target anchor
+          run_identity_target redaction
+          run_identity_target backend_boundaries
+          run_identity_target macos_backend
+          run_identity_target macos_keychain
+
+      - name: Rustdoc tests
+        run: cargo test --doc --workspace --locked
+
+      - name: Offline replay gate
+        run: cargo test --workspace --locked --offline
+
+      - name: ECR-001 boundaries
+        run: |
+          bash scripts/check-core-unsafe.sh
+          bash scripts/check-core-deps.sh
+          cargo tree -p ecra-core --locked
+
+      - name: ECR-002 boundaries
+        run: |
+          bash scripts/check-run-unsafe.sh
+          bash scripts/check-run-deps.sh
+          cargo tree -p ecra-run --locked
+
+      - name: ECR-031 boundaries
+        run: |
+          bash scripts/check-identity-unsafe.sh
+          bash scripts/check-identity-deps.sh
+          cargo tree -p ecra-identity --locked
+
+      - name: ECR-031 dependency and toolchain evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustc --version
+          cargo --version
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum Cargo.lock
+          else
+            shasum -a 256 Cargo.lock
+          fi
+          grep -F 'ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["fast", "zeroize"] }' crates/ecra-identity/Cargo.toml
+          grep -F 'chacha20poly1305 = { version = "=0.11.0", default-features = false, features = ["alloc", "zeroize"] }' crates/ecra-identity/Cargo.toml
+          grep -F 'hkdf = { version = "=0.13.0", default-features = false }' crates/ecra-identity/Cargo.toml
+          grep -F 'sha2 = { version = "=0.11.0", default-features = false }' crates/ecra-identity/Cargo.toml
+          grep -F 'zeroize = { version = "=1.9.0", default-features = false, features = ["alloc"] }' crates/ecra-identity/Cargo.toml
+          grep -F 'getrandom = { version = "=0.4.3", default-features = false }' crates/ecra-identity/Cargo.toml
+          grep -F 'serde = { version = "=1.0.229", default-features = false, features = ["derive", "std"] }' crates/ecra-identity/Cargo.toml
+          grep -F 'serde_json = { version = "=1.0.151", default-features = false, features = ["std"] }' crates/ecra-identity/Cargo.toml
+          grep -F 'uuid = { version = "=1.26.0", default-features = false, features = ["serde"] }' crates/ecra-identity/Cargo.toml
+          grep -F 'security-framework = { version = "=3.7.0", default-features = false, features = ["OSX_10_15"] }' crates/ecra-identity/Cargo.toml
+          cargo tree -p ecra-identity --edges normal --depth 1 --locked
+          cargo tree -p ecra-identity --edges normal --locked
+
+      - name: macOS Data Protection host readiness evidence
+        shell: bash
+        run: |
+          set -u
+
+          runner_user="$(id -un 2>/dev/null || printf 'unknown')"
+          console_user="$(stat -f '%Su' /dev/console 2>/dev/null || printf 'unknown')"
+          if [[ "$console_user" != "root" && "$console_user" != "loginwindow" && "$console_user" != "unknown" ]]; then
+            echo "interactive_console_session=true"
+          else
+            echo "interactive_console_session=false"
+          fi
+          if [[ "$runner_user" == "$console_user" ]]; then
+            echo "runner_matches_console_user=true"
+          else
+            echo "runner_matches_console_user=false"
+          fi
+
+          if command -v security >/dev/null 2>&1; then
+            identity_output="$(security find-identity -v -p codesigning 2>/dev/null || true)"
+            identity_count="$(printf '%s\n' "$identity_output" | awk '/^[[:space:]]*[0-9]+\)/ {count++} END {print count+0}')"
+            echo "code_signing_identity_count=${identity_count}"
+          else
+            echo "code_signing_identity_count=0"
+          fi
+
+          profile_count=0
+          for directory in \
+            "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
+            "$HOME/Library/MobileDevice/Provisioning Profiles"; do
+            if [[ -d "$directory" ]]; then
+              count="$(find "$directory" -maxdepth 1 -type f \( -name '*.mobileprovision' -o -name '*.provisionprofile' \) 2>/dev/null | awk 'END {print NR+0}')"
+              profile_count=$((profile_count + count))
+            fi
+          done
+          echo "provisioning_profile_count=${profile_count}"
+
+          if command -v xcodebuild >/dev/null 2>&1; then
+            echo "xcodebuild_available=true"
+            xcodebuild -version 2>/dev/null || true
+          else
+            echo "xcodebuild_available=false"
+          fi
+          if command -v codesign >/dev/null 2>&1; then
+            echo "codesign_available=true"
+          else
+            echo "codesign_available=false"
+          fi
+
+      - name: macOS Data Protection Keychain live acceptance
+        shell: bash
+        run: |
+          set -uo pipefail
+          status=0
+
+          if ! cargo test -p ecra-identity --lib --locked \
+            platform::macos::tests::data_protection_keychain_roundtrips_all_v1_secret_purposes \
+            -- --exact --ignored; then
+            status=1
+          fi
+
+          if ! cargo test -p ecra-identity --lib --locked \
+            platform::macos::tests::native_keychain_bootstrap_publishes_and_reopens_same_identity \
+            -- --exact --ignored; then
+            status=1
+          fi
+
+          if [[ "$status" -ne 0 ]]; then
+            echo "macOS Data Protection Keychain live acceptance failed closed. The runner host must provide a user-context, provisioning-authorized app-like execution identity; do not substitute the legacy file-based keychain." >&2
+          fi
+          exit "$status"
