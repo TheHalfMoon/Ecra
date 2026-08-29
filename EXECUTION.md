@@ -93,12 +93,16 @@ Do not move PR #4 out of Draft, merge it, start ECR-031 Phase 8, or claim `VERIF
 ```text
 Slice: ECR-004 — Verification & Reconciliation
 Planning branch: 004-verification-receipts
+Planning PR: #5
 Planning base: f6d8eb6ff6a60aa0ad8a6f52686a62f12cd374b0
+Last converged planning head before this EXECUTION commit: 764dce1c089ead4138cb5faed07c3a706946eff3
 Planning lifecycle: TASKS_READY candidate / non-canonical until planning merge
-Analyze: ZERO_BLOCKING_PLANNING_DRIFT_FOUND
-FR-001–FR-045: OWNED
-SC-001–SC-012: OWNED
-Pass-1 blockers: 1 found / 1 remediated
+Analyze Pass: 3
+Analyze result: ZERO_BLOCKING_PLANNING_DRIFT_FOUND
+FR-001–FR-046: OWNED
+SC-001–SC-013: OWNED
+A-001: REMEDIATED by IC-001 / T011A
+A-002: REMEDIATED by IC-002 / FR-046 / SC-013 / Phase 5 compatibility gates
 Implementation authorized: NO
 ```
 
@@ -108,19 +112,22 @@ ECR-004 is independently eligible from ECR-001/ECR-002 and does not depend on EC
 - `ActionReceipt` remains executor-observed evidence and cannot self-verify;
 - UNKNOWN reconciliation never fabricates an `ActionReceipt` or mutates ECR-002 run-event truth;
 - aggregate/checkpoint/reconciliation views preserve conflict and grant no authority;
-- retry disposition is safety metadata only;
-- ECR-002 `RunEvent` v1 remains unchanged;
+- retry disposition is safety advisory only and `semantically_retryable*` applies to a future new-attempt proposal, not same-run scheduling;
+- every reconciliation outcome leaves ECR-002 prepared/unreceipted/unresolved state, `unresolved_attempts`, and `RunPhase` unchanged;
+- same-run `RunResumed`, `ExecutionCompleted`, and blind-retry guards remain authoritative for the unresolved prior attempt;
+- ECR-002 `RunEvent` v1 remains unchanged and no sidecar projection represents run resolution;
 - ECR-004 uses a separate append-only verification journal with rebuildable projections;
 - journal digest chaining is integrity/corruption detection only, not hostile complete-store tamper resistance;
 - persisted v1 acceptance is synthetic/non-sensitive evidence metadata/references/digests only;
 - no browser/network/model/provider/process/policy execution dependency enters `ecra-verify`;
-- IC-001 permits only typed read-only accessors for already-existing ECR-001 `EvidenceRef` metadata, with unchanged ECR-001 wire/canonical semantics and mandatory ECR-001 regressions.
+- IC-001 permits only typed read-only accessors for already-existing ECR-001 `EvidenceRef` metadata, with unchanged ECR-001 wire/canonical semantics and mandatory ECR-001 regressions;
+- IC-002 prohibits ECR-004 from clearing ECR-002 unresolved state or counterfeiting a run-repair protocol.
 
 ECR-004 implementation MUST NOT start directly from the planning branch. Required order:
 
 ```text
-1. Finish planning convergence and open planning PR.
-2. Process planning review findings to zero blocking drift.
+1. Converge planning package/platform/index/EXECUTION/PR text on Analyze Pass 3.
+2. Process PR #5 planning review findings to zero actionable blocking drift on the exact converged head.
 3. Merge exact planning head by an allowed non-rebase method.
 4. Freeze resulting canonical main SHA.
 5. Require permanent ECR-001 and ECR-002 workflows SUCCESS on that exact SHA.
@@ -140,7 +147,7 @@ ECR-004 implementation MUST NOT start directly from the planning branch. Require
 
 The repository-scoped self-hosted macOS runner `macbook` is the trusted execution oracle for current Rust slices. Persistent personal runners must not execute untrusted fork PR code.
 
-Closed ECR-001/ECR-002 workflows remain permanent push gates on `main`. ECR-031 has its own trusted push-only branch/main gate including live native acceptance. ECR-004 implementation must add its own trusted push-only workflow with explicit request/evidence/aggregate/checkpoint/reconcile/journal/store/boundary targets plus ECR-001/ECR-002 regressions.
+Closed ECR-001/ECR-002 workflows remain permanent push gates on `main`. ECR-031 has its own trusted push-only branch/main gate including live native acceptance. ECR-004 implementation must add its own trusted push-only workflow with explicit request/evidence/aggregate/checkpoint/reconcile/journal/store/boundary targets plus ECR-001/ECR-002 regressions and explicit unresolved-state compatibility acceptance.
 
 Historical green cannot be reused after a content change to claim exact-head PASS.
 
