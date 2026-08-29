@@ -26,8 +26,8 @@ pub use aggregate::{
 };
 pub use checkpoint::{
     CheckpointEvaluationV1, MAX_ACCEPTED_STATES_PER_REQUIREMENT, MAX_CHECKPOINT_LABEL_BYTES,
-    MAX_CHECKPOINT_REQUIREMENTS, MAX_VERIFICATION_CHECKPOINT_BYTES,
-    VerificationCheckpointFieldsV1, VerificationCheckpointV1, VerificationRequirementV1,
+    MAX_CHECKPOINT_REQUIREMENTS, MAX_VERIFICATION_CHECKPOINT_BYTES, VerificationCheckpointFieldsV1,
+    VerificationCheckpointV1, VerificationRequirementV1,
 };
 pub use error::{VerifyError, VerifyErrorCategory, VerifyErrorCode};
 pub use evidence::{
