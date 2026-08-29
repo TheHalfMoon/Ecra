@@ -229,6 +229,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires a provisioned app-like macOS host for Data Protection Keychain access"]
     fn data_protection_keychain_roundtrips_all_v1_secret_purposes() {
         let backend = MacosDataProtectionKeychainBackend;
         assert_eq!(backend.status().unwrap(), TrustBackendStatus::Available);
@@ -254,15 +255,25 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires a provisioned app-like macOS host for Data Protection Keychain access"]
     fn native_keychain_bootstrap_publishes_and_reopens_same_identity() {
         let backend = MacosDataProtectionKeychainBackend;
         assert_eq!(backend.status().unwrap(), TrustBackendStatus::Available);
         let (directory, location) = native_bootstrap_location();
         let mut random = native_bootstrap_random();
 
-        let first =
-            bootstrap_or_reopen_local_principal(&location, &backend, &mut random, timestamp(1_000))
-                .unwrap();
+        let first = match bootstrap_or_reopen_local_principal(
+            &location,
+            &backend,
+            &mut random,
+            timestamp(1_000),
+        ) {
+            Ok(handle) => handle,
+            Err(error) => {
+                let _ = fs::remove_dir_all(&directory);
+                panic!("native macOS bootstrap failed closed: {error:?}");
+            }
+        };
         assert!(ProtectedTrustStateStore::store_exists(location.path()).unwrap());
         assert!(!ProtectedTrustStateStore::bootstrap_marker_exists(location.path()).unwrap());
 
