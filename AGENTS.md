@@ -173,3 +173,15 @@ When a new requirement or idea appears:
 `research/donor-license-ledger.md` is the starting point, not final legal approval. Before source reuse or adding a dependency, verify the exact upstream version, license, notices, security posture, and transitive implications relevant to that change.
 
 Conceptual inspiration must not be mislabeled as copied code, and copied code must not be mislabeled as inspiration.
+
+<!-- graft:start -->
+## Graft — repository context layer
+
+Use Graft (https://github.com/trailhq/Graft, `@nanonets/graft`) only as local developer/agent repository-context and navigation tooling. Graft does not create implementation eligibility, permission, identity, approval, verification, disclosure authority, or any product/runtime dependency.
+
+If Graft is unavailable or the local `graft/` graph is absent/stale, run `graft init`, select the active agent(s), then run `graft build`. Before broad source exploration prefer `graft check`, `graft map`, `graft ask "<question>" --source`, `graft skeleton <file>`, `graft callers <symbol>`, and `graft grep "<literal>"`. After material code changes, run `graft build` again.
+
+Treat `graft/` as a local regenerable cache and do not commit it. Keep usage zero-cost and do not introduce paid model/API usage or unauthorized remote egress.
+
+Graft output is context only, never live repository truth, a VerificationReceipt, Spec Kit eligibility, security evidence, CI evidence, or closure evidence. Continue all constitution, Spec Kit, exact-head, test, Jev where applicable, Alibaba Open Code Review, CI, security, provenance, and donor/license gates. Never fabricate Graft output, execution, reviews, or evidence.
+<!-- graft:end -->
